@@ -1,0 +1,13 @@
+obj-y	+= sys_eeprom.o
+obj-y	+= usbcharge.o
+obj-y	+= eeprom.o
+obj-y	+= cmd_loadfpga.o
+obj-y	+= cmd_checkcharger.o
+obj-y	+= cmd_kbd.o
+obj-y	+= cmd_kbdsecret.o
+obj-y	+= cmd_recoverykey.o
+obj-y	+= board_support.o
+obj-$(CONFIG_READMAINBOARDREVISION) += cmd_readmainboardrevision.o
+obj-$(CONFIG_CMD_UPDATE_FDT_EEPROM) += cmd_updatefdteeprom.o
+obj-$(CONFIG_CMD_BOARD) += cmd_board.o
+obj-$(CONFIG_MXC_SPI) += da9063.o
