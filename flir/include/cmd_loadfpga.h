@@ -15,7 +15,7 @@
 
 #include "linux/list.h"
 #include "eeprom.h"
-#include <asm/imx-common/iomux-v3.h>
+#include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/mx6-pins.h>
 
 

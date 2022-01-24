@@ -1,8 +1,7 @@
 #include <common.h>
 #include <command.h>
-#include <asm/errno.h>
-#include <da9063.h>
-#include <cmd_loadfpga.h>
+#include <errno.h>
+#include <linux/delay.h>
 #include <spi.h>
 #include <spi_flash.h>
 #include <asm/gpio.h>
@@ -10,6 +9,9 @@
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/iomux.h>
 #include <asm/arch/mx6-pins.h>
+
+#include "../../../flir/include/cmd_loadfpga.h"
+#include "../../../flir/include/da9063.h"
 
 extern int fpga_power(bool enable);
 static void power_up_fpga(void);
@@ -239,7 +241,7 @@ static void enable_fpga(void)
 #endif
 }
 
-static int do_load_fpga(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	enum { ST_RUN, ST_ERROR, ST_ABORT, ST_DONE } state;
 	unsigned timeout;

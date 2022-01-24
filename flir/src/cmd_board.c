@@ -1,8 +1,8 @@
 #include <common.h>
 #include <command.h>
-#include <asm/errno.h>
+#include <errno.h>
 #include <malloc.h>
-#include "eeprom.h"
+#include "../../../flir/include/eeprom.h"
 
 
 #define Eeprom_entry(bus,address,i2c_offset,name) {bus,address,i2c_offset,0,0,name}
@@ -13,10 +13,10 @@ struct Eeprom eeprom [] =
 	Eeprom_entry(2,0xae,0x40,"ec101"),
 	Eeprom_entry(2,0xaa,0x00,"evio"),
 };
-static int do_board(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
-    if (argc != 2)
-        return CMD_RET_USAGE;
+	if (argc != 2)
+		return CMD_RET_USAGE;
 	int i,ret;
 
 	for(i=0;i<ARRAY_SIZE(eeprom);i++)
@@ -36,11 +36,11 @@ static int do_board(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
 		char var[20];
 		snprintf(env, strlen(env), "%s_board_revision", eeprom[i].name);
 		snprintf(var, strlen(var), "%i", eeprom[i].revison);
-	    setenv(env, var);
+	    env_set(env, var);
 
 		snprintf(env, strlen(env), "%s_board_article", eeprom[i].name);
 		snprintf(var, strlen(var), "%i", eeprom[i].article);
-	    setenv(env, var);
+	    env_set(env, var);
 		return CMD_RET_SUCCESS;
 	}
 	printf("Board %s not responding \n",eeprom[i].name);

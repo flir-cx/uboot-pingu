@@ -799,8 +799,8 @@ libs-y += drivers/usb/phy/
 libs-y += drivers/usb/ulpi/
 libs-y += cmd/
 libs-y += common/
-libs-y += flir/src/
 libs-y += env/
+libs-y += flir/src/
 libs-$(CONFIG_API) += api/
 ifdef CONFIG_POST
 libs-y += post/

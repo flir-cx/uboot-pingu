@@ -17,10 +17,10 @@
 
 #include <common.h>
 #include <command.h>
-#include <asm/errno.h>
+#include <errno.h>
 #include <i2c.h>
 #include <malloc.h>
-#include "cmd_updatefdteeprom.h"
+#include "../../../flir/include/cmd_updatefdteeprom.h"
 #include <fdt_support.h>
 #include "eeprom.h"
 
@@ -61,7 +61,7 @@ void patch_fdt_eeprom(void *blob)
  *     later used to update the fdt blob
  * */
 
-static int do_update_fdt_eeprom(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+static int do_update_fdt_eeprom(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
     if (argc != 5)
         return CMD_RET_USAGE;

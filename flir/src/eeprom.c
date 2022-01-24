@@ -1,10 +1,11 @@
 
 #include <common.h>
 #include <command.h>
-#include <asm/errno.h>
-#include <malloc.h>
-#include "eeprom.h"
+#include <errno.h>
 #include <i2c.h>
+#include <malloc.h>
+
+#include "../../../flir/include/eeprom.h"
 
 /** Hardware version struct (in EEPROM) */
 struct HWrevstruct

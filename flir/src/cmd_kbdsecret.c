@@ -1,9 +1,10 @@
-#include <cmd_kbdsecret.h>
+#include "../../../flir/include/cmd_kbdsecret.h"
 #include <common.h>
 #include <command.h>
+#include <linux/delay.h>
 #include <stdio_dev.h>
-#include <cmd_kbd.h>
-#include <cmd_recoverykey.h>
+#include "../../../flir/include/cmd_kbd.h"
+#include "../../../flir/include/cmd_recoverykey.h"
 
 
 #define ESC "\x1b"
@@ -52,7 +53,7 @@ int poll_key(char k)
  *
  */
 
-static int do_kbd_secret(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	int i;
 	//MSD_LOAD button overrides security check

@@ -16,7 +16,7 @@
 #include <common.h>
 #include <command.h>
 #include <fuse.h>
-#include <asm/errno.h>
+#include <errno.h>
 #include <i2c.h>
 
 #define MAIN_EEPROM_I2C_ADDR 0xae
@@ -64,7 +64,7 @@ int GetMainboardVersion(int *article, int* revision)
 }
 
 
-static int do_readmainboardarticle(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+static int do_readmainboardarticle(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
     int article;
     int revision;
@@ -72,11 +72,11 @@ static int do_readmainboardarticle(cmd_tbl_t *cmdtp, int flag, int argc, char *c
    printf("Mainboard article %i\n ",article);
    char str[20];
    snprintf(str, strlen(str), "%i", article);
-   setenv("mainboardarticle", str);
+   env_set("mainboardarticle", str);
    return 0;
 }
 
-static int do_readmainboardrevision(cmd_tbl_t *cmdtp, int flag, int argc, char *const argv[])
+static int do_readmainboardrevision(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
     int article;
     int revision;
@@ -84,7 +84,7 @@ static int do_readmainboardrevision(cmd_tbl_t *cmdtp, int flag, int argc, char *
    printf("Mainboard revision %i\n ",revision);
    char str[20];
    snprintf(str, strlen(str), "%i", revision);
-   setenv("mainboardrevision", str);
+   env_set("mainboardrevision", str);
    return 0;
 }
 

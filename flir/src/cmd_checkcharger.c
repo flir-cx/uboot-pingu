@@ -1,10 +1,12 @@
 #include <common.h>
 #include <command.h>
+#include <linux/delay.h>
 #include <i2c.h>
 #include <asm/io.h>
-#include <cmd_checkcharger.h>
 
-static int do_check_charger(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+#include "../../../flir/include/cmd_checkcharger.h"
+
+static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
     printf("Check allowed charging current\n");
     unsigned long tmp,tmp2;

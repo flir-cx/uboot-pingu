@@ -27,7 +27,8 @@
 #include <command.h>
 #include <i2c.h>
 #include <linux/ctype.h>
-#include <crc.h>
+#include <linux/delay.h>
+#include <u-boot/crc.h>
 
 /**
  * static eeprom: EEPROM layout for FLIR mainboard
@@ -104,7 +105,7 @@ static int read_eeprom(void)
 #endif
 	tempcrc = e.macCrc;
 	e.macCrc = 0;
-	e.macCrc = cyg_crc16(&e.mac[0], 32);
+	e.macCrc = crc16_ccitt(0, &e.mac[0], 32);
 	if (tempcrc != e.macCrc) {
 		printf("EEPROM: Mac Address CRC incorrect\n");
 		memset(&e.mac[0], 0, 32);
@@ -133,7 +134,7 @@ static int prog_eeprom(void)
 #endif
 	memset(&e.macEmpty[0], 0, 27);
 	e.macCrc = 0;
-	e.macCrc = cyg_crc16(&e.mac[0], 32);
+	e.macCrc = crc16_ccitt(0, &e.mac[0], 32);
 
 	/*
 	 * The AT24C02 datasheet says that data can only be written in page
@@ -220,7 +221,7 @@ static void set_mac_address(unsigned int index, const char *string)
 	}
 }
 
-int do_mac(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+int do_mac(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	char cmd;
 
@@ -294,8 +295,8 @@ int mac_read_from_eeprom(void)
 		/* Only initialize environment variables that are blank
 		 * (i.e. have not yet been set)
 		 */
-		if (!getenv("ethaddr")) {
-			setenv("ethaddr", ethaddr);
+		if (!env_get("ethaddr")) {
+			env_set("ethaddr", ethaddr);
 		}
 	}
 

@@ -1,5 +1,7 @@
-#include <cmd_kbd.h>
+#include <../../../flir/include/cmd_kbd.h>
 #include <common.h>
+#include <command.h>
+#include <env.h>
 #include <asm/gpio.h>
 #include <i2c.h>
 
@@ -35,11 +37,11 @@ int get_gpio_ioexpander(unsigned combnr)
 	return (buf & (1 << nr) );
 }
 
-static int do_kbd(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_kbd(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	char envvalue[ARRAY_SIZE(buttons)+1];
 	int numpressed = read_keys(envvalue);
-	setenv("keybd", envvalue);
+	env_set("keybd", envvalue);
 	return numpressed == 0;
 }
 

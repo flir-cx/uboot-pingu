@@ -14,17 +14,20 @@
  * GNU General Public License for more details.
  */
 #include <common.h>
+#include <command.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/iomux.h>
 #include <asm/arch/mx6-pins.h>
 #include <asm/arch/crm_regs.h>
-#include <asm/imx-common/mxc_i2c.h>
-#include <spi.h>
+#include <asm/mach-imx/mxc_i2c.h>
+#include <env.h>
 #include <i2c.h>
-#include "da9063.h"
-#include "da9063_regs.h"
+#include <linux/delay.h>
+#include <spi.h>
+#include "../../../flir/include/da9063.h"
+#include "../../../flir/include/da9063_regs.h"
 
 extern struct spi_slave *slave;
 u32 get_imx_reset_cause(void);
@@ -165,11 +168,11 @@ void set_boot_logo(void)
 	{
 	case NO_BATTERY:
 	case LOW_BATTERY:
-		setenv("bootlogo","no_battery.bmp.gz" );
+		env_set("bootlogo","no_battery.bmp.gz" );
 		break;
 
 	case USB_CHARGE:
-		setenv("bootlogo","battery_logo.bmp.gz" );
+		env_set("bootlogo","battery_logo.bmp.gz" );
 		break;
 	case NORMAL_BOOT:
 	//	setenv("bootlogo","bootlogo.bmp.gz" );
@@ -238,7 +241,7 @@ int usb_charge_setup(void)
 
 
 
-static int do_charge_state(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_charge_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 
 	if(argc == 2)
@@ -265,7 +268,7 @@ static int do_charge_state(cmd_tbl_t *cmdtp, int flag, int argc, char * const ar
 
 	case USB_CHARGE:
 		printf("Camera: charge state \n");
-		setenv("charge_state",charge_state_cmd );
+		env_set("charge_state",charge_state_cmd );
 		break;
 
 	default:
@@ -282,7 +285,7 @@ U_BOOT_CMD(
     "Process charge state, might power off camera",
 	" {state} \n"
 	"0 - Normal state		-> boot camera into run state\n"
-    "1 - Low battery state		-> power off camera\n"
+	"1 - Low battery state		-> power off camera\n"
 	"2 - No battery			-> power off camera\n"
 	"3 - Charge battery		-> boot camera into charge state\n"
 );

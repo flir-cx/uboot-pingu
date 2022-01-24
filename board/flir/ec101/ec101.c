@@ -14,6 +14,8 @@
  * GNU General Public License for more details.
  */
 #include <common.h>
+#include <command.h>
+#include <init.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
@@ -61,6 +63,8 @@
 
 #include "../../../flir/include/da9063.h"
 #include "../../../flir/include/da9063_regs.h"
+#include "../../../flir/include/cmd_loadfpga.h"
+#include "../../../flir/include/cmd_updatefdteeprom.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 char *get_last_reset_cause(void);
@@ -373,7 +377,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 {
 	uchar enetaddr[6];
 	//fix ethernet mac-address using direct path to node
-	eth_getenv_enetaddr("ethaddr", enetaddr);
+	eth_env_get_enetaddr("ethaddr", enetaddr);
 	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000", "mac-address", &enetaddr, 6, 1);
 	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000", "local-mac-address", &enetaddr, 6, 1);
 

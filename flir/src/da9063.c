@@ -13,16 +13,17 @@
  * GNU General Public License for more details.
  */
 #include <common.h>
+#include <command.h>
 #include <asm/io.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
 #include <asm/arch/iomux.h>
 #include <asm/arch/mx6-pins.h>
 #include <asm/arch/crm_regs.h>
-#include <asm/imx-common/mxc_i2c.h>
+#include <asm/mach-imx/mxc_i2c.h>
 #include <spi.h>
-#include "da9063.h"
-#include "da9063_regs.h"
+#include "../../../flir/include/da9063.h"
+#include "../../../flir/include/da9063_regs.h"
 
 extern struct spi_slave *slave;
 
@@ -98,7 +99,7 @@ int pmic_write_bitfield(int reg, unsigned char mask,
 
 
 
-static int do_pmic(cmd_tbl_t *cmdtp, int flag, int argc,
+static int do_pmic(struct cmd_tbl *cmdtp, int flag, int argc,
 				char * const argv[])
 {
 	unsigned char value,cmd_write;
