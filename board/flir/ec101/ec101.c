@@ -105,6 +105,15 @@ static void setup_iomux_uart(void)
 	imx_iomux_v3_setup_multiple_pads(uart1_pads, ARRAY_SIZE(uart1_pads));
 }
 
+/*
+ * Do not overwrite the console
+ * Use always serial for U-Boot console
+ */
+int overwrite_consolef(void)
+{
+	return 1;
+}
+
 #if defined(CONFIG_VIDEO_IPUV3)
 void splash_screen_prepare(void)
 {
@@ -128,16 +137,6 @@ void splash_screen_prepare(void)
 
 	return;
 }
-
-/*
- * Do not overwrite the console
- * Use always serial for U-Boot console
- */
-int overwrite_console(void)
-{
-	return 1;
-}
-
 
 int board_video_skip(void)
 {

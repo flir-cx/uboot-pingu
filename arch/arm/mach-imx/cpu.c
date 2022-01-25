@@ -99,6 +99,11 @@ static char *get_reset_cause(void)
 	}
 }
 
+char *get_last_reset_cause(void)
+{
+	return get_reset_cause();
+}
+
 #ifdef CONFIG_ANDROID_BOOT_IMAGE
 void get_reboot_reason(char *ret)
 {

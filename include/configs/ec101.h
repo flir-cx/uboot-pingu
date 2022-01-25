@@ -172,9 +172,9 @@
 //#define CONFIG_OF_BOARD_SETUP
 
 /* Framebuffer and LCD */
-/*#define CONFIG_VIDEO
-#define CONFIG_VIDEO_IPUV3
-#define CONFIG_CFB_CONSOLE
+//#define CONFIG_VIDEO
+//#define CONFIG_VIDEO_IPUV3
+/*#define CONFIG_CFB_CONSOLE
 #define CONFIG_CFB_CONSOLE_ANSI
 #define CONFIG_VGA_AS_SINGLE_DEVICE
 #define CONFIG_SYS_CONSOLE_IS_IN_ENV
@@ -211,7 +211,7 @@
 
 #define CONFIG_SYS_FSL_USDHC_NUM	1
 #define CONFIG_MMCDEV_USDHC4		0	/* mmc index for SHDC4 (eMMC) */
-#define CONFIG_SYS_MMC_ENV_DEV		CONFIG_MMCDEV_USDHC4
+//#define CONFIG_SYS_MMC_ENV_DEV		CONFIG_MMCDEV_USDHC4
 
 /*Spi*/
 #define CONFIG_SYS_USE_SPINOR
@@ -277,12 +277,12 @@
 #else
 /* Standard ec101 u-boot */
 
-#define CONFIG_ENV_IS_IN_MMC
-#if defined(CONFIG_ENV_IS_IN_MMC)
-#define CONFIG_ENV_OFFSET		(1792 * 1024)	/* 256kB below 2MiB */
-#define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + (128 * 1024))
-#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
-#endif
+//#define CONFIG_ENV_IS_IN_MMC
+//#if defined(CONFIG_ENV_IS_IN_MMC)
+//#define CONFIG_ENV_OFFSET		(1792 * 1024)	/* 256kB below 2MiB */
+//#define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + (128 * 1024))
+//#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
+//#endif
 
 #define CONFIG_BOOTCOMMAND \
 	"if recoverykey && kbd_secret; then " \
