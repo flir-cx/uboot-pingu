@@ -1,0 +1,33 @@
+menu FLIR
+
+config FLIR_COMMANDS
+       bool "Support generic flir commands"
+       default n
+       help
+	"support flir commands"
+
+source "flir/src/Kconfig"
+
+##//Not a good practice...
+##https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/zephyr/guides/build/kconfig/tips.html
+
+config FLIR_FPGA
+       bool "Support FPGA"
+       default y
+
+if FLIR_FPGA
+
+config FPGA_XILINX
+       bool "Support XILINX FPGA"
+       default y
+       help 
+       	    "XILINX FPGA"
+
+config FPGA_ALTERA
+       bool "Support ALTERA FPGA"
+       default n
+       help 
+       	    "ALTERA FPGA"
+
+endif
+endmenu
