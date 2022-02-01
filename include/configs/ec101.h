@@ -15,6 +15,35 @@
 #ifndef __EC101_CONFIG_H
 #define __EC101_CONFIG_H
 
+
+#define CONFIG_MXC_UART_BASE UART1_BASE
+#include "mx6_common.h"
+//#define CONFIG_NR_DRAM_BANKS 1
+#define CONFIG_SYS_MAX_FLASH_BANKS 1
+#define CONFIG_SYS_MALLOC_LEN (10 * SZ_1M)
+#define CONFIG_SYS_FSL_ESDHC_ADDR 0
+#define PHYS_SDRAM MMDC0_ARB_BASE_ADDR
+#define CONFIG_SYS_SDRAM_BASE PHYS_SDRAM
+#define CONFIG_SYS_INIT_RAM_ADDR IRAM_BASE_ADDR
+#define CONFIG_SYS_INIT_RAM_SIZE IRAM_SIZE
+#define CONFIG_SYS_INIT_SP_OFFSET \
+        (CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
+#define CONFIG_SYS_INIT_SP_ADDR \
+        (CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
+
+#define CONFIG_IMX6_LDO_BYPASS
+
+#define CONFIG_SYS_FSL_USDHC_NUM	1
+#define CONFIG_MMCDEV_USDHC4		0	/* mmc index for SHDC4 (eMMC) */
+
+//#define CONFIG_SYS_MMC_ENV_DEV 0
+
+//#define CONFIG_MMC
+//#define CONFIG_CMD_MMC
+
+//#define DEBUG
+#if 0
+
 //#define CONFIG_MX6
 #include "mx6_common.h"
 #include <asm/arch/imx-regs.h>
@@ -297,4 +326,5 @@
 #include "ec101_env.h"
 
 #define CONFIG_FPGA_XILINX
+#endif
 #endif

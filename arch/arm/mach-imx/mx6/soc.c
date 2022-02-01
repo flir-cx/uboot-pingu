@@ -737,9 +737,9 @@ int board_postclk_init(void)
 	/* NO LDO SOC on i.MX6SLL */
 	if (is_mx6sll())
 		return 0;
-
+#ifndef CONFIG_IMX6_LDO_BYPASS
 	set_ldo_voltage(LDO_SOC, 1175);	/* Set VDDSOC to 1.175V */
-
+#endif
 	return 0;
 }
 

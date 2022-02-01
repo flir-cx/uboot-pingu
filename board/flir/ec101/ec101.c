@@ -109,9 +109,14 @@ static void setup_iomux_uart(void)
  * Do not overwrite the console
  * Use always serial for U-Boot console
  */
-int overwrite_consolef(void)
+int overwrite_console(void)
 {
 	return 1;
+}
+
+int board_mmc_get_env_dev(int devno)
+{
+	return CONFIG_MMCDEV_USDHC4;
 }
 
 #if defined(CONFIG_VIDEO_IPUV3)
@@ -192,12 +197,14 @@ void ldo_mode_set(int ldo_bypass)
 
 
 #ifdef CONFIG_FSL_ESDHC
-
 /* The order of MMC controllers here must match that of CONFIG_MMCDEV_USDHCx
  * in the platform header
  */
 struct fsl_esdhc_cfg usdhc_cfg[CONFIG_SYS_FSL_USDHC_NUM] = {
-	{USDHC4_BASE_ADDR},
+	{
+		.esdhc_base = USDHC4_BASE_ADDR,
+		.max_bus_width = 8
+	},
 };
 
 int board_mmc_getcd(struct mmc *mmc)
@@ -253,7 +260,9 @@ int board_phy_config(struct phy_device *phydev)
 
 int board_eth_init(struct bd_info *bis)
 {
+#if 0
 	int ret;
+
 	mac_read_from_eeprom();
 
 	//set default mac address
@@ -265,7 +274,7 @@ int board_eth_init(struct bd_info *bis)
 	ret = cpu_eth_init(bis);
 	if (ret)
 		printf("%s: cpu_eth_init failed\n", __func__);
-
+#endif
 	return 0;
 }
 

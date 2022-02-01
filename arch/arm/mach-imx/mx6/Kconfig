@@ -274,7 +274,7 @@ config TARGET_EMBESTMX6BOARDS
 	select SUPPORT_SPL
 
 config TARGET_EC101
-       bool "Support ec101"
+       bool "Flir ec101"
        select CPU_V7
 
 config TARGET_GE_BX50V3
