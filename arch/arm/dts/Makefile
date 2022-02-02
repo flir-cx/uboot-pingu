@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0+
+dtb-$(CONFIG_TARGET_MX6EC101) += imx6dl-ec101.dtb
 
 dtb-$(CONFIG_TARGET_SMARTWEB) += at91sam9260-smartweb.dtb
 dtb-$(CONFIG_TARGET_TAURUS) += at91sam9g20-taurus.dtb

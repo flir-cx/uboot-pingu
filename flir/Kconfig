@@ -30,4 +30,10 @@ config FPGA_ALTERA
        	    "ALTERA FPGA"
 
 endif
+config IMX6_LDO_BYPASS
+       bool "Bypass IMX LDO"
+       default n
+       help
+		"Do not use internal LDO"
+
 endmenu
