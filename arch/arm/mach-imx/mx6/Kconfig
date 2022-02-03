@@ -273,8 +273,8 @@ config TARGET_EMBESTMX6BOARDS
 	select BOARD_LATE_INIT
 	select SUPPORT_SPL
 
-config TARGET_EC101
-       bool "Flir ec101"
+config TARGET_FLIR
+       bool "FLIR Board"
        select CPU_V7
 
 config TARGET_MX6EC101
