@@ -88,8 +88,8 @@ int dram_init(void)
 }
 
 static iomux_v3_cfg_t const uart1_pads[] = {
-	IOMUX_PADS(PAD_CSI0_DAT10__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
-	IOMUX_PADS(PAD_CSI0_DAT11__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
+	IOMUX_PADS(PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
+	IOMUX_PADS(PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
 };
 
 #ifdef CONFIG_MXC_SPI
@@ -170,6 +170,49 @@ static void enable_lvds(struct display_info_t const *dev)
 {
 	enable_backlight();
 }
+
+#ifdef CONFIG_ENV_IS_IN_MMC
+int board_mmc_get_env_dev(int devno)
+{
+	return CONFIG_SYS_MMC_ENV_DEV;
+}
+
+static int check_mmc_autodetect(void)
+{
+	char *autodetect_str = env_get("mmcautodetect");
+
+	if (autodetect_str && (strcmp(autodetect_str, "yes") == 0))
+		return 1;
+
+	return 0;
+}
+
+/* This should be defined for each board */
+int mmc_map_to_kernel_blk(int dev_no)
+{
+	return CONFIG_SYS_MMC_ENV_DEV;
+}
+
+void board_late_mmc_env_init(void)
+{
+	char cmd[32];
+	char mmcblk[32];
+	u32 dev_no = mmc_get_env_dev();
+
+	if (!check_mmc_autodetect())
+		return;
+
+	env_set_ulong("mmcdev", dev_no);
+
+	/* Set mmcblk env */
+	sprintf(mmcblk, "/dev/mmcblk%dp2 rootwait rw",
+		mmc_map_to_kernel_blk(dev_no));
+	env_set("mmcroot", mmcblk);
+
+	sprintf(cmd, "mmc dev %d", dev_no);
+	run_command(cmd, 0);
+}
+#endif
 
 #ifdef CONFIG_SYS_I2C
 static struct i2c_pads_info i2c_pad_info1 = {
@@ -1247,7 +1290,7 @@ int board_late_init(void)
 #endif
 
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
-	env_set("board_name", "SABRESD");
+	env_set("board_name", "EVCO");
 
 	if (is_mx6dqp())
 		env_set("board_rev", "MX6QP");

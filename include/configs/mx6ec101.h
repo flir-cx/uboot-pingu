@@ -16,7 +16,7 @@
 #define CONFIG_MACH_TYPE	3980
 #define CONFIG_MXC_UART_BASE	UART1_BASE
 #define CONSOLE_DEV		"ttymxc0"
-#define CONFIG_MMCROOT		"/dev/mmcblk2p2"  /* SDHC3 */
+#define CONFIG_MMCROOT		"/dev/mmcblk0p2"
 
 #if defined(CONFIG_MX6Q) || defined(CONFIG_MX6QP)
 #define PHYS_SDRAM_SIZE		(1u * 1024 * 1024 * 1024)
@@ -26,7 +26,7 @@
 #define PHYS_SDRAM_SIZE		(512u * 1024 * 1024)
 #endif
 
-#include "mx6ec101_common.h"
+#include "flir_mx6_common.h"
 
 /* Falcon Mode */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"args"

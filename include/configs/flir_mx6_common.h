@@ -175,7 +175,7 @@
 	TEE_ENV \
 	"epdc_waveform=epdc_splash.bin\0" \
 	"script=boot.scr\0" \
-	"image=zImage\0" \
+	"image=uImage\0" \
 	"fdt_file=undefined\0" \
 	"fdt_addr=0x18000000\0" \
 	"tee_addr=0x20000000\0" \
@@ -191,7 +191,7 @@
 	"initrd_high=0xffffffff\0" \
 	"splashimage=0x28000000\0" \
 	"mmcdev=" __stringify(CONFIG_SYS_MMC_ENV_DEV) "\0" \
-	"mmcpart=1\0" \
+	"mmcpart=2\0" \
 	"finduuid=part uuid mmc ${mmcdev}:2 uuid\0" \
 	"mmcroot=" CONFIG_MMCROOT " rootwait rw\0" \
 	"mmcautodetect=yes\0" \
@@ -210,19 +210,20 @@
 		"fi\0" \
 	EMMC_ENV	  \
 	"smp=" SYS_NOSMP "\0"\
+	"loadcmd=ext4load\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} ${smp} " \
 		"root=${mmcroot}\0" \
 	"loadbootscript=" \
-		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script} || " \
-		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} boot/${script};\0" \
+		"${loadcmd} mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script} || " \
+		"${loadcmd} mmc ${mmcdev}:${mmcpart} ${loadaddr} boot/${script};\0" \
 	"bootscript=echo Running bootscript from mmc ...; " \
 		"source\0" \
-	"loadimage=load mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image} || " \
-		"load mmc ${mmcdev}:${mmcpart} ${loadaddr} boot/${image}\0" \
-	"loadfdt=load mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file} || " \
-		"load mmc ${mmcdev}:${mmcpart} ${fdt_addr} boot/${fdt_file}\0" \
-	"loadtee=load mmc ${mmcdev}:${mmcpart} ${tee_addr} ${tee_file} || " \
-		"load mmc ${mmcdev}:${mmcpart} ${tee_addr} boot/${tee_file}\0" \
+	"loadimage=${loadcmd} mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image} || " \
+		"${loadcmd} mmc ${mmcdev}:${mmcpart} ${loadaddr} boot/${image}\0" \
+	"loadfdt=${loadcmd} mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file} || " \
+		"${loadcmd} mmc ${mmcdev}:${mmcpart} ${fdt_addr} boot/${fdt_file}\0" \
+	"loadtee=${loadcmd} mmc ${mmcdev}:${mmcpart} ${tee_addr} ${tee_file} || " \
+		"${loadcmd} mmc ${mmcdev}:${mmcpart} ${tee_addr} boot/${tee_file}\0" \
 	"mmcboot=echo Booting from mmc ...; " \
 		"run mmcargs; " \
 		"if test ${tee} = yes; then " \
@@ -230,10 +231,10 @@
 		"else " \
 			"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
 				"if run loadfdt; then " \
-					"bootz ${loadaddr} - ${fdt_addr}; " \
+					"bootm ${loadaddr} - ${fdt_addr}; " \
 				"else " \
 					"if test ${boot_fdt} = try; then " \
-						"bootz; " \
+						"bootm; " \
 					"else " \
 						"echo WARN: Cannot load the DT; " \
 					"fi; " \
@@ -286,6 +287,8 @@
 					"setenv fdt_file imx6q-sabresd.dtb; fi; " \
 				"if test $board_name = SABRESD && test $board_rev = MX6DL; then " \
 					"setenv fdt_file imx6dl-sabresd.dtb; fi; " \
+				"if test $board_name = EVCO && test $board_rev = MX6DL; then " \
+					"setenv fdt_file imx6dl-evco.dtb; fi; " \
 				"if test $fdt_file = undefined; then " \
 					"echo WARNING: Could not determine dtb to use; fi; " \
 			"fi;\0" \
@@ -312,15 +315,19 @@
 	"run findtee;" \
 	"mmc dev ${mmcdev};" \
 	"if mmc rescan; then " \
-		"if run loadbootscript; then " \
-		"run bootscript; " \
-		"else " \
-			"if run loadimage; then " \
-				"run mmcboot; " \
-			"else run netboot; " \
+		"env set loadcmd; " \
+		"for loadcmd in ext4load fatload load; do " \
+			"echo trying loadcmd ${loadcmd}; " \
+			"if run loadbootscript; then " \
+				"run bootscript; " \
+			"else " \
+				"if run loadimage; then " \
+					"run mmcboot; " \
+				"fi; " \
 			"fi; " \
-		"fi; " \
-	"else run netboot; fi"
+		"done;" \
+	"fi; " \
+	"run netboot;"
 #endif
 
 #define CONFIG_ARP_TIMEOUT     200UL
