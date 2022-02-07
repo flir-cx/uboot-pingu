@@ -273,19 +273,25 @@ config TARGET_EMBESTMX6BOARDS
 	select BOARD_LATE_INIT
 	select SUPPORT_SPL
 
-config TARGET_FLIR
-       bool "FLIR Board"
-       select CPU_V7
-
 config TARGET_MX6EC101
-	bool "mx6ec101"
-    select TARGET_MX6SABRESD_COMMON
-    depends on MX6S
-    select FSL_CAAM
-    select FSL_BLOB
-    select MISC
-    select ARCH_MISC_INIT
-    select RNG_SELF_TEST
+	bool "Flir imx6 ec101"
+	select TARGET_MX6SABRESD_COMMON
+	depends on MX6S
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select ARCH_MISC_INIT
+	select RNG_SELF_TEST
+
+config TARGET_EOCO
+	bool "Flir imx6 eoco"
+	select TARGET_MX6SABRESD_COMMON
+	depends on MX6S
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select ARCH_MISC_INIT
+	select RNG_SELF_TEST
 
 
 config TARGET_GE_BX50V3
@@ -947,6 +953,7 @@ source "board/embest/mx6boards/Kconfig"
 source "board/engicam/imx6q/Kconfig"
 source "board/engicam/imx6ul/Kconfig"
 source "board/flir/ec101/Kconfig"
+source "board/flir/eoco/Kconfig"
 source "board/flir/mx6ec101/Kconfig"
 source "board/freescale/mx6qarm2/Kconfig"
 source "board/freescale/mx6memcal/Kconfig"

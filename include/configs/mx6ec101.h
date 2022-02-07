@@ -28,6 +28,8 @@
 
 #include "flir_mx6_common.h"
 
+#define CONFIG_IMX6_LDO_BYPASS
+
 /* Falcon Mode */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"args"
 #define CONFIG_SPL_FS_LOAD_KERNEL_NAME	"uImage"

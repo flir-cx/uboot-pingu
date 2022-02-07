@@ -1,5 +1,4 @@
 menu FLIR
-depends on TARGET_FLIR
 
 config FLIR_COMMANDS
        bool "Support generic flir commands"
@@ -31,29 +30,5 @@ config FPGA_ALTERA
        	    "ALTERA FPGA"
 
 endif
-config IMX6_LDO_BYPASS
-       bool "Bypass IMX LDO"
-       default n
-       help
-		"Do not use internal LDO"
-
-
-#config TARGET_EC101
-#       bool "Flir EC101"
-#       depends on TARGET_FLIR
-#       select CPU_V7
-
-config TARGET_EOCO
-       bool "Flir EOCO"
-       depends on TARGET_FLIR
-       depends on MX6QP
-       select CPU_V7
-
-config TARGET_EC101
-       bool "Flir EC101"
-       depends on TARGET_FLIR
-       select CPU_V7
-
-
 
 endmenu
