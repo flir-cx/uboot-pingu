@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
+//
+// Copyright (C) 2013 Freescale Semiconductor, Inc.
+
+/dts-v1/;
+
+#include "imx6qp.dtsi"
+#include "imx6dp-eoco.dtsi"
+
+/ {
+	model = "FLIR i.MX6 Solo evco Board";
+	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
+};

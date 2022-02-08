@@ -274,7 +274,7 @@ config TARGET_EMBESTMX6BOARDS
 	select SUPPORT_SPL
 
 config TARGET_MX6EC101
-	bool "Flir imx6 ec101"
+	bool "mx6ec101"
 	select TARGET_MX6SABRESD_COMMON
 	depends on MX6S
 	select FSL_CAAM
@@ -284,15 +284,14 @@ config TARGET_MX6EC101
 	select RNG_SELF_TEST
 
 config TARGET_EOCO
-	bool "Flir imx6 eoco"
+	bool "mx6eoco"
 	select TARGET_MX6SABRESD_COMMON
-	depends on MX6S
+	depends on MX6QP
 	select FSL_CAAM
 	select FSL_BLOB
 	select MISC
 	select ARCH_MISC_INIT
 	select RNG_SELF_TEST
-
 
 config TARGET_GE_BX50V3
 	bool "General Electric Bx50v3"
