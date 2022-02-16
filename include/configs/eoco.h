@@ -6,8 +6,8 @@
  * Configuration settings for the Freescale i.MX6Q SabreSD board.
  */
 
-#ifndef __MX6EC101_CONFIG_H
-#define __MX6EC101_CONFIG_H
+#ifndef __MX6EOCO_CONFIG_H
+#define __MX6EOCO_CONFIG_H
 
 #ifdef CONFIG_SPL
 #include "imx6_spl.h"
