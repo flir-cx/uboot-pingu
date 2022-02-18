@@ -6,8 +6,8 @@
  * Configuration settings for the Freescale i.MX6Q SabreSD board.
  */
 
-#ifndef __MX6EC101_COMMON_CONFIG_H
-#define __MX6EC101_COMMON_CONFIG_H
+#ifndef __FLIR_MX6_COMMON_CONFIG_H
+#define __FLIR_MX6_COMMON_CONFIG_H
 
 #include <linux/stringify.h>
 #include "mx6_common.h"
