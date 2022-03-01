@@ -8,6 +8,6 @@
 #include "imx6dp-eoco.dtsi"
 
 / {
-	model = "FLIR i.MX6 Solo evco Board";
+	model = "FLIR i.MX6 dual plus eoco Board";
 	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
 };

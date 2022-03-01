@@ -26,6 +26,7 @@
 #define PHYS_SDRAM_SIZE		(512u * 1024 * 1024)
 #endif
 
+#define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6dl-evco.dtb\0"
 #include "flir_mx6_common.h"
 
 #define CONFIG_IMX6_LDO_BYPASS
