@@ -3,6 +3,7 @@ if FLIR_COMMANDS
 config FLIR_COMMAND_RECOVERYKEY
        bool "FLIR_COMMAND_RECOVERYKEY"
        depends on FLIR_COMMANDS       
+       depends on FLIR_COMMAND_KBD
        default n
        help
 		FLIR Specific commands support"
@@ -11,24 +12,28 @@ config FLIR_COMMAND_RECOVERYKEY
 config FLIR_COMMAND_KBDSECRET
        bool "FLIR_COMMAND_KBDSECRET"
        depends on FLIR_COMMANDS
+       depends on FLIR_COMMAND_KBD
        default n
        help
 		"FLIR_COMMAND_KBDSECRET"
 config FLIR_COMMAND_KBD
        bool "FLIR_COMMAND_KBD"
        depends on FLIR_COMMANDS
+       depends on CMD_I2C
        default n
        help
 		"FLIR_COMMAND_KBD"
 config FLIR_COMMAND_CHECKCHARGER
        bool "FLIR_COMMAND_CHECKCHARGER"
        depends on FLIR_COMMANDS
+       depends on CMD_I2C
        default n
        help
 		"FLIR_COMMAND_CHECKCHARGER"
 config FLIR_COMMAND_LOADFPGA
        bool "FLIR_COMMAND_LOADFPGA"
        depends on FLIR_COMMANDS
+       depends on CMD_SPI
        default n
        help
 		"FLIR_COMMAND_LOADFPGA"
@@ -41,6 +46,7 @@ config FLIR_EEPROM
 config FLIR_USBCHARGE
        bool "FLIR_USBCHARGE"
        depends on FLIR_COMMANDS
+       depends on CMD_I2C
        default n
        help
 		"FLIR_USBCHARGE"
@@ -71,6 +77,7 @@ config CMD_UPDATE_FDT_EEPROM
 config CMD_BOARD
        bool "CMD_BOARD"
        depends on FLIR_COMMANDS
+       depends on CMD_I2C
        default n
        help
 		"CMD_BOARD"
