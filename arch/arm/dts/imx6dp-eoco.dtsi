@@ -226,15 +226,6 @@
 		};
 	};
 
-	dpsound: dpsound {
-		compatible = "fsl,imx-audio-tc358767a";
-		model = "imx-audio-tc358767a";
-		cpu-dai = <&ssi2>;
-		audio-codec = <&displayport>;
-		mux-int-port = <2>;
-		mux-ext-port = <4>;
-	};
-	
 	yildun {
 		compatible = "flir,yildun";
 		pinctrl-names = "default", "idle";
@@ -549,26 +540,89 @@
 
 
 /*FLIR i2c1 bus: eeprom*/
+&i2c1 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c1>;
+	status = "okay";
+
+	platform_24c02: platform_24c02@57 {
+		compatible = "atmel,24c02";
+		reg = <0x57>;
+		pagesize = <16>;
+	};
+
+};
+&i2c2 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
+	status = "okay";
+};
+
 &i2c3 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	ec101_24c02: ec101_24c02@57 {
-		compatible = "atmel,24c02";
-		reg = <0x57>;
-		pagesize = <16>;
+	eoco_pca9534: eoco_pca9534@46 {
+		compatible = "nxp,pca9534";
+		reg = <0x23>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names = "IO0", "3V15_GP_EN", "4VA_BW_EN", "SD1_WP",
+			"SD1_LED_N", "CHG_OTG", "IO6", "TP_RESET_N";
+		IO0 {
+			gpio-hog;
+			gpios = <0 0>;
+			input;
+			line-name = "IO0";
+		};
+		3V15_GP_EN {
+			gpio-hog;
+			gpios = <1 0>;
+			output;
+			line-name = "3V15_GP_EN";
+		};
+		4VA_BW_EN {
+			gpio-hog;
+			gpios = <2 0>;
+			output;
+			line-name = "4VA_BW_EN";
+		};
+		SD1_WP {
+			gpio-hog;
+			gpios = <3 0>;
+			input;
+			line-name = "SD1_WP";
+		};
+		SD1_LED_N {
+			gpio-hog;
+			gpios = <4 0>;
+			output;
+			line-name = "SD1_LED_N";
+		};
+		CHG_OTG {
+			gpio-hog;
+			gpios = <5 0>;
+			input;
+			line-name = "CHG_OTG";
+		};
+		IO6 {
+			gpio-hog;
+			gpios = <5 0>;
+			input;
+			line-name = "IO6";
+		};
+		TP_RESET_N {
+			gpio-hog;
+			gpios = <6 0>;
+			input;
+			line-name = "TP_RESET_N";
+		};
 	};
 
-	displayport: dp@0F {
-		compatible = "tc358767_lcd2dp";
-		reg = <0x0F>;
-		reset_gpio = <&gpio4 20 GPIO_ACTIVE_LOW>;
-		shdn_gpio = <&gpio3 13 GPIO_ACTIVE_LOW>;
-		interrupt-parent = <&gpio2>;
-		interrupts = <7 IRQ_TYPE_LEVEL_HIGH>;
-	};
 };
 
 &iomuxc {
@@ -619,6 +673,20 @@
 			>;
 		};
 
+		pinctrl_i2c1: i2c1grp {
+			fsl,pins = <
+				 //Differs from EC101
+				MX6QDL_PAD_CSI0_DAT8__I2C1_SDA  0x4001b8b1
+				MX6QDL_PAD_CSI0_DAT9__I2C1_SCL  0x4001b8b1
+			>;
+		};
+
+		pinctrl_i2c2: i2c2grp {
+			fsl,pins = <
+				MX6QDL_PAD_KEY_ROW3__I2C2_SDA  0x4001b8b1
+				MX6QDL_PAD_KEY_COL3__I2C2_SCL 0x4001b8b1
+			>;
+		};
 		pinctrl_i2c3: i2c3grp {
 			fsl,pins = <
 				MX6QDL_PAD_GPIO_5__I2C3_SCL  0x4001b8b1
