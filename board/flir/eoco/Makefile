@@ -4,4 +4,4 @@
 #
 # (C) Copyright 2011 Freescale Semiconductor, Inc.
 
-obj-y  := eoco.o
+obj-y  := platform.o eoco.o
