@@ -24,6 +24,8 @@
 #include <spi.h>
 #include "../../../flir/include/da9063.h"
 #include "../../../flir/include/da9063_regs.h"
+#include "../../../include/configs/platform.h"
+
 
 extern struct spi_slave *slave;
 
@@ -104,6 +106,11 @@ static int do_pmic(struct cmd_tbl *cmdtp, int flag, int argc,
 {
 	unsigned char value,cmd_write;
 	int reg;
+
+	if (! slave) {
+		printf("Error: spi slave not defined...");
+		return CMD_RET_FAILURE;
+	};
 
 	if((argv[1][0] == 'r') && (argc == 3))
 		cmd_write = 0;

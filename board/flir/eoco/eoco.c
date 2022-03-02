@@ -15,6 +15,7 @@
 #include <asm/arch/mx6-pins.h>
 #include <asm/global_data.h>
 #include <asm/mach-imx/spi.h>
+#include <spi.h>
 #include <env.h>
 #include <linux/errno.h>
 #include <linux/delay.h>
@@ -49,6 +50,9 @@
 #include <recovery.h>
 #endif
 #endif /*CONFIG_FSL_FASTBOOT*/
+#include "../../../flir/include/da9063.h"
+#include "../../../flir/include/da9063_regs.h"
+#include "../../../include/configs/platform.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -81,6 +85,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define KEY_VOL_UP	IMX_GPIO_NR(1, 4)
 
+struct spi_slave *slave;
 int dram_init(void)
 {
 	gd->ram_size = imx_ddr_size();
@@ -100,9 +105,90 @@ static iomux_v3_cfg_t const ecspi1_pads[] = {
 	IOMUX_PADS(PAD_KEY_ROW1__GPIO4_IO09 | MUX_PAD_CTRL(NO_PAD_CTRL)),
 };
 
-static void setup_spi(void)
+iomux_v3_cfg_t const ecspi4_pads[] = {
+    MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+int platform_setup_pmic_voltages(void)
+{
+    unsigned char dev_id, var_id, cust_id, conf_id;
+    struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+
+
+    gpio_request(IMX_GPIO_NR(3, 20), "CS SPI4");
+    gpio_direction_output(IMX_GPIO_NR(3, 20),1);
+
+    imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
+                                     ARRAY_SIZE(ecspi4_pads));
+    // enable ecspi4_clk
+    setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
+    slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
+    if (!slave)
+        return -1;
+    spi_claim_bus(slave);
+
+    /* Read and print PMIC identification */
+    if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+        printf("Could not read PMIC ID registers\n");
+        spi_release_bus(slave);
+        return -1;
+    }
+    printf("PMIC:  DA9063, Device: 0x%02x, Variant: 0x%02x, "
+           "Customer: 0x%02x, Config: 0x%02x\n", dev_id, var_id,
+           cust_id, conf_id);
+    if (dev_id != 0x61 ||
+       var_id != 0x63) {
+           printf("PMIC DA90631 detected wrong device");
+           spi_release_bus(slave);
+           return -1;
+    }
+
+    //turn on nONKEY_PIN to port mode, e.g. power switch reacts
+    //to button press, instead of button release!
+    pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
+
+	//disable comparator
+	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
+	//disable watchdog
+	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
+
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+    /* 1V3 is highest allowable voltage when LDO is bypassed */
+    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+	    printf("Could not configure VBCORE1 voltage to 1V3\n");
+    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+	    printf("Could not configure VBCORE2 voltage to 1V3\n");
+    //    imx_bypass_ldo();
+    /* 1V2 is an acceptable level up to 800 MHz */
+    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+	    printf("Could not configure VBCORE1 voltage to 1V2\n");
+    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+	    printf("Could not configure VBCORE2 voltage to 1V2\n");
+#endif
+    /* gpio_free(IMX_GPIO_NR(3,20)); */
+
+    spi_release_bus(slave);
+    setup_spi();
+    return 0;
+}
+
+void setup_spi(void)
 {
 	SETUP_IOMUX_PADS(ecspi1_pads);
+	/* gpio_request(IMX_GPIO_NR(5, 28), "CS SPI1 0"); */
+	/* gpio_request(IMX_GPIO_NR(5, 29), "CS SPI1 1"); */
+	/* gpio_direction_output(IMX_GPIO_NR(5, 28),1); */
+	/* gpio_direction_output(IMX_GPIO_NR(5, 29),1); */
 }
 #endif
 
@@ -137,6 +223,24 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 	IOMUX_PADS(PAD_DISP0_DAT22__IPU1_DISP0_DATA22 | MUX_PAD_CTRL(NO_PAD_CTRL)),
 	IOMUX_PADS(PAD_DISP0_DAT23__IPU1_DISP0_DATA23 | MUX_PAD_CTRL(NO_PAD_CTRL)),
 };
+
+int board_spi_cs_gpio(unsigned bus, unsigned cs)
+{
+	if (bus == 1) {
+		if(cs == 0) {
+			return IMX_GPIO_NR(5, 28); //SPI1_CS0_n
+		} else if(cs == 0) {
+			return IMX_GPIO_NR(5, 29); //SPI1_CS1_n
+		}
+	} else if (bus == 3) {
+		if(cs == 0) {
+			return IMX_GPIO_NR(3, 20); //DA9063 CS
+		}
+	}
+
+	return -1;
+}
+
 
 static iomux_v3_cfg_t const bl_pads[] = {
 	IOMUX_PADS(PAD_SD1_DAT3__GPIO1_IO21 | MUX_PAD_CTRL(NO_PAD_CTRL)),
@@ -881,6 +985,7 @@ int board_init(void)
 #endif
 
 #ifdef CONFIG_MXC_SPI
+	platform_setup_pmic_voltages();
 	setup_spi();
 #endif
 
