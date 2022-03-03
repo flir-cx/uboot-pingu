@@ -311,8 +311,25 @@
 					"echo WARNING: Could not determine tee to use; fi; " \
 			"fi;\0" \
 		""	/* end line */
-
-#else
+#define CONFIG_BOOTCOMMAND \
+	"run findfdt;" \
+	"run findtee;" \
+	"mmc dev ${mmcdev};" \
+	"if mmc rescan; then " \
+		"env set loadcmd; " \
+		"for loadcmd in ext4load fatload load; do " \
+			"echo trying loadcmd ${loadcmd}; " \
+			"if run loadbootscript; then " \
+				"run bootscript; " \
+			"else " \
+				"if run loadimage; then " \
+					"run mmcboot; " \
+				"fi; " \
+			"fi; " \
+		"done;" \
+	"fi; " \
+	"run netboot;"
+#else /*CONFIG_ENV_NXP_FORMAT*/
 /* protected environment variables (besides ethaddr and serial#) */
 #define CONFIG_ENV_FLAGS_LIST_STATIC	\
 	"wlanaddr:mc,"			\
@@ -343,7 +360,14 @@
 #define CONFIG_EMMC_FUSE_CMD \
         "fuse_emmc_boot_cmd=fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; \0" \
 	"fuse_emmc_boot=run fuse_emmc_boot_cmd\0"
-
+#define CONFIG_BOOTCOMMAND \
+	"if recoverykey && kbd_secret; then " \
+                "run recoveryboot;" \
+	"else " \
+                "chargeState; run mmcbootflir;" \
+	"fi;" \
+	"echo Fallback to recovery boot!....;" \
+	"run recoveryboot;"
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_EMMC_FUSE_CMD \
 	CONFIG_DEFAULT_NETWORK_SETTINGS \
@@ -388,7 +412,7 @@
 	"console=" CONSOLE_DEV "\0" \
 	"fdt_high=0xffffffff\0"	  \
 	"initrd_high=0xffffffff\0" \
-    "hw_start=checkCharger; loadFPGA t\0" \
+	"hw_start=checkCharger; loadFPGA t\0" \
 	"mmcpart=1\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} ${smp} " \
 		"${rootfs} rootwait rw ethaddr=${ethaddr} " \
@@ -533,27 +557,8 @@
 		"fi;\0" \
 	"mmcdev=0\0" \
 	""	/* end line */
+#endif /*CONFIG_ENV_NXP_FORMAT*/
 #endif
-#define CONFIG_BOOTCOMMAND \
-	"run findfdt;" \
-	"run findtee;" \
-	"mmc dev ${mmcdev};" \
-	"if mmc rescan; then " \
-		"env set loadcmd; " \
-		"for loadcmd in ext4load fatload load; do " \
-			"echo trying loadcmd ${loadcmd}; " \
-			"if run loadbootscript; then " \
-				"run bootscript; " \
-			"else " \
-				"if run loadimage; then " \
-					"run mmcboot; " \
-				"fi; " \
-			"fi; " \
-		"done;" \
-	"fi; " \
-	"run netboot;"
-#endif
-
 
 #define CONFIG_ARP_TIMEOUT     200UL
 
