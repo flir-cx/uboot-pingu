@@ -158,21 +158,21 @@
 		status = "okay";
 	};
 
-	fvd {
-		compatible = "flir,fvd";
-		pinctrl-names = "default", "spi-default","spi-idle";
-		pinctrl-0 = <&pinctrl_fvd>;
-		pinctrl-1 = <&pinctrl_ecspi1>;
-		pinctrl-2 = <&pinctrl_ecspi1_idle>;
-		fpga-program-gpio	= <&gpio5 25 GPIO_ACTIVE_HIGH>;
-		fpga-init-gpio		= <&gpio5 26 GPIO_ACTIVE_HIGH>;
-		fpga-conf-done-gpio 	= <&gpio5 27 GPIO_ACTIVE_HIGH>;
-		fpga-ready-gpio		= <&gpio3 19 GPIO_ACTIVE_HIGH>;
-		spi-sclk-gpio		= <&gpio5 22 GPIO_ACTIVE_HIGH>;
-		spi-mosi-gpio		= <&gpio5 23 GPIO_ACTIVE_HIGH>;
-		spi-miso-gpio		= <&gpio5 24 GPIO_ACTIVE_HIGH>;
-		spi-cs-gpio		= <&gpio5 28 GPIO_ACTIVE_HIGH>;
-	};
+	/* fvd { */
+	/* 	compatible = "flir,fvd"; */
+	/* 	pinctrl-names = "default", "spi-default","spi-idle"; */
+	/* 	pinctrl-0 = <&pinctrl_fvd>; */
+	/* 	pinctrl-1 = <&pinctrl_ecspi1>; */
+	/* 	pinctrl-2 = <&pinctrl_ecspi1_idle>; */
+	/* 	fpga-program-gpio	= <&gpio5 25 GPIO_ACTIVE_HIGH>; */
+	/* 	fpga-init-gpio		= <&gpio5 26 GPIO_ACTIVE_HIGH>; */
+	/* 	fpga-conf-done-gpio 	= <&gpio5 27 GPIO_ACTIVE_HIGH>; */
+	/* 	fpga-ready-gpio		= <&gpio3 19 GPIO_ACTIVE_HIGH>; */
+	/* 	spi-sclk-gpio		= <&gpio5 22 GPIO_ACTIVE_HIGH>; */
+	/* 	spi-mosi-gpio		= <&gpio5 23 GPIO_ACTIVE_HIGH>; */
+	/* 	spi-miso-gpio		= <&gpio5 24 GPIO_ACTIVE_HIGH>; */
+	/* 	spi-cs-gpio		= <&gpio5 28 GPIO_ACTIVE_HIGH>; */
+	/* }; */
 
 	fake {
 		compatible = "fsl,imx6q-fake";
@@ -226,18 +226,18 @@
 		};
 	};
 
-	yildun {
-		compatible = "flir,yildun";
-		pinctrl-names = "default", "idle";
-		pinctrl-0 = <&pinctrl_yildun_spi>;
-		pinctrl-1 = <&pinctrl_yildun_spi_idle>;
-		fpga2-config-gpio	= <&gpio3 0 GPIO_ACTIVE_HIGH>;
-		fpga2-status-gpio	= <&gpio3 1 GPIO_ACTIVE_HIGH>;
-		fpga2-conf-done-gpio 	= <&gpio3 2 GPIO_ACTIVE_HIGH>;
-		fpga2-ce-gpio		= <&gpio3 3 GPIO_ACTIVE_HIGH>;
-		spi2-sclk-gpio		= <&gpio2 23 GPIO_ACTIVE_HIGH>;
-		spi2-mosi-gpio		= <&gpio2 24 GPIO_ACTIVE_HIGH>;
-	};
+	/* yildun { */
+	/* 	compatible = "flir,yildun"; */
+	/* 	pinctrl-names = "default", "idle"; */
+	/* 	pinctrl-0 = <&pinctrl_yildun_spi>; */
+	/* 	pinctrl-1 = <&pinctrl_yildun_spi_idle>; */
+	/* 	fpga2-config-gpio	= <&gpio3 0 GPIO_ACTIVE_HIGH>; */
+	/* 	fpga2-status-gpio	= <&gpio3 1 GPIO_ACTIVE_HIGH>; */
+	/* 	fpga2-conf-done-gpio 	= <&gpio3 2 GPIO_ACTIVE_HIGH>; */
+	/* 	fpga2-ce-gpio		= <&gpio3 3 GPIO_ACTIVE_HIGH>; */
+	/* 	spi2-sclk-gpio		= <&gpio2 23 GPIO_ACTIVE_HIGH>; */
+	/* 	spi2-mosi-gpio		= <&gpio2 24 GPIO_ACTIVE_HIGH>; */
+	/* }; */
 };
 
 /* LCD */
