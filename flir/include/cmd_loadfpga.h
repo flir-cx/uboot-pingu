@@ -18,7 +18,6 @@
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/mx6-pins.h>
 
-
 #ifndef __CMD_LOADFPGA_H
 #define __CMD_LOADFPGA_H
 
@@ -33,11 +32,20 @@
 #define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
 #endif
 
-#ifdef  CONFIG_FPGA_ALTERA
+
+#ifdef CONFIG_FPGA_ALTERA
+#ifdef CONFIG_FLIR_PLATFORM_EOCO
+#define GPIO_FPGA_CONFIG_n          IMX_GPIO_NR(1, 7)
+#define GPIO_FPGA_STATUS_n          IMX_GPIO_NR(1, 2)
+#define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(1, 8)
+#define GPIO_FPGA_CE                IMX_GPIO_NR(5, 25)
+#else
 #define GPIO_FPGA_CONFIG_n          IMX_GPIO_NR(5, 25)
 #define GPIO_FPGA_STATUS_n          IMX_GPIO_NR(5, 26)
 #define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
 #define GPIO_FPGA_CE                IMX_GPIO_NR(4, 10)
+#endif
+
 #endif
 void setup_spinor(void);
 #endif

@@ -1,5 +1,18 @@
 menu FLIR
 
+menu FLIR_PLATFORM_SELECTION
+config FLIR_PLATFORM
+       bool "Select flir platform model"
+       default n
+
+config FLIR_PLATFORM_EOCO
+       bool "EOCO Specific platform selection"
+       default n
+       help
+		EOCO Platforms differs some from the FLIR_PLATFORM model
+		pins for FPGA configuration amooung other has been changed
+endmenu
+
 config FLIR_COMMANDS
        bool "Support generic flir commands"
        default n

@@ -54,6 +54,14 @@
 #include "../../../flir/include/da9063_regs.h"
 #include "../../../include/configs/platform.h"
 
+#define ENABLE_DEBUG 0
+
+#if ENABLE_DEBUG
+    #define LOG_MSG printf
+#else
+    #define LOG_MSG(...)
+#endif
+
 DECLARE_GLOBAL_DATA_PTR;
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
