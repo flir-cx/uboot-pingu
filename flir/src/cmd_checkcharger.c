@@ -9,9 +9,10 @@
 static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
     printf("Check allowed charging current\n");
-    unsigned long tmp,tmp2;
+    unsigned long tmp, tmp2;
     unsigned char buf[100];
-    i2c_set_bus_num(2);
+    printf("USB Check charger I2C disabled...");
+    /* i2c_set_bus_num(2); */
 
     // Enable the vdd3p0 curret limiter
     // Set PMU_REG_3P0.ENABLE_ILIMIT = 1'b1
@@ -40,14 +41,14 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
     // And CHK_CONTACT = 1'b1
 
     tmp = readl(USB_ANALOG_USB1_CHRG_DETECT1);
-    writel(tmp | (0x3<<18), USB_ANALOG_USB1_CHRG_DETECT1);
+    writel(tmp | (0x3 << 18), USB_ANALOG_USB1_CHRG_DETECT1);
 
     // USB plug contacted ?
     // (monitor the PLUG_CONTACT bit)
 
     mdelay(100);
     tmp = readl(USB_ANALOG_USB1_CHRG_DETECT_STAT);
-    if(!(tmp & 0x1)){
+    if (!(tmp & 0x1)){
 	    // VBUS is coming from a dedicated power supply.
 	    // No USB actions required.
 	    // Continue boot up
@@ -70,7 +71,7 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
     // (monitor the CHRG_DETECTED bit)
 
     tmp = readl(USB_ANALOG_USB1_CHRG_DETECT_STAT); //Is it a charger
-    if(!(tmp & 0x2)){
+    if (!(tmp & 0x2)){
 
 	    // Turn off the       (set EN_B and charger detector   CHK_CHRG_B to 1)
 	    // Initiliaze system and USB (can only draw 100mA current)
@@ -78,9 +79,9 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 	    // Continue boot up
 
 	    printf("Not a charger.... (100mA)\n");
-	    i2c_read(BQ24298_I2C_ADDR, 0x0, 1, buf, 1);
-	    buf[0]=(buf[0] & 0xf8)| 0x1; //100mA current limit
-	    i2c_write(BQ24298_I2C_ADDR, 0x0, 1, buf, 1);
+	    /* i2c_read(BQ24298_I2C_ADDR, 0x0, 1, buf, 1); */
+	    /* buf[0]=(buf[0] & 0xf8)| 0x1; //100mA current limit */
+	    /* i2c_write(BQ24298_I2C_ADDR, 0x0, 1, buf, 1); */
 	    return 100;
     }
 
@@ -103,7 +104,7 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
     writel((tmp & 0xffffffc3), USBPHY1_DEBUG);
 
     tmp = readl(USBPHY1_CTRL);
-    writel((tmp | 1<<4), USBPHY1_CTRL);
+    writel((tmp | 1 << 4), USBPHY1_CTRL);
 
     mdelay(100);
 
@@ -112,16 +113,16 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
     //DM_STATE bit)
 
     tmp2 = readl(USB_ANALOG_USB1_CHRG_DETECT_STAT);
-    if(tmp2 & 0x1 << 2){
+    if (tmp2 & 0x1 << 2){
 
 	    //Dedicated Charger (can draw 1.8A)
 	    //Continue boot up
 
 	    printf("It is a dedicated charging port (1500mA)\n");
 	    writel(tmp, USB_ANALOG_USB1_CHRG_DETECT1);
-	    i2c_read(BQ24298_I2C_ADDR, 0x0, 1, buf, 1);
-	    buf[0]=(buf[0] & 0xf8) | 0x5;  //1500mA current limit
-	    i2c_write(BQ24298_I2C_ADDR, 0x0, 1, buf, 1);
+	    /* i2c_read(BQ24298_I2C_ADDR, 0x0, 1, buf, 1); */
+	    /* buf[0]=(buf[0] & 0xf8) | 0x5;  //1500mA current limit */
+	    /* i2c_write(BQ24298_I2C_ADDR, 0x0, 1, buf, 1); */
 	    return 1500;
     }
 
@@ -130,16 +131,24 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 
     writel(tmp, USB_ANALOG_USB1_CHRG_DETECT1);
     printf("It is a charging downstream port (900mA)\n");
-    i2c_read(BQ24298_I2C_ADDR, 0x0, 1, buf, 1);
-    buf[0]=(buf[0] & 0xf8)| 0x3; //900 mA current limit
-    i2c_write(BQ24298_I2C_ADDR, 0x0, 1, buf, 1);
+    /* i2c_read(BQ24298_I2C_ADDR, 0x0, 1, buf, 1); */
+    /* buf[0]=(buf[0] & 0xf8)| 0x3; //900 mA current limit */
+    /* i2c_write(BQ24298_I2C_ADDR, 0x0, 1, buf, 1); */
     return 900;
 }
 
 
 
+#ifdef CONFIG_FLIR_NEW_COMMAND_STYLE
 U_BOOT_CMD(
-    checkCharger,	1,	0,	do_check_charger,
-    "",
-    ""
+	   checkCharger, 1, 0, do_check_charger,
+	   "",
+	   ""
+);
+#endif
+
+U_BOOT_CMD(
+	   flir_checkcharger, 1, 0, do_check_charger,
+	   "",
+	   ""
 );

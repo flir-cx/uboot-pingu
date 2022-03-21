@@ -42,7 +42,7 @@ struct button_key {
 #define BEIABUSMSK (KEYBOARD_BEIA_IO_EXP_I2C_ADDR << 8)
 
 static struct button_key const buttons[] = {
-	{"sw_load",	gpio_get_value, IMX_GPIO_NR(7, 11),	'S'},
+  //	{"sw_load",	gpio_get_value, IMX_GPIO_NR(7, 11),	'S'},
 	{"right",	get_gpio_ioexpander, EVIOBUSMSK | 0,	'R'},
 	{"left",	get_gpio_ioexpander, EVIOBUSMSK | 1,	'L'},
 	{"up",		get_gpio_ioexpander, EVIOBUSMSK | 2,	'U'},

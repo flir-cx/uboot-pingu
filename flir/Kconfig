@@ -15,11 +15,18 @@ endmenu
 
 config FLIR_COMMANDS
        bool "Support generic flir commands"
-       default n
+       default y
        help
 	"support flir commands"
 
+config FLIR_OLD_COMMAND_STYLE
+       bool "Support flir old command style"
+       default y
+       help
+	"Support old-style FLIR commands (without flir_)"
+
 source "flir/src/Kconfig"
+
 
 ##//Not a good practice...
 ##https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/zephyr/guides/build/kconfig/tips.html

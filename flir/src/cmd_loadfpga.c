@@ -156,7 +156,14 @@ int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 	return ret;
 }
 
+#ifdef CONFIG_FLIR_OLD_COMMAND_STYLE
 U_BOOT_CMD(loadFPGA, 2, 0, do_load_fpga,
+	   "Start load of main FPGA. Add 't' to wait for config to complete.",
+	   "[t]"
+	   );
+#endif
+
+U_BOOT_CMD(flir_loadfpga, 2, 0, do_load_fpga,
 	   "Start load of main FPGA. Add 't' to wait for config to complete.",
 	   "[t]"
 	   );
