@@ -11,10 +11,11 @@
 #include <pf1550.h>
 #include <lc709203.h>
 #include <leds.h>
+#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-void test_charge_levels()
+void test_charge_levels(void)
 {
 	for(int i=0;i<=100;i+=10)
 	{
@@ -23,7 +24,7 @@ void test_charge_levels()
 	}
 }
 
-static int do_chargeapp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 
 	int exit = 0;

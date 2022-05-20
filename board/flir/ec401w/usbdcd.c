@@ -1,4 +1,5 @@
 #include <usbdcd.h>
+#include <linux/delay.h>
 
 #define usbdcd_clear_interrupt_field() writel(readl(USB_DCD_CONTROL) | USB_DCD_CONTROL_IACK, USB_DCD_CONTROL)
 #define usbdcd_control_if(reg) ((reg) & USB_DCD_CONTROL_IF)

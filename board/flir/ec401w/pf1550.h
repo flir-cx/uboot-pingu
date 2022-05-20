@@ -271,6 +271,7 @@ enum pf1550_ilim {
 	_1500ma = 20,
 };
 
+void pmic_goto_core_off(bool enable);
 
 void init_pf1550_pmic(void);
 
@@ -286,7 +287,7 @@ int get_usb_cable_state(void);
 
 int get_onoff_key(void);
 
-void power_off();
+void power_off(void);
 
 void reboot(void);
 

@@ -669,7 +669,7 @@ static const struct led_ops lp5562_led_ops = {
 static int lp5562_led_probe(struct udevice *dev)
 {
 	struct lp5562_led_priv *priv = dev_get_priv(dev);
-	struct led_uc_plat *uc_plat = dev_get_uclass_platdata(dev);
+	struct led_uc_plat *uc_plat = dev_get_uclass_plat(dev);
 	u32 current;
 	int ret = 0;
 
@@ -759,7 +759,7 @@ static int lp5562_led_bind(struct udevice *parent)
 		if (ret)
 			return ret;
 
-		uc_plat = dev_get_uclass_platdata(dev);
+		uc_plat = dev_get_uclass_plat(dev);
 		uc_plat->label = label;
 	}
 
@@ -777,6 +777,6 @@ U_BOOT_DRIVER(lp5562_led) = {
 	.of_match = lp5562_led_ids,
 	.bind = lp5562_led_bind,
 	.probe = lp5562_led_probe,
-	.priv_auto_alloc_size = sizeof(struct lp5562_led_priv),
+	.priv_auto = sizeof(struct lp5562_led_priv),
 	.ops = &lp5562_led_ops,
 };

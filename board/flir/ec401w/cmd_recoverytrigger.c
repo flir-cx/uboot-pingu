@@ -35,6 +35,7 @@
 #include <dm.h>
 #include <i2c.h>
 #include <asm/arch/pcc.h>
+#include <linux/delay.h>
 #include "leds.h"
 #include "bootstate.h"
 #include "pf1550.h"
@@ -212,7 +213,7 @@ int check_button_sequence(void)
     return FAIL;
 }
 
-int do_recoverytrigger(void)
+static int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
     int pwr_btn = 0;
 

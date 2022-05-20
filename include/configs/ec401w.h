@@ -6,12 +6,11 @@
  * published by the Free Software Foundation.
  */
 
-#ifndef __MX7ULP_EC201_CONFIG_H
-#define __MX7ULP_EC201_CONFIG_H
+#ifndef __MX7ULP_EC401W_CONFIG_H
+#define __MX7ULP_EC401W_CONFIG_H
 
 #include <linux/sizes.h>
 #include <asm/arch/imx-regs.h>
-
 
 #define CONFIG_BOARD_POSTCLK_INIT
 #define CONFIG_SYS_BOOTM_LEN		0x1000000
@@ -25,10 +24,9 @@
 #define CONFIG_MXC_OCOTP
 
 #define CONFIG_BOUNCE_BUFFER
-#define CONFIG_FSL_ESDHC
-#define CONFIG_FSL_USDHC
-#define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
 
+/* MMC */
+#define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
 #define CONFIG_SYS_FSL_USDHC_NUM        1
 #define CONFIG_SYS_FSL_ESDHC_ADDR       0
 
@@ -49,7 +47,7 @@
 /* UART */
 #define LPUART_BASE			LPUART4_RBASE
 
-/* allow to overwrite serial and ethaddr */
+/* Allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
 #define CONFIG_CONS_INDEX		1
 #define CONFIG_BAUDRATE			115200
@@ -64,8 +62,8 @@
 
 /* Print Buffer Size */
 #define CONFIG_SYS_MAXARGS		256
-#define CONFIG_SYS_BARGSIZE CONFIG_SYS_CBSIZE
-#define CONFIG_SYS_PBSIZE (CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
+#define CONFIG_SYS_BARGSIZE 		CONFIG_SYS_CBSIZE
+#define CONFIG_SYS_PBSIZE 		(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
 
 #define CONFIG_STACKSIZE		SZ_8K
 
@@ -78,15 +76,14 @@
 #define CONFIG_SYS_MEMTEST_START	PHYS_SDRAM
 #define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM
 
-#define CONFIG_LOADADDR             0x60800000
+#define CONFIG_LOADADDR             	0x60800000
 
 #define CONFIG_CMD_MEMTEST
-#define CONFIG_SYS_MEMTEST_END      0x9E000000
-
+#define CONFIG_SYS_MEMTEST_END      	0x9E000000
 
 #define CONFIG_SYS_HZ			1000
 #define CONFIG_SYS_LOAD_ADDR		CONFIG_LOADADDR
-#define CONFIG_STANDALONE_LOAD_ADDR  CONFIG_SYS_LOAD_ADDR
+#define CONFIG_STANDALONE_LOAD_ADDR  	CONFIG_SYS_LOAD_ADDR
 
 #define CONFIG_SYS_INIT_RAM_ADDR	IRAM_BASE_ADDR
 #define CONFIG_SYS_INIT_RAM_SIZE	SZ_256K
@@ -111,11 +108,11 @@
 #define CONFIG_VIDEO_BMP_LOGO
 #define CONFIG_IMX_VIDEO_SKIP
 #define CONFIG_HX8394
-
 #define CONFIG_SPLASH_SOURCE
 #define CONFIG_VIDEO_BMP_GZIP
 #define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE 1024*1024
 #endif
+
 #define CONFIG_CFB_CONSOLE_ANSI
 #define CONFIG_OF_BOARD_SETUP
 
@@ -155,11 +152,11 @@
 
 #else /* CONFIG_MFG */
 
-#define CONFIG_SYS_MMC_ENV_DEV		0		/* emmc0 */
-#define CONFIG_ENV_SIZE			SZ_16K
-#define CONFIG_ENV_OFFSET		(1792 * 1024)	/* 256kB below 2MiB */
-#define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + (128 * 1024))
-#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
+/* #define CONFIG_SYS_MMC_ENV_DEV		0		/\* emmc0 *\/ */
+/* #define CONFIG_ENV_SIZE			SZ_16K */
+/* #define CONFIG_ENV_OFFSET		(1792 * 1024)	/\* 256kB below 2MiB *\/ */
+/* #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + (128 * 1024)) */
+/* #define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE */
 
 #define CONFIG_BOOTCOMMAND \
 	"setmac;" \
@@ -170,14 +167,11 @@
 	"fi;" \
 	"echo Fallback to recovery boot!....;" \
 	"run recoveryboot;"
-
 #endif /* CONFIG_MFG */
-
 
 /* protected environment variables (besides ethaddr and serial#) */
 #define CONFIG_ENV_FLAGS_LIST_STATIC	\
 	"bootargs_once:sr"
-
 
 /* Pool of randomly generated UUIDs at host machine */
 #define RANDOM_UUIDS	\
@@ -192,7 +186,6 @@
 	"part8_uuid=12c08a28-fb40-430a-a5bc-7b4f015b0b3c\0" \
 	"part9_uuid=dc83dea8-c467-45dc-84eb-5e913daec17e\0"
 
-
 #define CONFIG_OVERWRITE_ETHADDR_ONCE
 #define CONFIG_DEFAULT_NETWORK_SETTINGS	\
 	"wlanaddr=00:04:f3:ff:ff:fb\0" \
@@ -200,7 +193,6 @@
 	"ipaddr=192.168.42.30\0" \
 	"serverip=192.168.42.1\0" \
 	"netmask=255.255.0.0\0"
-
 
 /* Selects device tree*
  * Reads select-device-tree-script from boot partition
@@ -232,7 +224,6 @@
 				  "setenv fdt_file ${fdt_file_default};" \
 		   "fi\0"
 
-
 /* FLIR partition creation*
  * 
  * parition1 = recovery     40 MiB
@@ -263,7 +254,6 @@
 			  "else; " \
 			  "fi; " \
 		"fi; \0"
-
 
 /* FLIR Recovery boot
 * 
@@ -300,13 +290,11 @@
 				 "run loadfdt; run loadinitrd; run loadimage; " \
 				 "bootz ${loadaddr} ${initrd_addr} ${fdt_addr};\0" 
 
-
 /* Select which emmc partition to boot from
  * 
 * * Boot from emmc partition2 or partition3
 * based on system_active variable
 */
-
 #define CONFIG_SELECT_BOOT_PARTITION_ENV \
 	"system_active=system1\0" \
 	"select_boot=" \
@@ -372,13 +360,11 @@
 			"fi;" \
 		"fi;\0" \
 
-
 /* M4 boot
 *
 * Loads M4 code from emmc to sram
 * Starts executing M4
 */
-
 #define CONFIG_M4_BOOT_ENV \
 	"m4_image=imx7ulpm4.bin\0" \
 	"m4_addr=0x1ffd2000\0" \
@@ -417,6 +403,4 @@
 	CONFIG_SPLASH_IMAGE_ENV \
 	""	/* end line */
 
-
-
-#endif	/* __MX7ULP_EC201_CONFIG_H */
+#endif	/* __MX7ULP_EC401W_CONFIG_H */

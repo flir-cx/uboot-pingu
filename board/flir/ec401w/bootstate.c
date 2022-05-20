@@ -18,6 +18,8 @@
 #include <asm/arch/sys_proto.h>
 #include <dm.h>
 #include <i2c.h>
+#include <command.h>
+#include <linux/delay.h>
 #include "pf1550.h"
 #include "lc709203.h"
 #include "leds.h"
@@ -206,7 +208,7 @@ int boot_state_init(void)
 	return 0;
 }
 
-static int do_boot_state(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	if(state.force_boot_state != INVALID_STATE){
 		state.boot_state = state.force_boot_state;
@@ -218,7 +220,7 @@ static int do_boot_state(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv
 			break;
 		case RESET:
 		case ONKEY:
-			get_battery_voltage(&state.battery_mV);
+			get_battery_voltage((int *)&state.battery_mV);
 			printf("Battery voltage mV=%d... ",state.battery_mV);
 			if(state.battery_mV < LOW_BATTERY_mV){
 				printf("LOW\n");
@@ -275,5 +277,5 @@ U_BOOT_CMD(
 	"2 - Low battery state		-> power off camera\n"
 	"3 - No battery			-> power off camera\n"
 	"4 - Charge battery		-> boot camera into charge state\n"
-);
+)
 
