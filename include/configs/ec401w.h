@@ -70,12 +70,15 @@
 /* Physical Memory Map */
 #define CONFIG_NR_DRAM_BANKS		1
 
+/* Address where u-boot will be loaded in memory*/
 #define CONFIG_SYS_TEXT_BASE		0x67800000
+
 #define PHYS_SDRAM			0x60000000
 #define PHYS_SDRAM_SIZE			SZ_512M
 #define CONFIG_SYS_MEMTEST_START	PHYS_SDRAM
 #define CONFIG_SYS_SDRAM_BASE		PHYS_SDRAM
 
+/* Address where kernel will be loaded in memory*/
 #define CONFIG_LOADADDR             	0x60800000
 
 #define CONFIG_CMD_MEMTEST
@@ -368,7 +371,12 @@
 #define CONFIG_M4_BOOT_ENV \
 	"m4_image=imx7ulpm4.bin\0" \
 	"m4_addr=0x1ffd2000\0" \
-	"loadM4=ext4load mmc ${mmcdev}:${mmcpart} ${m4_addr} boot/${m4_image}\0" \
+	"m4_bin_size=ext4size mmc ${mmcdev}:${mmcpart} boot/${m4_image}\0" \
+	"copyM4=cp.b ${tempaddr} ${m4_addr} ${filesize}\0" \
+	"loadM4_to_temp=ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} boot/${m4_image}\0" \
+	"loadM4=if run loadM4_to_temp; then " \
+		"run copyM4;" \
+	"fi;\0" \
 \
 	"startM4=echo Starting M4 ...; " \
 			"if run loadM4; then " \
