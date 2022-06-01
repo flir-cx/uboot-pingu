@@ -115,7 +115,7 @@ int board_late_init(void)
 #if defined(CONFIG_OF_BOARD_SETUP)
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
-	do_fixup_by_path_string(blob, "/u-boot", "version", U_BOOT_VERSION_STRING);
+	do_fixup_by_path_string(blob, "/chosen", "u-boot,version", U_BOOT_VERSION_STRING);
 
 	return 0;
 }
