@@ -65,6 +65,7 @@ obj-$(CONFIG_IMX_TRUSTY_OS) += trusty.o
 endif
 ifeq ($(SOC),$(filter $(SOC),mx7ulp))
 obj-y  += cache.o mmdc_size.o
+obj-$(CONFIG_IMX_BOOTAUX) += imx_bootaux.o
 obj-$(CONFIG_IMX_HAB) += hab.o
 endif
 ifeq ($(SOC),$(filter $(SOC),vf610))

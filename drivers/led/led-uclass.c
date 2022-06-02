@@ -62,6 +62,16 @@ int led_set_period(struct udevice *dev, int period_ms)
 
 	return ops->set_period(dev, period_ms);
 }
+
+int led_set_pattern(struct udevice *dev, int program, int period_ms)
+{
+	struct led_ops *ops = led_get_ops(dev);
+
+	if (!ops->set_pattern)
+		return -ENOSYS;
+
+	return ops->set_pattern(dev, program, period_ms);
+}
 #endif
 
 int led_default_state(void)

@@ -15,6 +15,36 @@
 #include <cpu_func.h>
 
 #ifndef CONFIG_IMX8
+#ifdef CONFIG_MX7ULP
+/* FLIR added mx7ulp bootaux support - not present in fsl 2018.03 distro */
+int arch_auxiliary_core_up(u32 core_id, ulong boot_private_data)
+{
+       u32 stack, pc;
+
+       if (!boot_private_data)
+               return 1;
+
+       stack = *(u32 *)boot_private_data;
+       pc = *(u32 *)(boot_private_data + 4);
+
+       /* Set GP register to tell the M4 rom the image entry */
+       /* We assume the M4 image has IVT head and padding which
+        * should be same as the one programmed into QSPI flash
+        */
+
+       writel(pc, SIM0_RBASE + 0x70); /*GP7*/
+
+       return 0;
+}
+
+int arch_auxiliary_core_check_up(u32 core_id)
+{
+       return 0;
+}
+
+#else
+/* non imx7ulp, imx8 */
+
 int arch_auxiliary_core_up(u32 core_id, ulong addr)
 {
 	u32 stack, pc;
@@ -95,6 +125,7 @@ int arch_auxiliary_core_check_up(u32 core_id)
 	return 1;
 #endif
 }
+#endif
 #endif
 /*
  * To i.MX6SX and i.MX7D, the image supported by bootaux needs

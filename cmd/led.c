@@ -85,9 +85,47 @@ int do_led(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	if (argc < 2)
 		return CMD_RET_USAGE;
 	led_label = argv[1];
-	if (strncmp(led_label, "list", 4) == 0)
+	if (*led_label == 'l')
 		return list_leds();
+	else if(*led_label == 'p')
+	{
+		int pattern = 0;
 
+		pattern = simple_strtoul(argv[2], NULL, 10);
+		freq_ms = simple_strtoul(argv[3], NULL, 10);
+
+		struct udevice *dev1;
+		struct udevice *dev2;
+		struct udevice *dev3;
+
+		ret = led_get_by_label("1", &dev1);
+		if (ret) {
+			printf("LED 1 not found (err=%d)\n", ret);
+			return CMD_RET_FAILURE;
+		}
+		ret = led_get_by_label("2", &dev2);
+		if (ret) {
+			printf("LED 2 not found (err=%d)\n", ret);
+			return CMD_RET_FAILURE;
+		}
+		ret = led_get_by_label("3", &dev3);
+		if (ret) {
+			printf("LED 3 not found (err=%d)\n", ret);
+			return CMD_RET_FAILURE;
+		}
+
+		ret = led_set_pattern(dev1, pattern, freq_ms);
+		if (!ret)
+		{
+			ret += led_set_state(dev3, LEDST_BLINK);
+			ret += led_set_state(dev2, LEDST_BLINK);
+			ret += led_set_state(dev1, LEDST_BLINK);
+		}
+		return ret;
+	} else if (strncmp(led_label, "list", 4) == 0){
+		return list_leds();
+	}
+	
 	cmd = argc > 2 ? get_led_cmd(argv[2]) : LEDST_COUNT;
 #ifdef CONFIG_LED_BLINK
 	if (cmd == LEDST_BLINK) {

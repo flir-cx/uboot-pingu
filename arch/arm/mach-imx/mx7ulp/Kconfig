@@ -45,10 +45,15 @@ config TARGET_MX7ULP_EVK
 	select MISC
 	select ARCH_MISC_INIT
 
+config TARGET_MX7ULP_EC401W
+	bool "Support FLIR low cost platform board (EC401W)"
+	select MX7ULP
+
 endchoice
 
 source "board/ea/mx7ulp_com/Kconfig"
 source "board/freescale/mx7ulp_val/Kconfig"
 source "board/freescale/mx7ulp_evk/Kconfig"
+source "board/flir/ec401w/Kconfig"
 
 endif

@@ -33,8 +33,18 @@ int get_eeprom_hwrev(struct Eeprom * eeprom)
     int chip = (eeprom->i2c_address)>>1;
     int addr = eeprom->i2c_offset;
 
+#if CONFIG_DM_I2C
+    struct udevice *dev;
+    struct udevice *bus;
+    ret = uclass_get_device_by_seq(UCLASS_I2C, eeprom->i2c_bus, &bus);
+    if (!ret)
+        ret = i2c_get_chip(bus, chip, 1, &dev);
+    if (!ret)
+        ret = dm_i2c_read(dev, addr, (uchar *)&hwrev, sizeof(hwrev));
+#else
     ret = i2c_set_bus_num(eeprom->i2c_bus);
     ret = i2c_read(chip, addr, 1, (uchar*)&hwrev, sizeof(hwrev));
+#endif
 
     if(ret==0)
     {

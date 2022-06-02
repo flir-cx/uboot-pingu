@@ -68,6 +68,19 @@ struct led_ops {
 	 * @return 0 if OK, -ve on error
 	 */
 	int (*set_period)(struct udevice *dev, int period_ms);
+
+	/**
+	 * led_set_pattern() - set the leds to blink in a pattern
+	 *
+	 * This records the period if supported, or returns -ENOSYS if not.
+	 * To start the LED blinking, use set_state().
+	 *
+	 * @dev:	LED device to change
+	 * @program: Pattern to program to LED
+	 * @period_ms:	LED blink period in milliseconds
+	 * @return 0 if OK, -ve on error
+	 */
+	int (*set_pattern)(struct udevice *dev, int program, int period_ms);
 #endif
 };
 
@@ -116,5 +129,15 @@ int led_set_period(struct udevice *dev, int period_ms);
  *
  */
 int led_default_state(void);
+
+/**
+ * led_set_pattern() - set the blink pattern of an LED
+ *
+ * @dev:	LED device to change
+ * @program: Which pattern to program
+ * @period_ms:	LED blink period in milliseconds
+ * @return 0 if OK, -ve on error
+ */
+int led_set_pattern(struct udevice *dev, int program, int period_ms);
 
 #endif

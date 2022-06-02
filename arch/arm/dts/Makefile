@@ -824,6 +824,7 @@ dtb-$(CONFIG_MX7) += imx7d-sdb.dtb \
 
 
 dtb-$(CONFIG_ARCH_MX7ULP) += imx7ulp-com.dtb \
+	imx7ulp-ec401w.dtb \
 	imx7ulp-10x10-val.dtb \
 	imx7ulp-14x14-val.dtb \
 	imx7ulp-evk.dtb \
