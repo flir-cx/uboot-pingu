@@ -13,6 +13,9 @@
 #include "imx6_spl.h"
 #endif
 
+#define CONFIG_SYS_BOARD "ec101"
+#define CONFIG_BOARD_DESCRIPTION	"FLIR ec101 board"
+
 #define CONFIG_MACH_TYPE	3980
 #define CONFIG_MXC_UART_BASE	UART1_BASE
 #define CONSOLE_DEV		"ttymxc0"
@@ -65,6 +68,25 @@
 #define CONFIG_PCIE_IMX_POWER_GPIO	IMX_GPIO_NR(3, 19)
 #endif
 #endif
+
+/*Spi*/
+#define CONFIG_SYS_USE_SPINOR
+#ifdef CONFIG_SYS_USE_SPINOR
+#define CONFIG_CMD_SF
+#define CONFIG_SPI_FLASH
+#define CONFIG_SPI_FLASH_STMICRO
+#define CONFIG_SPI_FLASH_BAR
+#define CONFIG_MXC_SPI
+#define CONFIG_SF_DEFAULT_BUS  0
+#define CONFIG_SF_DEFAULT_SPEED 20000000
+#define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
+#define CONFIG_SF_DEFAULT_CS  IMX_GPIO_NR(5, 28)
+#endif
+#define CONFIG_CMD_SPI		/* SPI utility			*/
+/* DA9063 PMIC */
+#define DA9063_RW                   0x1 /* Host indicate reading acces via RW=1 */
+#define DA9063_SPI_CS               IMX_GPIO_NR(3, 20)
+#define DA9063_SPI_BUS              3
 
 /* USB Configs */
 #ifdef CONFIG_CMD_USB

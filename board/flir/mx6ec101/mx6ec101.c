@@ -15,6 +15,7 @@
 #include <asm/arch/mx6-pins.h>
 #include <asm/global_data.h>
 #include <asm/mach-imx/spi.h>
+#include <spi.h>
 #include <env.h>
 #include <linux/errno.h>
 #include <linux/delay.h>
@@ -50,7 +51,24 @@
 #endif
 #endif /*CONFIG_FSL_FASTBOOT*/
 
+// #include <cmd_loadfpga.h>
+#include "../../../flir/include/cmd_loadfpga.h"
+#include "../../../flir/include/da9063.h"
+#include "../../../flir/include/da9063_regs.h"
+#include "../../../include/configs/platform.h"
+#include "../../../board/flir/ec101/ec101.h"
+#include "../../../flir/include/board_support.h"
+
 DECLARE_GLOBAL_DATA_PTR;
+
+char *get_last_reset_cause(void);
+void mxc_mipi_dsi_enable(void);
+
+void imx_bypass_ldo(void);
+struct spi_slave *slave;
+int setup_pmic_voltages(void);
+int platform_setup_pmic_voltages(void);
+int fpga_power(bool enable);
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
@@ -81,23 +99,27 @@ DECLARE_GLOBAL_DATA_PTR;
 
 #define KEY_VOL_UP	IMX_GPIO_NR(1, 4)
 
+//default hw support
+static struct hw_support hardware =
+{
+	.mipi_mux =	false,
+	.display = true,
+	.usb_charge = false,
+	.name = "Unknown Camera"
+};
+
 int dram_init(void)
 {
 	gd->ram_size = imx_ddr_size();
 	return 0;
 }
 
-static iomux_v3_cfg_t const uart1_pads[] = {
-	IOMUX_PADS(PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
-	IOMUX_PADS(PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
-};
-
 #ifdef CONFIG_MXC_SPI
 static iomux_v3_cfg_t const ecspi1_pads[] = {
-	IOMUX_PADS(PAD_KEY_COL0__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL)),
-	IOMUX_PADS(PAD_KEY_COL1__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL)),
-	IOMUX_PADS(PAD_KEY_ROW0__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL)),
-	IOMUX_PADS(PAD_KEY_ROW1__GPIO4_IO09 | MUX_PAD_CTRL(NO_PAD_CTRL)),
+    MX6_PAD_CSI0_DAT4__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_CSI0_DAT5__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_CSI0_DAT6__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 static void setup_spi(void)
@@ -137,6 +159,23 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 	IOMUX_PADS(PAD_DISP0_DAT22__IPU1_DISP0_DATA22 | MUX_PAD_CTRL(NO_PAD_CTRL)),
 	IOMUX_PADS(PAD_DISP0_DAT23__IPU1_DISP0_DATA23 | MUX_PAD_CTRL(NO_PAD_CTRL)),
 };
+
+int board_spi_cs_gpio(unsigned bus, unsigned cs)
+{
+	if (bus == 1) {
+		if(cs == 0) {
+			return IMX_GPIO_NR(5, 28); //SPI1_CS0_n
+		} else if(cs == 1) {
+			return IMX_GPIO_NR(5, 29); //SPI1_CS1_n
+		}
+	} else if (bus == 3) {
+		if(cs == 0) {
+			return IMX_GPIO_NR(3, 20); //DA9063 CS
+		}
+	}
+
+	return -1;
+}
 
 static iomux_v3_cfg_t const bl_pads[] = {
 	IOMUX_PADS(PAD_SD1_DAT3__GPIO1_IO21 | MUX_PAD_CTRL(NO_PAD_CTRL)),
@@ -854,9 +893,26 @@ int board_ehci_hcd_init(int port)
 }
 #endif
 
+// Initialize boot timer
+void board_setup_timer(void)
+{
+	struct epit *epit_regs = (struct epit *)EPIT1_BASE_ADDR;
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	int reg;
+
+	clrbits_le32(&epit_regs->cr, 0x00000001);   // Disable
+	setbits_le32(&epit_regs->cr, 0x012C0412);   // 1 MHz free running no output
+	setbits_le32(&epit_regs->cr, 0x00000001);   // Enable
+
+	reg = readl(&mxc_ccm->CCGR1);
+	reg |= MXC_CCM_CCGR1_EPIT1S_MASK;
+	writel(reg, &mxc_ccm->CCGR1);
+}
+
 int board_early_init_f(void)
 {
-	setup_iomux_uart();
+        board_setup_timer();
+        setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
 #endif
@@ -871,16 +927,27 @@ void ldo_mode_set(int ldo_bypass)
 }
 #endif
 
+int checkboard(void)
+{
+    printf("Board: %s - %s\n", CONFIG_BOARD_DESCRIPTION, hardware.name);
+	return 0;
+}
+
 int board_init(void)
 {
+        int ret = 0;
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
 #if defined(CONFIG_DM_REGULATOR)
-	regulators_enable_boot_on(false);
+       	regulators_enable_boot_on(false);
 #endif
 
 #ifdef CONFIG_MXC_SPI
+	ret = platform_setup_pmic_voltages();
+	// ret = setup_pmic_voltages();
+       	if (ret)
+		return -1;
 	setup_spi();
 #endif
 
@@ -888,6 +955,22 @@ int board_init(void)
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 #endif
 
+#ifdef CONFIG_SYS_I2C_MXC
+
+	struct Eeprom ioboard =
+	{
+	 .i2c_bus = 2,
+	 .i2c_address = 0xaa,
+	 .i2c_offset = 0x0,
+	 //.article = 0,
+	 //.revision = 0,
+	 //.name = "\0",
+	};
+
+
+	board_support_setup(&ioboard, &hardware);
+#endif
+	
 #if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
 	setup_pcie();
 #endif
@@ -1283,7 +1366,10 @@ int board_late_init(void)
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
-
+	
+#ifdef CONFIG_SYS_USE_SPINOR
+       	setup_spinor();
+#endif
 	env_set("tee", "no");
 #ifdef CONFIG_IMX_OPTEE
 	env_set("tee", "yes");
@@ -1307,406 +1393,194 @@ int board_late_init(void)
 	return 0;
 }
 
-#ifdef CONFIG_FSL_FASTBOOT
-#ifdef CONFIG_ANDROID_RECOVERY
 
-#define GPIO_VOL_DN_KEY IMX_GPIO_NR(1, 5)
-iomux_v3_cfg_t const recovery_key_pads[] = {
-	IOMUX_PADS(PAD_GPIO_5__GPIO1_IO05 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-};
+#if defined(CONFIG_OF_BOARD_SETUP)
 
-int is_recovery_key_pressing(void)
+/* Platform function to modify the FDT as needed */
+int ft_board_setup(void *blob, struct bd_info *bd)
 {
-	int button_pressed = 0;
-	int ret;
-	struct gpio_desc desc;
+	uchar enetaddr[6];
+	//fix ethernet mac-address using direct path to node
+	eth_env_get_enetaddr("ethaddr", enetaddr);
+	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000", "mac-address", &enetaddr, 6, 1);
+	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000", "local-mac-address", &enetaddr, 6, 1);
 
-	/* Check Recovery Combo Button press or not. */
-	SETUP_IOMUX_PADS(recovery_key_pads);
+	/*	do_fixup_by_path_string(blob, "/u-boot", "version", U_BOOT_VERSION_STRING);
+	do_fixup_by_path_string(blob, "/u-boot", "reset-cause", get_last_reset_cause());
+	*/
 
-	ret = dm_gpio_lookup_name("GPIO1_5", &desc);
-	if (ret) {
-		printf("%s lookup GPIO1_5 failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	ret = dm_gpio_request(&desc, "volume_dn_key");
-	if (ret) {
-		printf("%s request volume_dn_key failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	dm_gpio_set_dir_flags(&desc, GPIOD_IS_IN);
-
-	if (dm_gpio_get_value(&desc) == 0) { /* VOL_DN key is low assert */
-		button_pressed = 1;
-		printf("Recovery key pressed\n");
-	}
-
-	return  button_pressed;
-}
-
-#endif /*CONFIG_ANDROID_RECOVERY*/
-
-#endif /*CONFIG_FSL_FASTBOOT*/
-
-#ifdef CONFIG_SPL_BUILD
-#include <asm/arch/mx6-ddr.h>
-#include <spl.h>
-#include <linux/libfdt.h>
-
-#ifdef CONFIG_SPL_OS_BOOT
-int spl_start_uboot(void)
-{
-	gpio_request(KEY_VOL_UP, "KEY Volume UP");
-	gpio_direction_input(KEY_VOL_UP);
-
-	/* Only enter in Falcon mode if KEY_VOL_UP is pressed */
-	return gpio_get_value(KEY_VOL_UP);
-}
+#if defined(CONFIG_VIDEO_IPUV3)
+    int temp[2];
+    temp[0] = cpu_to_fdt32(gd->fb_base);
+    temp[1] = cpu_to_fdt32(640*480*2);
+    do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
 #endif
 
-static void ccgr_init(void)
-{
-	struct mxc_ccm_reg *ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-
-	writel(0x00C03F3F, &ccm->CCGR0);
-	writel(0x0030FC03, &ccm->CCGR1);
-	writel(0x0FFFC000, &ccm->CCGR2);
-	writel(0x3FF00000, &ccm->CCGR3);
-	writel(0x00FFF300, &ccm->CCGR4);
-	writel(0x0F0000C3, &ccm->CCGR5);
-	writel(0x000003FF, &ccm->CCGR6);
+#if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
+    patch_fdt_eeprom(blob);
+#endif
+	return 0;
 }
 
-static int mx6q_dcd_table[] = {
-	0x020e0798, 0x000C0000,
-	0x020e0758, 0x00000000,
-	0x020e0588, 0x00000030,
-	0x020e0594, 0x00000030,
-	0x020e056c, 0x00000030,
-	0x020e0578, 0x00000030,
-	0x020e074c, 0x00000030,
-	0x020e057c, 0x00000030,
-	0x020e058c, 0x00000000,
-	0x020e059c, 0x00000030,
-	0x020e05a0, 0x00000030,
-	0x020e078c, 0x00000030,
-	0x020e0750, 0x00020000,
-	0x020e05a8, 0x00000030,
-	0x020e05b0, 0x00000030,
-	0x020e0524, 0x00000030,
-	0x020e051c, 0x00000030,
-	0x020e0518, 0x00000030,
-	0x020e050c, 0x00000030,
-	0x020e05b8, 0x00000030,
-	0x020e05c0, 0x00000030,
-	0x020e0774, 0x00020000,
-	0x020e0784, 0x00000030,
-	0x020e0788, 0x00000030,
-	0x020e0794, 0x00000030,
-	0x020e079c, 0x00000030,
-	0x020e07a0, 0x00000030,
-	0x020e07a4, 0x00000030,
-	0x020e07a8, 0x00000030,
-	0x020e0748, 0x00000030,
-	0x020e05ac, 0x00000030,
-	0x020e05b4, 0x00000030,
-	0x020e0528, 0x00000030,
-	0x020e0520, 0x00000030,
-	0x020e0514, 0x00000030,
-	0x020e0510, 0x00000030,
-	0x020e05bc, 0x00000030,
-	0x020e05c4, 0x00000030,
-	0x021b0800, 0xa1390003,
-	0x021b080c, 0x001F001F,
-	0x021b0810, 0x001F001F,
-	0x021b480c, 0x001F001F,
-	0x021b4810, 0x001F001F,
-	0x021b083c, 0x43270338,
-	0x021b0840, 0x03200314,
-	0x021b483c, 0x431A032F,
-	0x021b4840, 0x03200263,
-	0x021b0848, 0x4B434748,
-	0x021b4848, 0x4445404C,
-	0x021b0850, 0x38444542,
-	0x021b4850, 0x4935493A,
-	0x021b081c, 0x33333333,
-	0x021b0820, 0x33333333,
-	0x021b0824, 0x33333333,
-	0x021b0828, 0x33333333,
-	0x021b481c, 0x33333333,
-	0x021b4820, 0x33333333,
-	0x021b4824, 0x33333333,
-	0x021b4828, 0x33333333,
-	0x021b08b8, 0x00000800,
-	0x021b48b8, 0x00000800,
-	0x021b0004, 0x00020036,
-	0x021b0008, 0x09444040,
-	0x021b000c, 0x555A7975,
-	0x021b0010, 0xFF538F64,
-	0x021b0014, 0x01FF00DB,
-	0x021b0018, 0x00001740,
-	0x021b001c, 0x00008000,
-	0x021b002c, 0x000026d2,
-	0x021b0030, 0x005A1023,
-	0x021b0040, 0x00000027,
-	0x021b0000, 0x831A0000,
-	0x021b001c, 0x04088032,
-	0x021b001c, 0x00008033,
-	0x021b001c, 0x00048031,
-	0x021b001c, 0x09408030,
-	0x021b001c, 0x04008040,
-	0x021b0020, 0x00005800,
-	0x021b0818, 0x00011117,
-	0x021b4818, 0x00011117,
-	0x021b0004, 0x00025576,
-	0x021b0404, 0x00011006,
-	0x021b001c, 0x00000000,
-};
-
-static int mx6qp_dcd_table[] = {
-	0x020e0798, 0x000c0000,
-	0x020e0758, 0x00000000,
-	0x020e0588, 0x00000030,
-	0x020e0594, 0x00000030,
-	0x020e056c, 0x00000030,
-	0x020e0578, 0x00000030,
-	0x020e074c, 0x00000030,
-	0x020e057c, 0x00000030,
-	0x020e058c, 0x00000000,
-	0x020e059c, 0x00000030,
-	0x020e05a0, 0x00000030,
-	0x020e078c, 0x00000030,
-	0x020e0750, 0x00020000,
-	0x020e05a8, 0x00000030,
-	0x020e05b0, 0x00000030,
-	0x020e0524, 0x00000030,
-	0x020e051c, 0x00000030,
-	0x020e0518, 0x00000030,
-	0x020e050c, 0x00000030,
-	0x020e05b8, 0x00000030,
-	0x020e05c0, 0x00000030,
-	0x020e0774, 0x00020000,
-	0x020e0784, 0x00000030,
-	0x020e0788, 0x00000030,
-	0x020e0794, 0x00000030,
-	0x020e079c, 0x00000030,
-	0x020e07a0, 0x00000030,
-	0x020e07a4, 0x00000030,
-	0x020e07a8, 0x00000030,
-	0x020e0748, 0x00000030,
-	0x020e05ac, 0x00000030,
-	0x020e05b4, 0x00000030,
-	0x020e0528, 0x00000030,
-	0x020e0520, 0x00000030,
-	0x020e0514, 0x00000030,
-	0x020e0510, 0x00000030,
-	0x020e05bc, 0x00000030,
-	0x020e05c4, 0x00000030,
-	0x021b0800, 0xa1390003,
-	0x021b080c, 0x001b001e,
-	0x021b0810, 0x002e0029,
-	0x021b480c, 0x001b002a,
-	0x021b4810, 0x0019002c,
-	0x021b083c, 0x43240334,
-	0x021b0840, 0x0324031a,
-	0x021b483c, 0x43340344,
-	0x021b4840, 0x03280276,
-	0x021b0848, 0x44383A3E,
-	0x021b4848, 0x3C3C3846,
-	0x021b0850, 0x2e303230,
-	0x021b4850, 0x38283E34,
-	0x021b081c, 0x33333333,
-	0x021b0820, 0x33333333,
-	0x021b0824, 0x33333333,
-	0x021b0828, 0x33333333,
-	0x021b481c, 0x33333333,
-	0x021b4820, 0x33333333,
-	0x021b4824, 0x33333333,
-	0x021b4828, 0x33333333,
-	0x021b08c0, 0x24912249,
-	0x021b48c0, 0x24914289,
-	0x021b08b8, 0x00000800,
-	0x021b48b8, 0x00000800,
-	0x021b0004, 0x00020036,
-	0x021b0008, 0x24444040,
-	0x021b000c, 0x555A7955,
-	0x021b0010, 0xFF320F64,
-	0x021b0014, 0x01ff00db,
-	0x021b0018, 0x00001740,
-	0x021b001c, 0x00008000,
-	0x021b002c, 0x000026d2,
-	0x021b0030, 0x005A1023,
-	0x021b0040, 0x00000027,
-	0x021b0400, 0x14420000,
-	0x021b0000, 0x831A0000,
-	0x021b0890, 0x00400C58,
-	0x00bb0008, 0x00000000,
-	0x00bb000c, 0x2891E41A,
-	0x00bb0038, 0x00000564,
-	0x00bb0014, 0x00000040,
-	0x00bb0028, 0x00000020,
-	0x00bb002c, 0x00000020,
-	0x021b001c, 0x04088032,
-	0x021b001c, 0x00008033,
-	0x021b001c, 0x00048031,
-	0x021b001c, 0x09408030,
-	0x021b001c, 0x04008040,
-	0x021b0020, 0x00005800,
-	0x021b0818, 0x00011117,
-	0x021b4818, 0x00011117,
-	0x021b0004, 0x00025576,
-	0x021b0404, 0x00011006,
-	0x021b001c, 0x00000000,
-};
-
-static int mx6dl_dcd_table[] = {
-	0x020e0774, 0x000C0000,
-	0x020e0754, 0x00000000,
-	0x020e04ac, 0x00000030,
-	0x020e04b0, 0x00000030,
-	0x020e0464, 0x00000030,
-	0x020e0490, 0x00000030,
-	0x020e074c, 0x00000030,
-	0x020e0494, 0x00000030,
-	0x020e04a0, 0x00000000,
-	0x020e04b4, 0x00000030,
-	0x020e04b8, 0x00000030,
-	0x020e076c, 0x00000030,
-	0x020e0750, 0x00020000,
-	0x020e04bc, 0x00000030,
-	0x020e04c0, 0x00000030,
-	0x020e04c4, 0x00000030,
-	0x020e04c8, 0x00000030,
-	0x020e04cc, 0x00000030,
-	0x020e04d0, 0x00000030,
-	0x020e04d4, 0x00000030,
-	0x020e04d8, 0x00000030,
-	0x020e0760, 0x00020000,
-	0x020e0764, 0x00000030,
-	0x020e0770, 0x00000030,
-	0x020e0778, 0x00000030,
-	0x020e077c, 0x00000030,
-	0x020e0780, 0x00000030,
-	0x020e0784, 0x00000030,
-	0x020e078c, 0x00000030,
-	0x020e0748, 0x00000030,
-	0x020e0470, 0x00000030,
-	0x020e0474, 0x00000030,
-	0x020e0478, 0x00000030,
-	0x020e047c, 0x00000030,
-	0x020e0480, 0x00000030,
-	0x020e0484, 0x00000030,
-	0x020e0488, 0x00000030,
-	0x020e048c, 0x00000030,
-	0x021b0800, 0xa1390003,
-	0x021b080c, 0x001F001F,
-	0x021b0810, 0x001F001F,
-	0x021b480c, 0x001F001F,
-	0x021b4810, 0x001F001F,
-	0x021b083c, 0x4220021F,
-	0x021b0840, 0x0207017E,
-	0x021b483c, 0x4201020C,
-	0x021b4840, 0x01660172,
-	0x021b0848, 0x4A4D4E4D,
-	0x021b4848, 0x4A4F5049,
-	0x021b0850, 0x3F3C3D31,
-	0x021b4850, 0x3238372B,
-	0x021b081c, 0x33333333,
-	0x021b0820, 0x33333333,
-	0x021b0824, 0x33333333,
-	0x021b0828, 0x33333333,
-	0x021b481c, 0x33333333,
-	0x021b4820, 0x33333333,
-	0x021b4824, 0x33333333,
-	0x021b4828, 0x33333333,
-	0x021b08b8, 0x00000800,
-	0x021b48b8, 0x00000800,
-	0x021b0004, 0x0002002D,
-	0x021b0008, 0x00333030,
-	0x021b000c, 0x3F435313,
-	0x021b0010, 0xB66E8B63,
-	0x021b0014, 0x01FF00DB,
-	0x021b0018, 0x00001740,
-	0x021b001c, 0x00008000,
-	0x021b002c, 0x000026d2,
-	0x021b0030, 0x00431023,
-	0x021b0040, 0x00000027,
-	0x021b0000, 0x831A0000,
-	0x021b001c, 0x04008032,
-	0x021b001c, 0x00008033,
-	0x021b001c, 0x00048031,
-	0x021b001c, 0x05208030,
-	0x021b001c, 0x04008040,
-	0x021b0020, 0x00005800,
-	0x021b0818, 0x00011117,
-	0x021b4818, 0x00011117,
-	0x021b0004, 0x0002556D,
-	0x021b0404, 0x00011006,
-	0x021b001c, 0x00000000,
-};
-
-static void ddr_init(int *table, int size)
+int platform_setup_pmic_voltages(void)
 {
-	int i;
+    unsigned char dev_id, var_id, cust_id, conf_id;
+    struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 
-	for (i = 0; i < size / 2 ; i++)
-		writel(table[2 * i + 1], table[2 * i]);
+    gpio_request(IMX_GPIO_NR(3, 20), "CS SPI4");
+    gpio_direction_output(IMX_GPIO_NR(3, 20),1);
+    imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
+                                     ARRAY_SIZE(ecspi4_pads));
+    // enable ecspi4_clk
+    setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
+    slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
+    if (!slave)
+        return -1;
+    spi_claim_bus(slave);
+
+    /* Read and print PMIC identification */
+    if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+        printf("Could not read PMIC ID registers\n");
+        spi_release_bus(slave);
+        return -1;
+    }
+    printf("PMIC:  DA9063, Device: 0x%02x, Variant: 0x%02x, "
+           "Customer: 0x%02x, Config: 0x%02x\n", dev_id, var_id,
+           cust_id, conf_id);
+    if (dev_id != 0x61 ||
+       var_id != 0x63) {
+           printf("PMIC DA90631 detected wrong device");
+           spi_release_bus(slave);
+           return -1;
+    }
+
+    //turn on nONKEY_PIN to port mode, e.g. power switch reacts
+    //to button press, instead of button release!
+    pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
+
+	//disable comparator
+	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
+	//disable watchdog
+	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
+
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+    /* 1V3 is highest allowable voltage when LDO is bypassed */
+    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+	    printf("Could not configure VBCORE1 voltage to 1V3\n");
+    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+	    printf("Could not configure VBCORE2 voltage to 1V3\n");
+    //    imx_bypass_ldo();
+    /* 1V2 is an acceptable level up to 800 MHz */
+    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+	    printf("Could not configure VBCORE1 voltage to 1V2\n");
+    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+	    printf("Could not configure VBCORE2 voltage to 1V2\n");
+#endif
+    /* gpio_free(IMX_GPIO_NR(3,20)); */
+
+    spi_release_bus(slave);
+    setup_spi();
+    return 0;
 }
 
-static void spl_dram_init(void)
+int setup_pmic_voltages(void)
 {
-	if (is_mx6dq())
-		ddr_init(mx6q_dcd_table, ARRAY_SIZE(mx6q_dcd_table));
-	else if (is_mx6dqp())
-		ddr_init(mx6qp_dcd_table, ARRAY_SIZE(mx6qp_dcd_table));
-	else if (is_mx6sdl())
-		ddr_init(mx6dl_dcd_table, ARRAY_SIZE(mx6dl_dcd_table));
-}
+    unsigned char dev_id, var_id, cust_id, conf_id;
+    struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 
-void board_init_f(ulong dummy)
-{
-	/* DDR initialization */
-	spl_dram_init();
+    imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
+                                     ARRAY_SIZE(ecspi4_pads));
+    // enable ecspi4_clk
+    setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
+    slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
+    if (!slave)
+        return -1;
+    spi_claim_bus(slave);
 
-	/* setup AIPS and disable watchdog */
-	arch_cpu_init();
+    /* Read and print PMIC identification */
+    if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
+            pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+        printf("Could not read PMIC ID registers\n");
+        spi_release_bus(slave);
+        return -1;
+    }
+    printf("PMIC:  DA9063, Device: 0x%02x, Variant: 0x%02x, "
+           "Customer: 0x%02x, Config: 0x%02x\n", dev_id, var_id,
+           cust_id, conf_id);
 
-	ccgr_init();
-	gpr_init();
+    //turn on nONKEY_PIN to port mode, e.g. power switch reacts
+    //to button press, instead of button release!
+    pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
 
-	/* iomux and setup of i2c */
-	board_early_init_f();
+	//disable comparator
+	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
+	//disable watchdog
+	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
 
-	/* setup GP timer */
-	timer_init();
-
-	/* UART clocks enabled and gd valid - init serial console */
-	preloader_console_init();
-
-	/* Clear the BSS. */
-	memset(__bss_start, 0, __bss_end - __bss_start);
-
-	/* load/boot image from boot device */
-	board_init_r(NULL, 0);
-}
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+    /* 1V3 is highest allowable voltage when LDO is bypassed */
+    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+	    printf("Could not configure VBCORE1 voltage to 1V3\n");
+    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+	    printf("Could not configure VBCORE2 voltage to 1V3\n");
+    imx_bypass_ldo();
+    /* 1V2 is an acceptable level up to 800 MHz */
+    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+	    printf("Could not configure VBCORE1 voltage to 1V2\n");
+    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+	    printf("Could not configure VBCORE2 voltage to 1V2\n");
 #endif
 
-#ifdef CONFIG_SPL_LOAD_FIT
-int board_fit_config_name_match(const char *name)
+    spi_release_bus(slave);
+    return 0;
+}
+
+int fpga_power(bool enable)
 {
-	if (is_mx6dq()) {
-		if (!strcmp(name, "imx6q-sabresd"))
-			return 0;
-	} else if (is_mx6dqp()) {
-		if (!strcmp(name, "imx6qp-sabresd"))
-			return 0;
-	} else if (is_mx6dl()) {
-		if (!strcmp(name, "imx6dl-sabresd"))
-			return 0;
+    unsigned char conf_id;
+    if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+        printf("Could not read PMIC ID registers\n");
+        spi_release_bus(slave);
+        return -1;
+    }
+
+  	spi_claim_bus(slave);
+    // BPRO_EN (1V0_FPGA)
+    pmic_write_bitfield(DA9063_REG_BPRO_CONT,DA9063_BUCK_EN,enable?DA9063_BUCK_EN:0);
+    // CORE_SW_EN  (1V8_FPGA)
+    pmic_write_bitfield(DA9063_REG_BCORE1_CONT,DA9063_CORE_SW_EN,enable?DA9063_CORE_SW_EN:0);
+    // PERI_SW_EN    (1V2_FPGA)
+    pmic_write_bitfield(DA9063_REG_BPERI_CONT,DA9063_PERI_SW_EN,enable?DA9063_PERI_SW_EN:0);
+	if(conf_id == 0x3b) //revC
+	{
+		// BMEM_EN         (2V5_FPGA)
+		pmic_write_bitfield(DA9063_REG_BMEM_CONT,DA9063_BUCK_EN,enable?DA9063_BUCK_EN:0);
+		// LDO10_EN          (3V15_FPGA)
+		pmic_write_bitfield(DA9063_REG_LDO10_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
 	}
-
-	return -1;
+	else //revD
+	{
+		// LDO10_EN          (2V5_FPGA)
+		pmic_write_bitfield(DA9063_REG_LDO10_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
+		// LDO8_EN          (3V15_FPGA)
+		pmic_write_bitfield(DA9063_REG_LDO8_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
+	}
+	spi_release_bus(slave);
+	return 0;
+	
 }
-#endif
+
+#endif /* CONFIG_OF_BOARD_SETUP */

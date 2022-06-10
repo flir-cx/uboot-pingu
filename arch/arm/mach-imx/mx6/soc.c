@@ -524,6 +524,16 @@ static void imx_set_vddpu_power_down(void)
 	writel(val, &anatop->reg_core_clr);
 }
 
+void imx_bypass_ldo(void)
+{
+	struct anatop_regs *anatop = (struct anatop_regs *)ANATOP_BASE_ADDR;
+	u32 val;
+
+	/* set REG2 (ARM) and REG0 (SOC) to fully open (REG1 = PU will be switched off) */
+	val = 0x007c001f;
+	writel(val, &anatop->reg_core_set);
+}
+
 static void imx_set_pcie_phy_power_down(void)
 {
 	u32 val;
