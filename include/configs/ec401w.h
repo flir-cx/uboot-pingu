@@ -269,8 +269,10 @@
 #define CONFIG_REC_BOOT_ENV \
 	"recargs=setenv bootargs console=${console},${baudrate} " \
 		"root=/dev/ram0 recovery ethaddr=${ethaddr}\0" \
-        "fdefargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/ram0 factorydefault ethaddr=${ethaddr} factorydefault\0" \
+\
+	"fdefargs=setenv bootargs console=${console},${baudrate} " \
+		"root=/dev/ram0 factorydefault ethaddr=${ethaddr}\0" \
+\
 	"loadinitrd=fatload mmc ${mmcdev}:${mmcpart} ${initrd_addr} ${initrd_file}\0" \
 	"initrd_addr=0x63800000\0" \
 	"initrd_file=uRamdisk.img\0" \

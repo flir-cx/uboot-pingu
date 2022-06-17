@@ -205,8 +205,7 @@ int check_button_sequence(void)
         printf("Factory default\n");
         // User release button while steady leds
         // inject factory default here
-	printf("triggercommand = factorydefaultboot\n");
-	env_set("triggercommand", "factorydefaultboot");
+        env_set("triggercommand", "factorydefaultboot");
         return OK;
     }
     
@@ -217,7 +216,6 @@ static int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char * 
 {
     int pwr_btn = 0;
 
-    printf("triggercommand = recoveryboot\n");
     env_set("triggercommand", "recoveryboot");
 
     pcc_clock_enable(PER_CLK_PCTLC, true);
