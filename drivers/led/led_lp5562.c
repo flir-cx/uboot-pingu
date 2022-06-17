@@ -331,50 +331,17 @@ static int lp5562_led_set_state(struct udevice *dev, enum led_state_t state)
 
 #ifdef CONFIG_LED_BLINK
 
-static int lp5562_led_pattern_boot(u16 *p1, u16 *p2, u16 *p3, u16 ramp_step, u16 wait_step)
+static int lp5562_led_pattern_boot(u16 *p1, u16 *p2, u16 *p3)
 {
-	int opc = 0;
-	u16 *p;
+	static const u16 bp1[] = { 0x047F, 0xE004, 0xE200, 0x04FF, 0xE004, 0xE200, 0x0000, };
+	static const u16 bp2[] = { 0xE080, 0x047F, 0xE008, 0xE080, 0x04FF, 0xE008, 0x0000, };
+	static const u16 bp3[] = { 0xE100, 0x047F, 0xE002, 0xE100, 0x04FF, 0xE002, 0x0000, };
 
-	// Engine 1
-	p = p1;
-	p[opc++] = LED_PGRM_WAIT_TRIGGER3;
-	p[opc++] = LED_PGRM_INCREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_INCREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_DECREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_DECREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_GOTO_START;
+	memcpy(p1, bp1, sizeof(bp1));
+	memcpy(p2, bp2, sizeof(bp2));
+	memcpy(p3, bp3, sizeof(bp3));
 
-	// Engine 2
-	p = p2;
-	opc = 0;
-	p[opc++] = LED_PGRM_WAIT_TRIGGER3;
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_INCREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_INCREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_DECREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_DECREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_GOTO_START;
-
-	// Engine 3
-	p = p3;
-	opc = 0;
-	p[opc++] = LED_PGRM_SEND_TRIGGER12;
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_INCREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_INCREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_WAIT_STEP(wait_step);
-	p[opc++] = LED_PGRM_DECREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_DECREMENT_STEP(ramp_step);
-	p[opc++] = LED_PGRM_GOTO_START;
-
-	return opc;
+	return sizeof(bp1);
 }
 
 static int lp5562_led_pattern_ramp_all(u16 *p1, u16 *p2, u16 *p3, u16 wait_time)
@@ -521,7 +488,7 @@ static int lp5562_led_program_pattern(struct udevice *dev, int program, int peri
 	switch (program)
 	{
 		case PATTERN_BOOT:
-			opcode = lp5562_led_pattern_boot(program1, program2, program3, BOOT_RAMP_STEP, WAIT_RAMP_STEP);
+			opcode = lp5562_led_pattern_boot(program1, program2, program3);
 			break;
 		case PATTERN_RAMP_ALL:
 			opcode = lp5562_led_pattern_ramp_all(program1, program2, program3, wait_time);
@@ -537,11 +504,10 @@ static int lp5562_led_program_pattern(struct udevice *dev, int program, int peri
 			break;
 	}
 
-	ret = lp5562_led_program_engine(parent_dev, program1, opcode, 1);
+	ret = lp5562_led_program_engine(parent_dev, program3, opcode, 3);
 	if(ret)
 	{
-		printf("failed to program engine 1: %d", ret);
-		goto done;
+		printf("failed to program engine 3: %d", ret);
 	}
 	ret = lp5562_led_program_engine(parent_dev, program2, opcode, 2);
 	if(ret)
@@ -549,10 +515,11 @@ static int lp5562_led_program_pattern(struct udevice *dev, int program, int peri
 		printf("failed to program engine 2: %d", ret);
 		goto done;
 	}
-	ret =lp5562_led_program_engine(parent_dev, program3, opcode, 3);
+	ret = lp5562_led_program_engine(parent_dev, program1, opcode, 1);
 	if(ret)
 	{
-		printf("failed to program engine 3: %d", ret);
+		printf("failed to program engine 1: %d", ret);
+		goto done;
 	}
 done:
 	return ret;

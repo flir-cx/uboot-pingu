@@ -129,22 +129,22 @@
 		led0@0 {
 			reg = <0x2>; /* B */
 			label = "3";
-			ti,led_current = <0x32>; /* 0.5ma */
+			ti,led_current = <0x04>;
 		};
 		led1@1 {
 			reg = <0x3>; /* G */
 			label = "2";
-			ti,led_current = <0x32>; /* 0.5ma */
+			ti,led_current = <0x04>;
 		};
 		led2@2 {
 			reg = <0x4>; /* R */
 			label = "1";
-			ti,led_current = <0x32>; /* 0.5ma */
+			ti,led_current = <0x05>;
 		};
 		led3@3 {
 			reg = <0xE>;
 			label = "r"; /* W */
-			ti,led_current = <0x32>; /* 0.5ma */
+			ti,led_current = <0x19>;
 		};
 	};
 };
