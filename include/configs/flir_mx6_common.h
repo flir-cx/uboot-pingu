@@ -476,9 +476,9 @@
                 "run recargs; " \
                 "bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
         "parts_flir=\"uuid_disk=${uuid_disk};" \
-                "start=2MiB,name=recovery,size=24MiB,uuid=${part1_uuid};" \
-                "name=rootfs1,size=512MiB,uuid=${part2_uuid};" \
-                "name=rootfs2,size=512MiB,uuid=${part3_uuid};" \
+                "start=2MiB,name=recovery,size=40MiB,uuid=${part1_uuid};" \
+                "name=rootfs1,size=504MiB,uuid=${part2_uuid};" \
+                "name=rootfs2,size=504MiB,uuid=${part3_uuid};" \
                 "name=rootfsrw,size=128MiB,uuid=${part4_uuid};" \
                 "name=apps,size=512MiB,uuid=${part5_uuid};" \
                 "name=data,size=512MiB,uuid=${part6_uuid};" \
