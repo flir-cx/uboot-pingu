@@ -27,6 +27,9 @@
 #endif
 
 #define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6dl-evco.dtb\0"
+#define CONFIG_EMMC_FUSE_CMD \
+        "fuse_emmc_boot_cmd=fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; \0" \
+	"fuse_emmc_boot=run fuse_emmc_boot_cmd\0"
 #include "flir_mx6_common.h"
 
 #define CONFIG_IMX6_LDO_BYPASS

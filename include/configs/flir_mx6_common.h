@@ -357,9 +357,7 @@
 	"serverip=192.168.42.1\0" \
 	"netmask=255.255.0.0\0"
 
-#define CONFIG_EMMC_FUSE_CMD \
-        "fuse_emmc_boot_cmd=fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; \0" \
-	"fuse_emmc_boot=run fuse_emmc_boot_cmd\0"
+/* #define CONFIG_EMMC_FUSE_CMD Should be defined in the file including this one e.g. eoco.h */
 #define CONFIG_BOOTCOMMAND \
 	"if recoverykey && kbd_secret; then " \
                 "run recoveryboot;" \
