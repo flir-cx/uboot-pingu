@@ -163,6 +163,7 @@
 
 #define CONFIG_BOOTCOMMAND \
 	"setmac;" \
+	"bootstate;" \
 	"if recoverytrigger; then " \
 		"run ${triggercommand};" \
 	"else " \
@@ -336,7 +337,6 @@
 			"run select_boot;\0" \
 \
 	"mmcbootflir=echo Booting from mmc (flir)...;" \
-			"bootstate;" \
 			"run setup_boot;run update-fdt; run selectfdtfile; " \
 			"run hw_start;" \
 			"run mmcargs;" \

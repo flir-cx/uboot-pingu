@@ -240,8 +240,6 @@ static int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char * 
         {
             return OK;
         }
-
-        leds_off();
     }
 
     return FAIL;
