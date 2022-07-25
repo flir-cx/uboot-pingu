@@ -16,10 +16,12 @@
 
 #include <common.h>
 #include <mipi_dsi.h>
+#include "mipi_dsi-1.h"
 #include "mipi_common.h"
 #include <linux/fb.h>
 #include <asm/arch/crm_regs.h>
 #include "mxc_mipi_dsi.h"
+#include <linux/delay.h>
 #include <asm/io.h>
 #include <ipu_pixfmt.h>
 
@@ -76,6 +78,42 @@ static const struct _mipi_dsi_phy_pll_clk mipi_dsi_phy_pll_clk_table[] = {
 	{160,  0x04}, /*  150-160MHz	*/
 };
 
+/*
+ * Assuming 10 clk cycles and a proc. speed of 24 MHz
+ * then every iteration takes 0.417 u seconds (2.4 cycles).
+ */
+static inline void early_udelay(int usec)
+{
+    int i;
+    for(i = 0; i <usec*3; i++)
+    {
+       int volatile t = i;
+       t += 1;
+    } 
+}
+
+static inline void early_mdelay(int msec)
+{
+    int i;
+    for(i = 0 ; i < msec; i++)
+        early_udelay(990);
+}
+
+void phase_based_mdelay(int msec, int early)
+{
+    if (early)
+        early_mdelay(msec);
+    else
+		mdelay(msec);
+}
+
+void phase_based_udelay(int usec, int early)
+{
+    if (early)
+        early_udelay(usec);
+    else
+		udelay(usec);
+}
 
 static inline void mipi_dsi_write_register(struct mipi_dsi_info *mipi_dsi, u32 reg, u32 val)
 {
@@ -88,7 +126,7 @@ static inline void mipi_dsi_read_register(struct mipi_dsi_info *mipi_dsi, u32 re
 }
 
 static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
-						u32 cmd, u32 data)
+						u32 cmd, u32 data, int early)
 {
 	u32 val;
 	u32 timeout = 0;
@@ -111,7 +149,7 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_PHY_STATUS, &val);
 	while ((val & DSI_PHY_STATUS_LOCK) != DSI_PHY_STATUS_LOCK) {
-		mdelay(1);
+        phase_based_mdelay(1, early);
 		timeout++;
 		if (timeout == MIPI_DSI_PHY_TIMEOUT) {
 			printf("Error: phy lock timeout!\n");
@@ -122,7 +160,7 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 	timeout = 0;
 	while ((val & DSI_PHY_STATUS_STOPSTATE_CLK_LANE) !=
 			DSI_PHY_STATUS_STOPSTATE_CLK_LANE) {
-		mdelay(1);
+        phase_based_mdelay(1, early);
 		timeout++;
 		if (timeout == MIPI_DSI_PHY_TIMEOUT) {
 			printf("Error: phy lock lane timeout!\n");
@@ -133,7 +171,7 @@ static void mipi_dsi_dphy_init(struct mipi_dsi_info *mipi_dsi,
 }
 
 
-int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *buf, int len)
+int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *buf, int len, int early)
 {
 	u32 val;
 	u32 status = 0;
@@ -150,7 +188,7 @@ int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *b
 								&status);
 			while ((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) ==
 					 DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) {
-				udelay(50);
+                               phase_based_udelay(50, early);
 				timeout++;
 				if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 					return -1;
@@ -162,7 +200,7 @@ int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *b
 		if (len > 0) {
 			while ((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) ==
 					 DSI_CMD_PKT_STATUS_GEN_PLD_W_FULL) {
-				udelay(50);
+                               phase_based_udelay(50, early);
 				timeout++;
 				if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 					return -1;
@@ -183,7 +221,7 @@ int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *b
 	mipi_dsi_read_register(mipi_dsi, MIPI_DSI_CMD_PKT_STATUS, &status);
 	while ((status & DSI_CMD_PKT_STATUS_GEN_CMD_FULL) ==
 			 DSI_CMD_PKT_STATUS_GEN_CMD_FULL) {
-		udelay(50);
+               phase_based_udelay(50, early);
 		timeout++;
 		if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 			return -1;
@@ -197,7 +235,7 @@ int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *b
 			 DSI_CMD_PKT_STATUS_GEN_CMD_EMPTY) ||
 			!((status & DSI_CMD_PKT_STATUS_GEN_PLD_W_EMPTY) ==
 			DSI_CMD_PKT_STATUS_GEN_PLD_W_EMPTY)) {
-		udelay(50);
+               phase_based_udelay(50, early);
 		timeout++;
 		if (timeout == MIPI_DSI_REG_RW_TIMEOUT)
 			return -1;
@@ -208,7 +246,7 @@ int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *b
 }
 
 
-static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi)
+static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi, int early)
 {
 	u32		val;
 	u32		lane_byte_clk_period;
@@ -302,7 +340,7 @@ static void mipi_dsi_enable_controller(struct mipi_dsi_info *mipi_dsi)
 	mipi_dsi_write_register(mipi_dsi, MIPI_DSI_ERROR_MSK1, 0);
 
 	mipi_dsi_dphy_init(mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
-					   mipi_dsi->dphy_pll_config);
+					   mipi_dsi->dphy_pll_config, early);
 
 }
 
@@ -346,16 +384,16 @@ void mipi_clk_enable(void)
 }
 
 
-int mxc_mipi_dsi_enable(void)
+int mxc_mipi_dsi_enable(int early)
 {
 	struct mipi_dsi_info mipi_dsi;
 	int i;
 
 	mipid_otm1287a_get_lcd_videomode(&mipi_dsi.mode, &mipi_dsi.lcd_config);
-
+#if 0  // Handled through displays in mx6ec101.c and board_video_skip() in video.c
     ipuv3_fb_init(mipi_dsi.mode, 0,
                IPU_PIX_FMT_RGB24);
-
+#endif
 	mipi_clk_enable();
 
 	for (i = 0; i < ARRAY_SIZE(mipi_dsi_phy_pll_clk_table); i++) {
@@ -373,9 +411,11 @@ int mxc_mipi_dsi_enable(void)
 	mipi_dsi.dphy_pll_config = mipi_dsi_phy_pll_clk_table[--i].config;
 	debug("dphy_pll_config:0x%x.\n", mipi_dsi.dphy_pll_config);
 
-	mipi_dsi_enable_controller(&mipi_dsi);
+	mipi_dsi_enable_controller(&mipi_dsi, early);
 
-	mipid_otm1287a_lcd_setup(&mipi_dsi);
+	mipid_otm1287a_lcd_setup(&mipi_dsi, early);
+
+        phase_based_mdelay(1, early);
 
 	mipi_dsi_set_mode(&mipi_dsi, false);
 

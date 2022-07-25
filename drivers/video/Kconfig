@@ -991,6 +991,12 @@ config VIDEO_BMP_GZIP
 	  images, gzipped BMP images can be displayed via the
 	  splashscreen support or the bmp command.
 
+config HIDE_LOGO_VERSION
+	bool "No display of bootloader version"
+	default y
+	help
+          do not display bootloader version string
+
 config VIDEO_BMP_RLE8
 	bool "Run length encoded BMP image (RLE8) support"
 	depends on DM_VIDEO || CFB_CONSOLE

@@ -400,7 +400,9 @@
            "fi\0" \
     "bootlogo=bootlogo.bmp.gz\0"\
     "loadsplash=run select_boot; ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} /boot/${bootlogo};cp.w ${tempaddr} ${splashimage} ${filesize}\0" \
+    "splashfile=/boot/bootlogo.bmp.gz\0"\
     "splashimage=0x17000002\0"\
+    "splashsource=mmc_fs\0"\
     "tempaddr=0x16000000\0"\
 	"fdt_addr=0x18000000\0" \
 	"initrd_addr=0x19000000\0" \
@@ -633,6 +635,9 @@
 #define CONFIG_VIDEO_BMP_LOGO
 #define CONFIG_IMX_HDMI
 #define CONFIG_IMX_VIDEO_SKIP
+
+/* 0014-add-bootlogo-functionality.patch */
+#define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE 1024*1024
 
 #if defined(CONFIG_ANDROID_SUPPORT)
 #include "mx6sabreandroid_common.h"

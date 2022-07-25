@@ -294,6 +294,9 @@ void get_reboot_reason(char *ret);
 ulong board_get_usable_ram_top(ulong total_size);
 
 int board_early_init_f(void);
+#ifdef CONFIG_BOARD_EARLY_INIT_F_REST
+int board_early_init_f_rest(void);
+#endif
 
 /* manipulate the U-Boot fdt before its relocation */
 int board_fix_fdt(void *rw_fdt_blob);

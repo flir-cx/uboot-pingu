@@ -21,6 +21,8 @@
 #include <splash.h>
 #include <usb.h>
 #include <asm/global_data.h>
+#include <malloc.h>
+#include <memalign.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -222,6 +224,7 @@ static int splash_load_fs(struct splash_location *location, u32 bmp_load_addr)
 	loff_t bmp_size;
 	loff_t actread;
 	char *splash_file;
+	void *mem_load_addr = NULL;
 
 	splash_file = env_get("splashfile");
 	if (!splash_file)
@@ -256,7 +259,18 @@ static int splash_load_fs(struct splash_location *location, u32 bmp_load_addr)
 	}
 
 	splash_select_fs_dev(location);
-	res = fs_read(splash_file, bmp_load_addr, 0, 0, &actread);
+	mem_load_addr = malloc_cache_aligned(bmp_size);
+	if (mem_load_addr == NULL)
+	{
+	    printf("Error: malloc_cache_aligned returned NULL!\n");
+	    goto out;
+	}
+	res = fs_read(splash_file, mem_load_addr, 0, 0, &actread);
+	if (!res)
+	    memcpy(bmp_load_addr, mem_load_addr, bmp_size);
+	else
+	    printf("Error: fs_read() error, unable to read from splash_file!\n");
+	free(mem_load_addr);
 
 out:
 	if (location->ubivol != NULL)

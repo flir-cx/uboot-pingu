@@ -15,6 +15,7 @@ CONFIG_SHA1_CHECK_UB_IMG = y
 CONFIG_ARCH_SUNXI = y
 endif
 
+subdir-$(HOST_TOOLS_ALL) += easylogo
 subdir-$(HOST_TOOLS_ALL) += gdb
 
 # Merge all the different vars for envcrc into one
@@ -29,6 +30,8 @@ CONFIG_BUILD_ENVCRC ?= $(ENVCRC-y)
 
 hostprogs-$(CONFIG_SPL_GENERATE_ATMEL_PMECC_HEADER) += atmel_pmecc_params
 
+# TODO: CONFIG_CMD_LICENSE does not work
+hostprogs-$(CONFIG_CMD_LICENSE) += bin2header
 hostprogs-$(CONFIG_LCD_LOGO) += bmp_logo
 hostprogs-$(CONFIG_VIDEO_LOGO) += bmp_logo
 HOSTCFLAGS_bmp_logo.o := -pedantic
@@ -255,7 +258,8 @@ LOGO-$(CONFIG_VIDEO_LOGO) += $(LOGO_DATA_H)
 
 # Generic logo
 ifeq ($(LOGO_BMP),)
-LOGO_BMP= $(srctree)/$(src)/logos/denx.bmp
+#LOGO_BMP= $(srctree)/$(src)/logos/denx.bmp
+LOGO_BMP= $(srctree)/$(src)/logos/freescale.bmp
 
 # Use board logo and fallback to vendor
 ifneq ($(wildcard $(srctree)/$(src)/logos/$(BOARD).bmp),)
@@ -293,7 +297,6 @@ $(LOGO_DATA_H):	$(obj)/bmp_logo $(LOGO_BMP)
 else
 $(LOGO_DATA_H):	$(obj)/bmp_logo $(LOGO_BMP)
 	$(obj)/bmp_logo --gen-data $(LOGO_BMP) > $@
-#endif
 endif
 
 # Let clean descend into subdirs

@@ -36,7 +36,7 @@ static struct splash_location default_splash_locations[] = {
 		.name = "mmc_fs",
 		.storage = SPLASH_STORAGE_MMC,
 		.flags = SPLASH_STORAGE_FS,
-		.devpart = "0:1",
+		.devpart = "0:2",
 	},
 	{
 		.name = "usb_fs",
@@ -83,8 +83,29 @@ static inline int splash_video_logo_load(void) { return -ENOSYS; }
 __weak int splash_screen_prepare(void)
 {
 	if (CONFIG_IS_ENABLED(SPLASH_SOURCE))
+	{
+                //0014-add-bootlogo-functionality.patch
+		//choose which partition to load bootlogo from
+        
+		char *system_active = env_get("system_active");
+		if(system_active)
+		{
+			switch(system_active[6]) //system_active=system1 or system2
+			{
+				case '1':
+					default_splash_locations[0].devpart[2]='2'; //use mmc partition 2
+					break;
+				case '2':
+					default_splash_locations[0].devpart[2]='3'; //use mmc partition 3
+					break;
+				default: 
+					printf("splash_screen_prepare: invalid system_active environment: %s \n",system_active); 
+					break;
+			}
+		}
 		return splash_source_load(default_splash_locations,
 					  ARRAY_SIZE(default_splash_locations));
+	}
 
 	return splash_video_logo_load();
 }

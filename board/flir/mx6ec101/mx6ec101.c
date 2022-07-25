@@ -62,13 +62,14 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 char *get_last_reset_cause(void);
-void mxc_mipi_dsi_enable(void);
-
 void imx_bypass_ldo(void);
 struct spi_slave *slave;
 int setup_pmic_voltages(void);
 int platform_setup_pmic_voltages(void);
 int fpga_power(bool enable);
+int pwm_init(int pwm_id, int div, int invert);
+int pwm_config(int pwm_id, int duty_ns, int period_ns);
+void pwm_enable(int pwm_id);
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
@@ -732,6 +733,32 @@ static void do_enable_hdmi(struct display_info_t const *dev)
 }
 
 struct display_info_t const displays[] = {{
+	.bus	= 1,
+	.addr	= 0,
+	//.pixfmt	= IPU_PIX_FMT_BGR24,   //bpp = 24, FLIR logo
+	.pixfmt	= IPU_PIX_FMT_RGB24,   //bpp = 24, FLIR logo
+	//.pixfmt	= IPU_PIX_FMT_RGB565,
+	//.pixfmt	= IPU_PIX_FMT_GENERIC,   //bpp = 8, Freescale-NXP logo
+	.di = 0,
+	.detect	= NULL,
+	.enable	= enable_rgb,
+	.mode	= {
+		.name           = "KOPIN-VGA",
+		.refresh        = 60,
+		.xres           = 640,  
+		.yres           = 480,
+		//.pixclock       = 50000, // When using Lauterbach T32 to load the image
+		.pixclock       = 37000,   // When loading the imasge over USB using imx_usb 
+		.left_margin    = 100,
+		.right_margin   = 100,
+		.upper_margin   = 31,
+		.lower_margin   = 10,
+                .hsync_len      = 96,
+		.vsync_len      = 4,
+		.sync           = 0,
+		.vmode          = FB_VMODE_NONINTERLACED,
+        	.flag           = 0
+} }, {
 	.bus	= -1,
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB666,
@@ -909,14 +936,70 @@ void board_setup_timer(void)
 	writel(reg, &mxc_ccm->CCGR1);
 }
 
+static void dm_start_i2c(int early)
+{
+	const struct dm_i2c_ops *i2c_ops = NULL;
+	struct udevice *i2c_devp = NULL;
+
+	if (uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &i2c_devp) == -ENODEV)
+	{
+	    if (!early)
+		printf("%s, %s, %d: dev i2c@21f8000 not found!\n", __FILE__, __FUNCTION__, __LINE__);
+		return;
+	}
+	i2c_ops = device_get_ops(i2c_devp);
+	if (i2c_ops == NULL)
+	    return;
+
+	if (hardware.mipi_mux)
+	{
+	    unsigned char buf[2];
+	    struct i2c_msg msg;
+
+	    msg.addr  = LEIF_PCA9534_ADDRESS;
+	    msg.flags = 0; // Write
+	    msg.len   = 1;
+
+	    //set LCD_MIPI_SEL=1 and LCD_MIPI_EN=0
+	    buf[0] = 0xbf;
+	    msg.buf = buf;
+	    i2c_ops->xfer(i2c_devp, &msg, 1);
+
+	    buf[0] = 0x9f;
+	    msg.buf = buf;
+	    i2c_ops->xfer(i2c_devp, &msg, 1);
+	}
+}
+
+static void setup_pwm_n_mipi_dsi(int early)
+{
+	//init backlight to lcd
+	pwm_init(PWM1, 0, 0);
+	//duty cycle = 70%, period = 0.2ms (should match duty cycle in kernel)
+	pwm_config(PWM1, 140000, 200000);
+	pwm_enable(PWM1); 
+	dm_start_i2c(early);
+	mxc_mipi_dsi_enable(early);
+}
+
 int board_early_init_f(void)
 {
         board_setup_timer();
         setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
+	setup_pwm_n_mipi_dsi(1);
 #endif
 
+	return 0;
+}
+
+int board_early_init_f_rest(void)
+{
+#if defined(CONFIG_VIDEO_IPUV3)
+	struct udevice *ipu_devp = NULL;
+	uclass_get_device_by_name(UCLASS_VIDEO, "ipu@2400000", &ipu_devp);
+#endif
 	return 0;
 }
 
@@ -953,9 +1036,18 @@ int board_init(void)
 
 #ifdef CONFIG_SYS_I2C
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
+	/* Setup I2C4  */
+	ret = setup_i2c(3, CONFIG_SYS_I2C_SPEED,
+		CONFIG_SYS_I2C_SLAVE, &i2c_pad_info1);
+	/* Setup I2C3 */
+	ret = setup_i2c(2, CONFIG_SYS_I2C_SPEED,
+		CONFIG_SYS_I2C_SLAVE, &i2c_pad_info2);
 #endif
 
 #ifdef CONFIG_SYS_I2C_MXC
+	ret = setup_pmic_voltages();
+	if (ret)
+		return ret;
 
 	struct Eeprom ioboard =
 	{
@@ -981,6 +1073,13 @@ int board_init(void)
 
 #ifdef CONFIG_FEC_MXC
 	setup_fec();
+#endif
+
+#if defined(CONFIG_VIDEO_IPUV3)
+	if (hardware.display) 
+	{
+	    setup_pwm_n_mipi_dsi(0);
+	}
 #endif
 
 	return 0;
@@ -1447,8 +1546,8 @@ int platform_setup_pmic_voltages(void)
         spi_release_bus(slave);
         return -1;
     }
-    printf("PMIC:  DA9063, Device: 0x%02x, Variant: 0x%02x, "
-           "Customer: 0x%02x, Config: 0x%02x\n", dev_id, var_id,
+    printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, "
+           "Customer: 0x%02x, Config: 0x%02x\n", __FUNCTION__, dev_id, var_id,
            cust_id, conf_id);
     if (dev_id != 0x61 ||
        var_id != 0x63) {
@@ -1513,8 +1612,8 @@ int setup_pmic_voltages(void)
         spi_release_bus(slave);
         return -1;
     }
-    printf("PMIC:  DA9063, Device: 0x%02x, Variant: 0x%02x, "
-           "Customer: 0x%02x, Config: 0x%02x\n", dev_id, var_id,
+    printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, "
+           "Customer: 0x%02x, Config: 0x%02x\n", __FUNCTION__, dev_id, var_id,
            cust_id, conf_id);
 
     //turn on nONKEY_PIN to port mode, e.g. power switch reacts

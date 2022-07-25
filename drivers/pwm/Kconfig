@@ -23,6 +23,13 @@ config PWM_IMX
 	help
 	  This PWM is found i.MX27 and later i.MX SoCs.
 
+config IMX6_PWM_PER_CLK
+	int "PWM clock"
+	default 66000000
+	help
+	  i.MX6 PWM clock. See also comments in function pwm_imx_get_parms in 
+	  the file pwm-imx-util.c.
+
 config PWM_MESON
 	bool "Enable support for Amlogic Meson SoCs PWM"
 	depends on DM_PWM

@@ -334,6 +334,15 @@ static void process_fdt_options(const void *blob)
 #endif /* CONFIG_SYS_TEXT_BASE */
 }
 
+#define CONFIG_BOOTCMD_USB_RECOVERY \
+	"if recoverykey && kbd_secret; then " \
+                "run recoveryboot;" \
+	"else " \
+                "chargeState; run mmcbootflir;" \
+	"fi;" \
+	"echo Fallback to recovery boot!....;" \
+	"run recoveryboot;"
+
 const char *bootdelay_process(void)
 {
 	char *s;
@@ -357,7 +366,7 @@ const char *bootdelay_process(void)
 				 mfgtools\n", 0);
 	} else if (is_boot_from_usb()) {
 		printf("Boot from USB for uuu\n");
-		env_set("bootcmd", "fastboot 0");
+		env_set("bootcmd", CONFIG_BOOTCMD_USB_RECOVERY);
 	} else {
 		printf("Normal Boot\n");
 	}
