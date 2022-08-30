@@ -253,7 +253,7 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	case NO_BATTERY:
 		printf("Battery missing\n");
 	case LOW_BATTERY:
-		leds_on(0, 0); // low batt
+		leds_critical(); // low batt
 		udelay(2000000);
 		power_off();
 		break;

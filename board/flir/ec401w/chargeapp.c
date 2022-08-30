@@ -19,7 +19,7 @@ void test_charge_levels(void)
 {
 	for(int i=0;i<=100;i+=10)
 	{
-		leds_on(i, CHARGING);
+		leds_charge(i);
 		mdelay(2000);
 	}
 }
@@ -30,6 +30,7 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 	int exit = 0;
 
 	int soc = 0;
+	int soc_last = -1;
 
 	//Test for display charge level with leds
 	if(argc == 2 && argv[1][0]=='t')
@@ -47,7 +48,8 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 		get_battery_state_of_charge(&soc);
 
 		//update battery progressbar
-		leds_on(soc, CHARGING);
+		if (soc != soc_last)
+			leds_charge(soc);
 
 		if(get_onoff_key())
 		{
@@ -64,6 +66,8 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 		//exit if ctrlc is pressed
 		if(ctrlc())
 			exit=1;
+
+		soc_last = soc;
 
 		udelay(100000);
 	}

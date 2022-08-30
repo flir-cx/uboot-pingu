@@ -344,34 +344,6 @@ static int lp5562_led_pattern_boot(u16 *p1, u16 *p2, u16 *p3)
 	return sizeof(bp1);
 }
 
-static int lp5562_led_pattern_ramp_all(u16 *p1, u16 *p2, u16 *p3, u16 wait_time)
-{
-	int opc = 0;
-
-	// Engine 1
-	p1[opc++] = LED_PGRM_WAIT_TRIGGER3;
-	p1[opc++] = LED_PGRM_INCREMENT;
-	p1[opc++] = LED_PGRM_INCREMENT;
-	p1[opc++] = LED_PGRM_STOP_NO_RESET;
-
-	// Engine 2
-	opc = 0;
-	p2[opc++] = LED_PGRM_WAIT_TRIGGER3;
-	p2[opc++] = LED_PGRM_INCREMENT;
-	p2[opc++] = LED_PGRM_INCREMENT;
-	p2[opc++] = LED_PGRM_STOP_NO_RESET;
-
-	// Engine 3
-	opc = 0;
-	p3[opc++] = LED_PGRM_WAIT(wait_time);
-	p3[opc++] = LED_PGRM_SEND_TRIGGER12;
-	p3[opc++] = LED_PGRM_INCREMENT;
-	p3[opc++] = LED_PGRM_INCREMENT;
-	p3[opc++] = LED_PGRM_STOP_NO_RESET;
-
-	return opc;
-}
-
 static int lp5562_led_pattern_fade_all(u16 *p1, u16 *p2, u16 *p3, u16 wait_time)
 {
 	int opc = 0;
@@ -439,13 +411,119 @@ static int lp5562_led_pattern_blink(u16 *p1, u16 *p2, u16 *p3, u16 wait_time)
 	return opc;
 }
 
+static int lp5562_led_pattern_battery_pulse(u16 *p1, u16 *p2, u16 *p3, u8 n_leds)
+{
+	static const u16 bp_on[] = { 0x0F7F, 0x0FFF, 0x0F7F, 0x0FFF, 0x0F7F, 0x0FFF, 0xC000, };
+	static const u16 bp_off[] = { 0x4000, 0xC000, };
+
+	switch(n_leds) {
+	case 1:
+		memcpy(p1, bp_on, sizeof(bp_on));
+		memcpy(p2, bp_off, sizeof(bp_off));
+		memcpy(p3, bp_off, sizeof(bp_off));
+		break;
+	case 2:
+		memcpy(p1, bp_on, sizeof(bp_on));
+		memcpy(p2, bp_on, sizeof(bp_on));
+		memcpy(p3, bp_off, sizeof(bp_off));
+		break;
+	case 3:
+		memcpy(p1, bp_on, sizeof(bp_on));
+		memcpy(p2, bp_on, sizeof(bp_on));
+		memcpy(p3, bp_on, sizeof(bp_on));
+		break;
+	default:
+		memcpy(p1, bp_off, sizeof(bp_off));
+		memcpy(p2, bp_off, sizeof(bp_off));
+		memcpy(p3, bp_off, sizeof(bp_off));
+		break;
+	}
+
+	return sizeof(bp_on);
+}
+
+static int lp5562_led_pattern_charge(u16 *p1, u16 *p2, u16 *p3, u8 level)
+{
+	static const u16 c_on[] = { 0x40FF, 0xC000, };
+	static const u16 c_off[] = { 0x4000, 0xC000, };
+	static const u16 c_500[] = { 0x40FF, 0x6000, 0x4000, 0x6000, 0x0000, };
+
+	switch(level) {
+	case 1:
+		memcpy(p1, c_500, sizeof(c_500));
+		memcpy(p2, c_off, sizeof(c_off));
+		memcpy(p3, c_off, sizeof(c_off));
+		break;
+	case 2:
+		memcpy(p1, c_on, sizeof(c_on));
+		memcpy(p2, c_500, sizeof(c_500));
+		memcpy(p3, c_off, sizeof(c_off));
+		break;
+	case 3:
+		memcpy(p1, c_on, sizeof(c_on));
+		memcpy(p2, c_on, sizeof(c_on));
+		memcpy(p3, c_500, sizeof(c_500));
+		break;
+	default:
+		memcpy(p1, c_off, sizeof(c_off));
+		memcpy(p2, c_off, sizeof(c_off));
+		memcpy(p3, c_off, sizeof(c_off));
+		break;
+	}
+
+	return sizeof(c_500);
+}
+
+static int lp5562_led_pattern_battery_status(u16 *p1, u16 *p2, u16 *p3, u8 level)
+{
+	static const u16 c_on[] = { 0x40FF, 0xC000, };
+	static const u16 c_off[] = { 0x4000, 0xC000, };
+
+	switch(level) {
+	case 1:
+		memcpy(p1, c_on, sizeof(c_on));
+		memcpy(p2, c_off, sizeof(c_off));
+		memcpy(p3, c_off, sizeof(c_off));
+		break;
+	case 2:
+		memcpy(p1, c_on, sizeof(c_on));
+		memcpy(p2, c_on, sizeof(c_on));
+		memcpy(p3, c_off, sizeof(c_off));
+		break;
+	case 3:
+		memcpy(p1, c_on, sizeof(c_on));
+		memcpy(p2, c_on, sizeof(c_on));
+		memcpy(p3, c_on, sizeof(c_on));
+		break;
+	default:
+		memcpy(p1, c_off, sizeof(c_off));
+		memcpy(p2, c_off, sizeof(c_off));
+		memcpy(p3, c_off, sizeof(c_off));
+		break;
+	}
+
+	return sizeof(c_on);
+}
+
 #define PATTERN_BOOT 0
-#define PATTERN_RAMP_ALL 1
+#define PATTERN_BATTERY_PULSE 1
 #define PATTERN_FADE_ALL 2
 #define PATTERN_BLINK_ALL 3
+#define PATTERN_CHARGE 4
+#define PATTERN_BATTERY_STATUS 5
 
+static u16 calculate_wait_time(int period_ms)
+{
+	if (period_ms < MIN_BLINK_PERIOD)
+		period_ms = MIN_BLINK_PERIOD;
 
-static int lp5562_led_program_pattern(struct udevice *dev, int program, int period_ms)
+	if (period_ms > MAX_BLINK_PERIOD)
+		period_ms = MAX_BLINK_PERIOD;
+
+	return (period_ms - 251) / 2;
+}
+
+static int lp5562_led_program_pattern(struct udevice *dev, int program, int param)
 {
 	struct lp5562_led_priv *priv = dev_get_priv(dev);
 	struct udevice *parent_dev = dev_get_parent(dev);
@@ -455,49 +533,31 @@ static int lp5562_led_program_pattern(struct udevice *dev, int program, int peri
 	u16 program2[20];
 	u16 program3[20];
 	u16 wait_time;
-
-	u16 boot_ramp;
-	u16 boot_wait;
-
 	int ret;
 
-	printf("program pattern %d %d\n", program, period_ms);
-
-	if (period_ms < MIN_BLINK_PERIOD)
-		period_ms = MIN_BLINK_PERIOD;
-	else if (period_ms > MAX_BLINK_PERIOD)
-		period_ms = MAX_BLINK_PERIOD;
-
-
-	wait_time = ((period_ms - 251) / 2);
-
-#define BOOT_RAMP_STEP 0x3
-#define WAIT_RAMP_STEP 0xD
-
-	if(period_ms == 1000)
-	{
-		boot_ramp = BOOT_RAMP_STEP;
-		boot_wait = WAIT_RAMP_STEP;
-	}
-	else
-	{
-		boot_ramp = 0x1;
-		boot_wait = 0xD;
-	}
+	printf("program pattern %d %d\n", program, param);
 
 	switch (program)
 	{
 		case PATTERN_BOOT:
 			opcode = lp5562_led_pattern_boot(program1, program2, program3);
 			break;
-		case PATTERN_RAMP_ALL:
-			opcode = lp5562_led_pattern_ramp_all(program1, program2, program3, wait_time);
+		case PATTERN_BATTERY_PULSE:
+			opcode = lp5562_led_pattern_battery_pulse(program1, program2, program3, param);
 			break;
 		case PATTERN_FADE_ALL:
+			wait_time = calculate_wait_time(param);
 			opcode = lp5562_led_pattern_fade_all(program1, program2, program3, wait_time);
 			break;
 		case PATTERN_BLINK_ALL:
+			wait_time = calculate_wait_time(param);
 			opcode = lp5562_led_pattern_blink(program1, program2, program3, wait_time);
+			break;
+		case PATTERN_CHARGE:
+			opcode = lp5562_led_pattern_charge(program1, program2, program3, param);
+			break;
+		case PATTERN_BATTERY_STATUS:
+			opcode = lp5562_led_pattern_battery_status(program1, program2, program3, param);
 			break;
 		default:
 			return 0;

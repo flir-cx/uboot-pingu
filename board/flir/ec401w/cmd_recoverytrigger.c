@@ -51,8 +51,8 @@ static iomux_cfg_t const btn_pwr_pad[] = {
 };
 
 // HW reset 16s
-#define SEQ_HOLD_START_MS           3000
-#define SEQ_DISPLAY_SOC_MS          4000
+#define SEQ_BATTERY_STATUS_START_MS 4000
+#define SEQ_DISPLAY_SOC_MS          6000
 #define SEQ_SLOW_FDEFAULT_MS        3000
 #define SEQ_FAST_FDEFAULT_MS        2000
 #define SEQ_END_MS                  3000
@@ -126,7 +126,7 @@ int check_recovery_sequence(void)
 
     printf("sequence 1 ok\n");
 
-    leds_on(50, 1);
+    leds_charge(50);
 
     // sequence 2
     printf("sequence 2 start \n");
@@ -139,7 +139,7 @@ int check_recovery_sequence(void)
     if(trigger_wait_until(TRIG_ON, 2000) == OK)
         return FAIL; // dont press again.
 
-    leds_on(85, 1);
+    leds_charge(85);
 
     return OK;
 }
@@ -150,21 +150,18 @@ int check_button_sequence(void)
 
     printf("Check button sequence\n");
 
-    if(trigger_wait_until(TRIG_OFF, SEQ_HOLD_START_MS) == OK)
+    if(trigger_wait_until(TRIG_OFF, SEQ_BATTERY_STATUS_START_MS) == OK)
         return FAIL;
 
     // Display SOC
     get_battery_state_of_charge(&soc);
-    leds_on(soc, NOT_CHARGING);
+	leds_battery_pulse(soc);
 
     printf("Button sequence 1\n");
 
-    if(trigger_wait_until(TRIG_OFF, SEQ_DISPLAY_SOC_MS) == OK)
-    {
-        // Power off if user releases button
-        leds_off();
+	mdelay(SEQ_DISPLAY_SOC_MS);
+    if(gpio_get_value(PWR_GPIO) == TRIG_OFF)
         power_off();
-    }
 
     printf("Button sequence 2\n");
 
@@ -198,7 +195,7 @@ int check_button_sequence(void)
 
     printf("Button sequence 4\n");
 
-    leds_on(100, NOT_CHARGING);
+    leds_battery_solid(100);
 
     if(trigger_wait_until(TRIG_OFF, SEQ_END_MS) == OK)
     {
