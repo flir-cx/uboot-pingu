@@ -14,6 +14,7 @@
 #include "../../../flir/include/da9063.h"
 
 static void power_up_fpga(void);
+
 __weak int fpga_power(bool enable)
 {
 	printf("Weak fpga power, fpga_power should be defined in board\n");
@@ -233,20 +234,20 @@ static void request_fpga_config_pins(bool enable)
 		gpio_request(GPIO_FPGA_CONFIG_n, "FPGA Config");
 		gpio_request(GPIO_FPGA_STATUS_n, "FPGA Status");
 		gpio_request(GPIO_FPGA_CE, "FPGA CE");
+		gpio_request(GPIO_FPGA_CONF_DONE, "FPGA CONF_DONE");
 	} else {
 		gpio_free(GPIO_FPGA_CONFIG_n);
 		gpio_free(GPIO_FPGA_STATUS_n);
 		gpio_free(GPIO_FPGA_CE);
+		gpio_free(GPIO_FPGA_CONF_DONE);
 	}
 }
 
 int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	int ret;
-	LOG_MSG("%s\n", __func__);
-	disable_spi_bus();
+	disable_spi_bus();   //allow fpga to control spi bus
 	request_fpga_config_pins(true);
-	gpio_request(GPIO_FPGA_CONF_DONE, "FPGA CONF_DONE");
 	power_up_fpga();
 
 	printf("Loading FPGA\n");
@@ -254,18 +255,21 @@ int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 	/* Just start config, don't wait for it to complete */
 	start_fpga_configuration();
 	mdelay(1000);
-	request_fpga_config_pins(false);
-	enable_spi_bus();
 
 	if (gpio_get_value(GPIO_FPGA_CONF_DONE) == 1) {
 		printf("FPGA Loading done\n");
 		ret = CMD_RET_SUCCESS;
 	} else {
 		printf("FPGA Loading failed\n");
+		//FPGA did not load correctly from SPI flash
+		//Disable FPGA loading to allow SPI access from linux
+		gpio_direction_input(GPIO_FPGA_CE);
+		gpio_direction_input(GPIO_FPGA_CONFIG_n);
 		ret = CMD_RET_FAILURE;
 	}
 
-	gpio_free(GPIO_FPGA_CONF_DONE);
+	request_fpga_config_pins(false);
+	enable_spi_bus(); //take back control of spi bus
 
 	return ret;
 }

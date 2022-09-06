@@ -193,10 +193,10 @@ int platform_setup_pmic_voltages(void)
 void setup_spi(void)
 {
 	SETUP_IOMUX_PADS(ecspi1_pads);
-	/* gpio_request(IMX_GPIO_NR(5, 28), "CS SPI1 0"); */
-	/* gpio_request(IMX_GPIO_NR(5, 29), "CS SPI1 1"); */
-	/* gpio_direction_output(IMX_GPIO_NR(5, 28),1); */
-	/* gpio_direction_output(IMX_GPIO_NR(5, 29),1); */
+	gpio_request(IMX_GPIO_NR(5, 28), "CS SPI1 0");
+	gpio_request(IMX_GPIO_NR(5, 29), "CS SPI1 1");
+	gpio_direction_output(IMX_GPIO_NR(5, 28),1);
+	gpio_direction_output(IMX_GPIO_NR(5, 29),1);
 }
 #endif
 
@@ -234,6 +234,13 @@ static iomux_v3_cfg_t const rgb_pads[] = {
 
 int board_spi_cs_gpio(unsigned bus, unsigned cs)
 {
+	if (bus == 0) {
+		if(cs == 0) {
+			return IMX_GPIO_NR(5, 28); //SPI1_CS0_n
+		} else if(cs == 0) {
+			return IMX_GPIO_NR(5, 29); //SPI1_CS1_n
+		}
+	}
 	if (bus == 1) {
 		if(cs == 0) {
 			return IMX_GPIO_NR(5, 28); //SPI1_CS0_n
