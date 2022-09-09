@@ -65,8 +65,9 @@ int get_onoff_key(void)
 	pf1550_read_reg(PF1550_PMIC_REG_ONKEY_INT_STAT0 ,&onkey_int);
 	pf1550_write_reg(PF1550_PMIC_REG_ONKEY_INT_STAT0, onkey_int);
 
-	if(onkey_int &  ONKEY_IRQ_PUSHI)
+	if(onkey_int & ONKEY_IRQ_1SI)
 		return 1;
+
 	return 0;
 }
 
