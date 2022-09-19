@@ -80,28 +80,30 @@ static int splash_video_logo_load(void)
 static inline int splash_video_logo_load(void) { return -ENOSYS; }
 #endif
 
+/*
+ * FLIR modifications in splash_screen_prepare:
+ * Splash location is selected based on system_active.
+ * system1 => MMC partition 2
+ * system2 => MMC partition 3
+ */
 __weak int splash_screen_prepare(void)
 {
-	if (CONFIG_IS_ENABLED(SPLASH_SOURCE))
-	{
-                //0014-add-bootlogo-functionality.patch
-		//choose which partition to load bootlogo from
-        
-		char *system_active = env_get("system_active");
-		if(system_active)
-		{
-			switch(system_active[6]) //system_active=system1 or system2
-			{
-				case '1':
-					default_splash_locations[0].devpart[2]='2'; //use mmc partition 2
+	char *system_active = env_get("system_active");
+
+	if (CONFIG_IS_ENABLED(SPLASH_SOURCE) && system_active && (strlen(system_active) > 6)) {
+		int i;
+		char sa = system_active[6];
+
+		if (sa == '1' || sa == '2') {
+			for (i = 0; i < ARRAY_SIZE(default_splash_locations); i++) {
+				if (!strcmp(default_splash_locations[i].name, "mmc_fs")) {
+					default_splash_locations[i].devpart[2] = sa + 1;
 					break;
-				case '2':
-					default_splash_locations[0].devpart[2]='3'; //use mmc partition 3
-					break;
-				default: 
-					printf("splash_screen_prepare: invalid system_active environment: %s \n",system_active); 
-					break;
+				}
 			}
+		} else {
+			printf("%s: invalid system_active environment: %s\n",
+			       __func__, system_active);
 		}
 		return splash_source_load(default_splash_locations,
 					  ARRAY_SIZE(default_splash_locations));
