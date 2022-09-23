@@ -842,9 +842,6 @@ static const init_fnc_t init_sequence_f[] = {
 #if !defined(CONFIG_M68K)
 	timer_init,		/* initialize timer */
 #endif
-#if defined(CONFIG_BOARD_EARLY_INIT_F_REST)
-	board_early_init_f_rest,
-#endif
 #if defined(CONFIG_BOARD_POSTCLK_INIT)
 	board_postclk_init,
 #endif

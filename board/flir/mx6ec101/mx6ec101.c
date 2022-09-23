@@ -40,6 +40,7 @@
 #include <usb/ehci-ci.h>
 #include <asm/arch/mx6-ddr.h>
 #include <power/regulator.h>
+#include <splash.h>
 #if defined(CONFIG_MX6DL) && defined(CONFIG_MXC_EPDC)
 #include <lcd.h>
 #include <mxc_epdc_fb.h>
@@ -108,6 +109,76 @@ static struct hw_support hardware =
 	.usb_charge = false,
 	.name = "Unknown Camera"
 };
+
+/**
+ * @brief Mimics the default_splash_locations in splash.c
+ *
+ */
+static struct splash_location flir_splash_locations[] = {
+	{
+		.name = "mmc_fs_system1",
+		.storage = SPLASH_STORAGE_MMC,
+		.flags = SPLASH_STORAGE_FS,
+		.devpart = "0:2",
+	},
+	{
+		.name = "mmc_fs_system2",
+		.storage = SPLASH_STORAGE_MMC,
+		.flags = SPLASH_STORAGE_FS,
+		.devpart = "0:3",
+	},
+};
+/**
+ * @brief changes the envv variable splashsource to
+ * be mmc_fs_system[1|2] to pickup the splashfile from
+ * the rigth partition.
+ *
+ */
+static void fix_env_splash_source()
+{
+	char *env_splashsrc;
+	char *system_active;
+	char extended_splash_src[80] = "mmc_fs_";
+	size_t concat_len;
+	int ret;
+
+	system_active = env_get("system_active");
+	if (NULL == system_active){
+		log_err("Could not read system_active from env.\n");
+		return;
+	}
+
+
+	env_splashsrc = env_get("splashsource");
+	strncat(extended_splash_src, system_active, strlen(system_active));
+	ret = env_set("splashsource", extended_splash_src);
+	if (ret) {
+		log_err("Could not write splashsource from env.\n");
+		return;
+	}
+	if (env_splashsrc &&
+	    strncmp(env_splashsrc, extended_splash_src, sizeof(extended_splash_src) - 1) == 0)
+		log_info("splashsource not changed, still '%s'\n", extended_splash_src);
+	else
+		log_info("splashsource changed to '%s'\n", extended_splash_src);
+}
+
+/**
+ * @brief Overrides the (weak) splash_screen_prepare in splash.c
+ *
+ * @return int non zero on error
+ */
+int splash_screen_prepare(void)
+{
+	fix_env_splash_source();
+#ifdef CONFIG_SPLASH_SOURCE
+	return splash_source_load(flir_splash_locations,
+				  ARRAY_SIZE(flir_splash_locations));
+#else
+	log_err("SPLASH_SOURCE should be configured\n");
+#endif
+	return -ENOENT;
+}
 
 int dram_init(void)
 {
@@ -936,50 +1007,47 @@ void board_setup_timer(void)
 	writel(reg, &mxc_ccm->CCGR1);
 }
 
-static void dm_start_i2c(int early)
+static void setup_mipi_mux_i2c()
 {
 	const struct dm_i2c_ops *i2c_ops = NULL;
 	struct udevice *i2c_devp = NULL;
 
-	if (uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &i2c_devp) == -ENODEV)
-	{
-	    if (!early)
-		printf("%s, %s, %d: dev i2c@21f8000 not found!\n", __FILE__, __FUNCTION__, __LINE__);
-		return;
-	}
-	i2c_ops = device_get_ops(i2c_devp);
-	if (i2c_ops == NULL)
-	    return;
-
 	if (hardware.mipi_mux)
 	{
-	    unsigned char buf[2];
-	    struct i2c_msg msg;
+		unsigned char buf[2];
+		struct i2c_msg msg;
+		if (uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &i2c_devp) == -ENODEV) {
+			printf("%s, %s, %d: dev i2c@21f8000 not found!\n", __FILE__, __FUNCTION__, __LINE__);
+			return;
+		}
+		i2c_ops = device_get_ops(i2c_devp);
+		if (i2c_ops == NULL) {
+			log_err("Failed to get i2c_ops from device at i2c@21f8000\n");
+			return;
+		}		
 
-	    msg.addr  = LEIF_PCA9534_ADDRESS;
-	    msg.flags = 0; // Write
-	    msg.len   = 1;
+		msg.addr  = LEIF_PCA9534_ADDRESS;
+		msg.flags = 0; // Write
+		msg.len   = 1;
 
-	    //set LCD_MIPI_SEL=1 and LCD_MIPI_EN=0
-	    buf[0] = 0xbf;
-	    msg.buf = buf;
-	    i2c_ops->xfer(i2c_devp, &msg, 1);
+		//set LCD_MIPI_SEL=1 and LCD_MIPI_EN=0
+		buf[0] = 0xbf;
+		msg.buf = buf;
+		i2c_ops->xfer(i2c_devp, &msg, 1);
 
-	    buf[0] = 0x9f;
-	    msg.buf = buf;
-	    i2c_ops->xfer(i2c_devp, &msg, 1);
+		buf[0] = 0x9f;
+		msg.buf = buf;
+		i2c_ops->xfer(i2c_devp, &msg, 1);
 	}
 }
 
-static void setup_pwm_n_mipi_dsi(int early)
+static void setup_pwm_n_mipi_dsi()
 {
 	//init backlight to lcd
 	pwm_init(PWM1, 0, 0);
 	//duty cycle = 70%, period = 0.2ms (should match duty cycle in kernel)
 	pwm_config(PWM1, 140000, 200000);
-	pwm_enable(PWM1); 
-	dm_start_i2c(early);
-	mxc_mipi_dsi_enable(early);
+	pwm_enable(PWM1);
 }
 
 int board_early_init_f(void)
@@ -988,18 +1056,10 @@ int board_early_init_f(void)
         setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
-	setup_pwm_n_mipi_dsi(1);
+	setup_pwm_n_mipi_dsi();
+	setup_mipi_mux_i2c();
 #endif
 
-	return 0;
-}
-
-int board_early_init_f_rest(void)
-{
-#if defined(CONFIG_VIDEO_IPUV3)
-	struct udevice *ipu_devp = NULL;
-	uclass_get_device_by_name(UCLASS_VIDEO, "ipu@2400000", &ipu_devp);
-#endif
 	return 0;
 }
 
@@ -1073,13 +1133,6 @@ int board_init(void)
 
 #ifdef CONFIG_FEC_MXC
 	setup_fec();
-#endif
-
-#if defined(CONFIG_VIDEO_IPUV3)
-	if (hardware.display) 
-	{
-	    setup_pwm_n_mipi_dsi(0);
-	}
 #endif
 
 	return 0;
@@ -1462,6 +1515,13 @@ static const struct boot_mode board_boot_modes[] = {
 
 int board_late_init(void)
 {
+
+#if defined(CONFIG_VIDEO_IPUV3)
+	if (hardware.display)
+	{
+		mxc_mipi_dsi_enable();
+	}
+#endif
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif

@@ -143,6 +143,7 @@ static struct mipi_lcd_config lcd_config = {
 	.max_phy_clk	= OTM1287A_MAX_DPHY_CLK,
 	.dpi_fmt		= MIPI_RGB888,
 };
+
 void mipid_otm1287a_get_lcd_videomode(struct fb_videomode **mode,
 		struct mipi_lcd_config **data)
 {
@@ -151,48 +152,50 @@ void mipid_otm1287a_get_lcd_videomode(struct fb_videomode **mode,
 }
 
 
-static int otm1287a_write_reg(struct mipi_dsi_info *mipi_dsi, u32 reg, u32 data, int early)
+static int otm1287a_write_reg(struct mipi_dsi_info *mipi_dsi, u32 reg, u32 data)
 {
 	int err;
 	const u32 buf = reg | (data <<8);
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
-		&buf, 0, early);
+		&buf, 0);
 	return err;
 }
 
-static int otm1287a_write_cmd(struct mipi_dsi_info *mipi_dsi, const u32 cmd, int early)
+static int otm1287a_write_cmd(struct mipi_dsi_info *mipi_dsi, const u32 cmd)
 {
 	int err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_DCS_SHORT_WRITE,
-		&cmd, 0, early);
-        phase_based_udelay(1, early);
+		&cmd, 0);
+        udelay(1);
 
 	return err;
 }
 
-int mipid_otm1287a_lcd_setup(struct mipi_dsi_info *mipi_dsi, int early)
+int mipid_otm1287a_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 {
 	int i;
-        phase_based_udelay(50, early);
-	otm1287a_write_cmd(mipi_dsi,OTM1287A_CMD_SWRESET, early);
-        phase_based_udelay(20, early);
+	udelay(50);
+	otm1287a_write_cmd(mipi_dsi,OTM1287A_CMD_SWRESET);
+	udelay(20);
 
 	for(i=0;i<ARRAY_SIZE(lcd_setup);i++)
 	{
 		mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
-				&lcd_setup[i].address_shift, 0, early);
+				&lcd_setup[i].address_shift, 0);
 		if(lcd_setup[i].buf_size == 2)
 			mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
-					(u32*) lcd_setup[i].buf, 0, early);
+					(u32*) lcd_setup[i].buf, 0);
 		else
 			mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_DCS_LONG_WRITE,
-					(u32*) lcd_setup[i].buf, lcd_setup[i].buf_size, early);
+					(u32*) lcd_setup[i].buf, lcd_setup[i].buf_size);
 	}
 
-	otm1287a_write_reg(mipi_dsi,OTM1287A_REG_MADCTL,0x2, early);
+	otm1287a_write_reg(mipi_dsi, OTM1287A_REG_MADCTL, 0x2);
 
-	otm1287a_write_cmd(mipi_dsi,OTM1287A_CMD_SLPOUT, early);
-        phase_based_mdelay(120, early);
-	otm1287a_write_cmd(mipi_dsi,OTM1287A_CMD_DISPON, early);
+	otm1287a_write_cmd(mipi_dsi,OTM1287A_CMD_SLPOUT);
+	mdelay(120);
+	otm1287a_write_cmd(mipi_dsi,OTM1287A_CMD_DISPON);
+
+
 	return 0;
 }
 

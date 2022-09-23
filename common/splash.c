@@ -36,7 +36,7 @@ static struct splash_location default_splash_locations[] = {
 		.name = "mmc_fs",
 		.storage = SPLASH_STORAGE_MMC,
 		.flags = SPLASH_STORAGE_FS,
-		.devpart = "0:2",
+		.devpart = "0:1",
 	},
 	{
 		.name = "usb_fs",
@@ -88,26 +88,9 @@ static inline int splash_video_logo_load(void) { return -ENOSYS; }
  */
 __weak int splash_screen_prepare(void)
 {
-	char *system_active = env_get("system_active");
-
-	if (CONFIG_IS_ENABLED(SPLASH_SOURCE) && system_active && (strlen(system_active) > 6)) {
-		int i;
-		char sa = system_active[6];
-
-		if (sa == '1' || sa == '2') {
-			for (i = 0; i < ARRAY_SIZE(default_splash_locations); i++) {
-				if (!strcmp(default_splash_locations[i].name, "mmc_fs")) {
-					default_splash_locations[i].devpart[2] = sa + 1;
-					break;
-				}
-			}
-		} else {
-			printf("%s: invalid system_active environment: %s\n",
-			       __func__, system_active);
-		}
+	if (CONFIG_IS_ENABLED(SPLASH_SOURCE))
 		return splash_source_load(default_splash_locations,
 					  ARRAY_SIZE(default_splash_locations));
-	}
 
 	return splash_video_logo_load();
 }
