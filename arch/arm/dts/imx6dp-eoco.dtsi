@@ -469,6 +469,12 @@
 				regulator-max-microvolt = <3440000>;
 			};
 
+			/* 3V15_PMIC_LCD */
+			DA9063_LDO5:ldo5  {
+				regulator-name = "DA9063_LDO5";
+				regulator-boot-on;
+			};
+
 			/* 2V5D_FPGA2 */
 			DA9063_LDO6:ldo6  {
 				regulator-name = "DA9063_LDO6";

@@ -167,27 +167,27 @@ int platform_setup_pmic_voltages(void)
 	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
 
 #if defined(CONFIG_IMX6_LDO_BYPASS)
-    /* 1V3 is highest allowable voltage when LDO is bypassed */
-    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
-	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
-	    printf("Could not configure VBCORE1 voltage to 1V3\n");
-    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
-	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
-	    printf("Could not configure VBCORE2 voltage to 1V3\n");
-    //    imx_bypass_ldo();
-    /* 1V2 is an acceptable level up to 800 MHz */
-    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
-	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
-	    printf("Could not configure VBCORE1 voltage to 1V2\n");
-    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
-	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
-	    printf("Could not configure VBCORE2 voltage to 1V2\n");
-#endif
-    /* gpio_free(IMX_GPIO_NR(3,20)); */
+	/* 1V3 is highest allowable voltage when LDO is bypassed */
+	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+		printf("Could not configure VBCORE1 voltage to 1V3\n");
+	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+		printf("Could not configure VBCORE2 voltage to 1V3\n");
 
-    spi_release_bus(slave);
-    setup_spi();
-    return 0;
+	/* 1V2 is an acceptable level up to 800 MHz */
+	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+		printf("Could not configure VBCORE1 voltage to 1V2\n");
+	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+		printf("Could not configure VBCORE2 voltage to 1V2\n");
+	if (pmic_write_reg(DA9063_REG_LDO5_CONT, 1))
+		printf("Could not configure DA9063_REG_LDO5_CONT to on\n");
+#endif
+	spi_release_bus(slave);
+	setup_spi();
+	return 0;
 }
 
 void setup_spi(void)
