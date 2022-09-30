@@ -13,6 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+
 #include <common.h>
 #include <command.h>
 #include <asm/io.h>
@@ -26,6 +27,8 @@
 #include <i2c.h>
 #include <linux/delay.h>
 #include <spi.h>
+#include <log.h>
+#include <dm/uclass.h>
 #include "../../../flir/include/da9063.h"
 #include "../../../flir/include/da9063_regs.h"
 
@@ -55,7 +58,7 @@ static struct boot_state
 {
 	int boot_reason;
 	int boot_state;
-	int battery_level;
+	unsigned char battery_level;
 	bool battery;
 	bool usb_cable;
 
@@ -141,10 +144,11 @@ int get_boot_reason(void)
 	return boot_reason;
 }
 
-
 int get_battery_level(void)
 {
 	int ret;
+
+#if !CONFIG_IS_ENABLED(DM_I2C)
 	unsigned char battery_level;
 	i2c_set_bus_num(3);
 
@@ -159,6 +163,38 @@ int get_battery_level(void)
 
 	return battery_level;
 
+#else // CONFIG_IS_ENABLED(DM_I2C)
+	struct udevice *bus, *dev;
+	
+	state.battery_level = 0;
+	ret = uclass_get_device_by_seq(UCLASS_I2C, 3, &bus);
+	if (ret != 0)
+	{
+		debug("uclass_get_device_by_seq() error!\n");
+		return ret;
+	}
+
+	ret = dm_i2c_probe(bus, BQ27542_I2C_ADDR, 0, &dev);
+	if (ret == 0)
+	{
+		ret = dm_i2c_read(dev, BQ27542_REG_STATE_OF_CHARGE, &state.battery_level, 1);
+		if (ret == 0)
+		{
+			printf("Battery: charge level %d%%\n",state.battery_level);
+			return (((int) (state.battery_level)) & 0x000000ff);
+		}
+		else
+		{
+			debug("Battery: dm_i2c_read() error! Battery missing or charge level is 0%%. Returning %d\n", ret);
+			return ret;
+		}
+	}
+	else
+	{
+		debug("Battery: dm_i2c_probe() error! Battery missing or charge level is 0%%. Returning %d\n", ret);
+		return ret;
+	}
+#endif // !CONFIG_IS_ENABLED(DM_I2C)
 }
 
 void set_boot_logo(void)
@@ -210,7 +246,12 @@ int usb_charge_setup(void)
 		if(battery_level < 0)
 			state.boot_state = NO_BATTERY;
 		else if(battery_level < LOW_BATTERY_LEVEL)
-			state.boot_state = LOW_BATTERY;
+		{
+			if (state.usb_cable)
+				state.boot_state = USB_CHARGE;
+			else
+				state.boot_state = LOW_BATTERY;
+		}
 		break;
 	case VBUS_POWER:
 		if(battery_level >= 0)

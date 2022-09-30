@@ -119,7 +119,7 @@ static struct hw_support hardware =
 {
 	.mipi_mux =	false,
 	.display = true,
-	.usb_charge = false,
+	.usb_charge = true,
 	.name = "Unknown Camera"
 };
 
@@ -183,14 +183,26 @@ static void fix_env_splash_source()
  */
 int splash_screen_prepare(void)
 {
-	fix_env_splash_source();
-#ifdef CONFIG_SPLASH_SOURCE
-	return splash_source_load(flir_splash_locations,
-				  ARRAY_SIZE(flir_splash_locations));
-#else
-	log_err("SPLASH_SOURCE should be configured\n");
-#endif
-	return -ENOENT;
+	char *env_loadsplash;
+
+	set_boot_logo();
+
+	if (!env_get("splashimage")) {
+		log_err("Environment variable splashimage not found!\n");
+		return -EINVAL;
+	}
+
+	env_loadsplash = env_get("loadsplash");
+	if (env_loadsplash == NULL) {
+		log_err("Environment variable loadsplash not found!\n");
+		return -EINVAL;
+	}
+
+	if (run_command_list(env_loadsplash, -1, 0)) {
+		log_err("Failed to run loadsplash %s\n\n", env_loadsplash);
+		return -ENOSYS;
+	}
+	return 0;
 }
 
 int dram_init(void)
@@ -1065,6 +1077,7 @@ static void setup_pwm_n_mipi_dsi()
 
 int board_early_init_f(void)
 {
+	arch_cpu_init();
         board_setup_timer();
         setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
@@ -1135,7 +1148,12 @@ int board_init(void)
 
 	board_support_setup(&ioboard, &hardware);
 #endif
-	
+	if (IS_ENABLED(CONFIG_FLIR_USBCHARGE))
+	{
+		if (hardware.usb_charge)
+			usb_charge_setup();
+	}
+
 #if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
 	setup_pcie();
 #endif
