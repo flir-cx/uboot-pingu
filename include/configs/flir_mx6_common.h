@@ -12,6 +12,7 @@
 #include <linux/stringify.h>
 #include "mx6_common.h"
 #include "imx_env.h"
+#include "flir_mfgmode.h"
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(16 * SZ_1M)
@@ -358,6 +359,10 @@
 	"netmask=255.255.0.0\0"
 
 /* #define CONFIG_EMMC_FUSE_CMD Should be defined in the file including this one e.g. eoco.h */
+#ifndef CONFIG_FLIR_MFG
+#error "CONFIG_FLIR_MFG not defined!"
+#endif
+#if CONFIG_FLIR_MFG == 0 /* Normal boot */
 #define CONFIG_BOOTCOMMAND \
 	"if recoverykey && kbd_secret; then " \
                 "run recoveryboot;" \
@@ -366,8 +371,19 @@
 	"fi;" \
 	"echo Fallback to recovery boot!....;" \
 	"run recoveryboot;"
-#define CONFIG_EXTRA_ENV_SETTINGS \
+#elif CONFIG_FLIR_MFG == 1 /* fuse and setup the partitions then recboot */
+#define CONFIG_BOOTCOMMAND \
+	"setenv ethaddr 00:40:7f:21:22:23; " \
 	CONFIG_EMMC_FUSE_CMD \
+	"run partition_mmc_flir; run recboot"
+#elif CONFIG_FLIR_MFG == 2 /* recboot */
+#define CONFIG_BOOTCOMMAND \
+	"run recboot"
+#else
+#error "CONFIG_FLIR_MFG is not set to a valid value!"
+#endif /* CONFIG_FLIR_MFG */
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_DEFAULT_NETWORK_SETTINGS \
 	RANDOM_UUIDS \
 	"script=boot.scr\0" \
