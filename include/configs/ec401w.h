@@ -164,8 +164,9 @@
 #define CONFIG_BOOTCOMMAND \
 	"setmac;" \
 	"bootstate;" \
+	"factorydefault_bootarg=;" \
 	"if recoverytrigger; then " \
-		"run ${triggercommand};" \
+		"run recoveryboot;" \
 	"else " \
 		"run mmcbootflir;" \
 	"fi;" \
@@ -271,9 +272,6 @@
 	"recargs=setenv bootargs console=${console},${baudrate} " \
 		"root=/dev/ram0 recovery ethaddr=${ethaddr}\0" \
 \
-	"fdefargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/ram0 factorydefault ethaddr=${ethaddr}\0" \
-\
 	"loadinitrd=fatload mmc ${mmcdev}:${mmcpart} ${initrd_addr} ${initrd_file}\0" \
 	"initrd_addr=0x63800000\0" \
 	"initrd_file=uRamdisk.img\0" \
@@ -288,13 +286,6 @@
 				 "setenv mmcpart 1; " \
 				 "run loadfdt; run loadinitrd; run loadimage; " \
 				 "bootz ${loadaddr} ${initrd_addr} ${fdt_addr};\0" \
-\
-	"factorydefaultboot=echo Booting from mmc factory default;" \
-				 "run selectrecfdtfile; run fdefargs; " \
-				 "setenv bootargs_linux ${bootargs}; " \
-				 "setenv mmcpart 1; " \
-				 "run loadfdt; run loadinitrd; run loadimage; " \
-				 "bootz ${loadaddr} ${initrd_addr} ${fdt_addr};\0" 
 
 /* Select which emmc partition to boot from
  * 
@@ -317,7 +308,7 @@
 	"mmcdev=0\0" \
 	"mmcpart=1\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
-		"${rootfs} rootwait rw ethaddr=${ethaddr} " \
+		"${rootfs} rootwait ${factorydefault_bootarg} rw ethaddr=${ethaddr} " \
 		"wlanaddr=${wlanaddr} btaddr=${btaddr} ${bootargs_once} " \
 		 "${extra_bootargs} \0" \
 \
