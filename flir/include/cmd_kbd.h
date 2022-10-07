@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2015 FLIR Systems.
  * Copyright (C) 2017 FLIR Systems.
@@ -17,40 +18,25 @@
 #ifndef __CMD_KBD_H
 #define __CMD_KBD_H
 
-#include <common.h>
-#include <asm/gpio.h>
-int get_gpio_ioexpander(unsigned nr);
-int read_keys(char *buf);
+/**
+ * read_keys(char **buf) - Read keyboard values
+ * @buf: result ptr to null-terminated key buffer
+ * Return: No of keys pressed, or -1 on error
+ */
+int read_keys(char **buf);
 
+#define RECOVERY_KEY  "R"
+#define SW_LOAD       "S"
 
+#define cond_log_return(_cond, _ret, _fmt, args...)	\
+({							\
+	int _rval = (_ret);				\
+	if (_cond) {					\
+		printf(_fmt, ##args);			\
+		return _rval;				\
+	}						\
+})
 
-
-#define KEYBOARD_IO_EXP_I2C_ADDR	0x20
-#define KEYBOARD_BEIA_IO_EXP_I2C_ADDR   0x21
-#define PCA9534_INPUT_PORT		0x0
-#define RECOVERY_KEY                    "R"
-#define SW_LOAD                         "S"
-
-struct button_key {
-	char const	*name;
-	int		(*get_key) (unsigned);
-	unsigned	gpnum;
-	char		ident;
-};
-
-#define EVIOBUSMSK (KEYBOARD_IO_EXP_I2C_ADDR << 8)
-#define BEIABUSMSK (KEYBOARD_BEIA_IO_EXP_I2C_ADDR << 8)
-
-static struct button_key const buttons[] = {
-  //	{"sw_load",	gpio_get_value, IMX_GPIO_NR(7, 11),	'S'},
-	{"right",	get_gpio_ioexpander, EVIOBUSMSK | 0,	'R'},
-	{"left",	get_gpio_ioexpander, EVIOBUSMSK | 1,	'L'},
-	{"up",		get_gpio_ioexpander, EVIOBUSMSK | 2,	'U'},
-	{"back",	get_gpio_ioexpander, EVIOBUSMSK | 4,	'B'},
-	{"down",	get_gpio_ioexpander, EVIOBUSMSK | 5,	'D'},
-	{"middle",	get_gpio_ioexpander, EVIOBUSMSK | 6,	'M'},
-	{"sw_load",	get_gpio_ioexpander, BEIABUSMSK | 0,    'S'},
-};
-
+#define return_on_status(_ret, _fmt...) cond_log_return(_ret, _ret, ##_fmt)
 
 #endif

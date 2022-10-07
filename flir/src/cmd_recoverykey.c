@@ -1,9 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0+
 #include "../../../flir/include/cmd_kbd.h"
-#include "../../../flir/include/cmd_recoverykey.h"
-#include <common.h>
 #include <command.h>
-#include <asm/gpio.h>
-#include <i2c.h>
 
 static int safe_boot;
 
@@ -14,17 +11,20 @@ int flir_get_safe_boot(void)
 
 static int do_recoverykey(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-	char envvalue[ARRAY_SIZE(buttons)+1];
-	read_keys(envvalue);
-	char *s = strstr(envvalue,SW_LOAD);
-	if(s)
-	{
+	char *keybuf;
+	char *s;
+
+	if (read_keys(&keybuf) < 0)
+		return 1;
+
+	s = strstr(keybuf, SW_LOAD);
+	if (s) {
 		safe_boot = 1;
 		return 0;
 	}
 
-	s = strstr(envvalue,RECOVERY_KEY);
-	return s == NULL;
+	s = strstr(keybuf, RECOVERY_KEY);
+	return !s;
 }
 
 U_BOOT_CMD(
@@ -32,5 +32,3 @@ U_BOOT_CMD(
 	"Test for recovery key, right keypad press",
 	"Returns 0 (true) to shell if key is pressed."
 );
-
-

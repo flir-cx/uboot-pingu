@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2015 FLIR Systems.
  * Copyright (C) 2017 FLIR Systems.
@@ -18,8 +19,5 @@
 #define __CMD_RECOVERYKEY_H
 
 int flir_get_safe_boot(void);
-#define RECOVERY_KEY "R"
-#define SW_LOAD	     "S"
-
 
 #endif
