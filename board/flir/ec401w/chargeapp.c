@@ -1,5 +1,3 @@
-
-
 #include <common.h>
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
@@ -15,6 +13,8 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+#define CHARGEAPP_LOOP_DELAY 100000			/* 100ms */
+#define CHARGER_TOGGLE_HYSTERESIS 2500000	/* 2.5s */
 void test_charge_levels(void)
 {
 	for(int i=0;i<=100;i+=10)
@@ -26,11 +26,10 @@ void test_charge_levels(void)
 
 static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-
 	int exit = 0;
-
 	int soc = 0;
 	int soc_last = -1;
+	int cnt = 0;
 
 	//Test for display charge level with leds
 	if(argc == 2 && argv[1][0]=='t')
@@ -59,17 +58,28 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 		}
 
 		//poweroff camera if usb-cable is removed
-		if(!get_usb_cable_state()){
-			power_off();
-		}
+		if(!get_usb_cable_state()) {
 
+			/* When the charger is inserted and target is rebooted,
+			 * it will say that the cable is out after 2 seconds.
+			 * After another 2 seconds, the cable will be replugged.
+			 * Because of this we need a bit of hysteresis, so that the
+			 * target doesn't end up in a reboot loop */
+			cnt++;
+			if (cnt * CHARGEAPP_LOOP_DELAY > CHARGER_TOGGLE_HYSTERESIS) {
+				power_off();
+			}
+		} else {
+			cnt = 0;
+		}
+			
 		//exit if ctrlc is pressed
 		if(ctrlc())
 			exit=1;
 
 		soc_last = soc;
 
-		udelay(100000);
+		udelay(CHARGEAPP_LOOP_DELAY);
 	}
 	return 0;
 }
