@@ -376,9 +376,21 @@
 	"setenv ethaddr 00:40:7f:21:22:23; " \
 	CONFIG_EMMC_FUSE_CMD \
 	"run partition_mmc_flir; run recboot"
+#ifdef CONFIG_ENV_IS_IN_MMC
+#undef CONFIG_ENV_IS_IN_MMC
+#endif
+#define CONFIG_ENV_IS_NOWHERE
+#ifdef CONFIG_SPLASH_SCREEN
+/* No splash screen for MFG - Will destroy preloaded kernel... */
+#undef CONFIG_SPLASH_SCREEN
+#endif
 #elif CONFIG_FLIR_MFG == 2 /* recboot */
 #define CONFIG_BOOTCOMMAND \
 	"run recboot"
+#ifdef CONFIG_ENV_IS_IN_MMC
+#undef CONFIG_ENV_IS_IN_MMC
+#endif
+#define CONFIG_ENV_IS_NOWHERE
 #else
 #error "CONFIG_FLIR_MFG is not set to a valid value!"
 #endif /* CONFIG_FLIR_MFG */
