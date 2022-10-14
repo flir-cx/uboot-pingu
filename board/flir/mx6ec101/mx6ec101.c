@@ -56,8 +56,6 @@
 #include "../../../flir/include/cmd_loadfpga.h"
 #include "../../../flir/include/da9063.h"
 #include "../../../flir/include/da9063_regs.h"
-#include "../../../include/configs/platform.h"
-#include "../../../board/flir/ec101/ec101.h"
 #include "../../../flir/include/board_support.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -100,6 +98,21 @@ void pwm_enable(int pwm_id);
 #define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
 
 #define KEY_VOL_UP	IMX_GPIO_NR(1, 4)
+
+#define LEIF_PCA9534_ADDRESS (0x4a >> 1)
+#define PWM1 0
+
+iomux_v3_cfg_t const uart1_pads[] = {
+	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const ecspi4_pads[] = {
+	MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
 
 //default hw support
 static struct hw_support hardware =

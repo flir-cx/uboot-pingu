@@ -52,7 +52,6 @@
 #endif /*CONFIG_FSL_FASTBOOT*/
 #include "../../../flir/include/da9063.h"
 #include "../../../flir/include/da9063_regs.h"
-#include "../../../include/configs/platform.h"
 
 #define ENABLE_DEBUG 0
 

@@ -24,7 +24,6 @@
 #include <spi.h>
 #include "../../../flir/include/da9063.h"
 #include "../../../flir/include/da9063_regs.h"
-#include "../../../include/configs/platform.h"
 
 
 extern struct spi_slave *slave;

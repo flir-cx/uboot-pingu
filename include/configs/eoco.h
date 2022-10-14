@@ -12,7 +12,6 @@
 #ifdef CONFIG_SPL
 #include "imx6_spl.h"
 #endif
-#include "platform.h"
 
 #define CONFIG_MACH_TYPE	3980
 #define CONFIG_MXC_UART_BASE	UART1_BASE
@@ -33,6 +32,11 @@
 #include "flir_mx6_common.h"
 
 #define CONFIG_IMX6_LDO_BYPASS
+
+/* DA9063 PMIC */
+#define DA9063_RW                   0x1 /* Host indicate reading acces via RW=1 */
+#define DA9063_SPI_CS               0 // used to be IMX_GPIO_NR(3, 20), n.b.
+#define DA9063_SPI_BUS              3
 
 /* Falcon Mode */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"args"
