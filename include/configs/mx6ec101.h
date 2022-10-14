@@ -13,7 +13,6 @@
 #include "imx6_spl.h"
 #endif
 
-#define CONFIG_SYS_BOARD "ec101"
 #define CONFIG_BOARD_DESCRIPTION	"FLIR ec101 board"
 
 #define CONFIG_MACH_TYPE	3980
@@ -33,8 +32,6 @@
 #define CONFIG_EMMC_FUSE_CMD \
 	"fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; "
 #include "flir_mx6_common.h"
-
-#define CONFIG_IMX6_LDO_BYPASS
 
 /* Falcon Mode */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"args"
@@ -70,21 +67,11 @@
 
 /*Spi*/
 #define CONFIG_SYS_USE_SPINOR
-#ifdef CONFIG_SYS_USE_SPINOR
-#define CONFIG_CMD_SF
-#define CONFIG_SPI_FLASH
-#define CONFIG_SPI_FLASH_STMICRO
-#define CONFIG_SPI_FLASH_BAR
-#define CONFIG_MXC_SPI
-#define CONFIG_SF_DEFAULT_BUS  0
-#define CONFIG_SF_DEFAULT_SPEED 20000000
-#define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
-#define CONFIG_SF_DEFAULT_CS  IMX_GPIO_NR(5, 28)
-#endif
-#define CONFIG_CMD_SPI		/* SPI utility			*/
+// CONFIG_SF_DEFAULT_CS = IMX_GPIO_NR(5, 28) = 156
+
 /* DA9063 PMIC */
 #define DA9063_RW                   0x1 /* Host indicate reading acces via RW=1 */
-#define DA9063_SPI_CS               IMX_GPIO_NR(3, 20)
+#define DA9063_SPI_CS               0 // Used to be IMX_GPIO_NR(3, 20), n.b.
 #define DA9063_SPI_BUS              3
 
 /* USB Configs */
