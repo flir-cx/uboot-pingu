@@ -1122,7 +1122,7 @@ int board_init(void)
 	if (ret)
 		return ret;
 
-	struct Eeprom ioboard =
+	struct eeprom ioboard =
 	{
 	 .i2c_bus = 2,
 	 .i2c_address = 0xaa,

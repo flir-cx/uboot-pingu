@@ -62,8 +62,8 @@ config FLIR_BOARD_SUPPORT
        default n
        help
 		"FLIR_BOARD_SUPPORT"
-config REDMAINBOARDREVISION
-       bool "REDMAINBOARDREVISION"
+config READMAINBOARDREVISION
+       bool "READMAINBOARDREVISION"
        depends on FLIR_COMMANDS
        default n
        help

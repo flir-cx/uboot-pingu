@@ -1,10 +1,10 @@
 #include "../../../flir/include/board_support.h"
 #include "../../../flir/include/flir_generic.h"
-#include <eeprom.h>
+#include "../../../flir/include/eeprom.h"
 
-int board_support_setup(struct Eeprom *ioboard, struct hw_support *hardware)
+int board_support_setup(struct eeprom *ioboard, struct hw_support *hardware)
 {
-	int ret = get_eeprom_hwrev(ioboard);
+	int ret = eeprom_read_rev(ioboard);
 	if(ret != 0)
 	{
 		printf("Error reading io board %d \n",ret);

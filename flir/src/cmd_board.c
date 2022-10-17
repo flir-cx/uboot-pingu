@@ -4,10 +4,9 @@
 #include <malloc.h>
 #include "../../../flir/include/eeprom.h"
 
-
 #define Eeprom_entry(bus,address,i2c_offset,name) {bus,address,i2c_offset,0,0,name}
 
-struct Eeprom eeprom [] =
+struct eeprom eeprom [] =
 {
 	Eeprom_entry(2, 0xae, 0x40, "main"),
 	Eeprom_entry(2, 0xae, 0x40, "ec101"),
@@ -33,21 +32,21 @@ static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[
 	}
 
 #ifdef CONFIG_FLIR_OLD_COMMAND_STYLE
-	ret = get_eeprom_hwrev(&eeprom[i]);
+	ret = eeprom_read_rev(&eeprom[i]);
 	if (ret == 0)
 	{
-		char env[32];
-		char var[20];
-		snprintf(env, strlen(env), "%s_board_revision", eeprom[i].name);
-		snprintf(var, strlen(var), "%i", eeprom[i].revison);
+		char env[64];
+		char var[32];
+		snprintf(env, sizeof(env), "%s_board_revision", eeprom[i].name);
+		snprintf(var, sizeof(var), "%i", eeprom[i].revision);
 		env_set(env, var);
 
-		snprintf(env, strlen(env), "%s_board_article", eeprom[i].name);
-		snprintf(var, strlen(var), "%i", eeprom[i].article);
+		snprintf(env, sizeof(env), "%s_board_article", eeprom[i].name);
+		snprintf(var, sizeof(var), "%i", eeprom[i].article);
 		env_set(env, var);
 		return CMD_RET_SUCCESS;
 	} else {
-		printf("Board %s not responding \n", eeprom[i].name);		
+		printf("Board %s not responding \n", eeprom[i].name);
 		return CMD_RET_FAILURE;
 	}
 #endif
@@ -66,7 +65,7 @@ U_BOOT_CMD(
 	   "	<name>_board_revision and \n"
 	   "	<name>_board_article\n"
 	   "supported eeproms: \n"
-	   "ec401w"
+	   "ec401w ec101"
 	   );
 #endif
 
