@@ -2,13 +2,13 @@
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
 #include <dm.h>
-#include <bootstate.h>
+#include "bootstate.h"
 #include <console.h>
 #include <command.h>
 #include <stdio_dev.h>
-#include <pf1550.h>
-#include <lc709203.h>
-#include <leds.h>
+#include "pf1550.h"
+#include "lc709203.h"
+#include "leds.h"
 #include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;

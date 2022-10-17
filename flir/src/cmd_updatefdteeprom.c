@@ -49,7 +49,7 @@ void patch_fdt_eeprom(void *blob)
 
     list_for_each_entry(tmp, &eeprom_list.list, list){
         int article  = cpu_to_fdt32(tmp->eeprom.article);
-        int revision = cpu_to_fdt32(tmp->eeprom.revison);
+        int revision = cpu_to_fdt32(tmp->eeprom.revision);
         do_fixup_by_path(blob,tmp->eeprom.name,"article",&article,sizeof(article),1);
         do_fixup_by_path(blob,tmp->eeprom.name,"rev",&revision,sizeof(revision),1);
     }
@@ -81,7 +81,7 @@ static int do_update_fdt_eeprom(struct cmd_tbl *cmdtp, int flag, int argc, char 
      /* Device tree node name */
     sprintf(tmp->eeprom.name,"/boards/%s",argv[1]);
 
-    ret=get_eeprom_hwrev(&tmp->eeprom);
+    ret = eeprom_read_rev(&tmp->eeprom);
 
     if(ret==0)
     {

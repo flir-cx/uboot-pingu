@@ -3,7 +3,7 @@
 #include <dm.h>
 #include <console.h>
 #include <command.h>
-#include <leds.h>
+#include "leds.h"
 
 #define CHG_LEVEL_FULL 95
 #define CHG_LEVEL_HIGH 75

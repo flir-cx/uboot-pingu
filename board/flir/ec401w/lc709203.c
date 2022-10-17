@@ -7,7 +7,9 @@
  * published by the Free Software Foundation.
  */
 
-#include <lc709203.h>
+#include <dm.h>
+#include <i2c.h>
+#include "lc709203.h"
 
 static uint8_t crc8(const void* vptr, int len) {
 	const uint8_t *data = vptr;

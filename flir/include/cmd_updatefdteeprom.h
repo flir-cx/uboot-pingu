@@ -23,7 +23,7 @@ void patch_fdt_eeprom(void *blob);
 
 struct Eeprom_list{
     struct list_head list;
-    struct Eeprom  eeprom;
+    struct eeprom  eeprom;
 };
 
 #endif
