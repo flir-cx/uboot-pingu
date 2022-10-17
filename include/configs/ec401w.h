@@ -21,7 +21,6 @@
 
 /* Fuses */
 #define CONFIG_CMD_FUSE
-#define CONFIG_MXC_OCOTP
 
 #define CONFIG_BOUNCE_BUFFER
 
@@ -66,9 +65,6 @@
 #define CONFIG_SYS_PBSIZE 		(CONFIG_SYS_CBSIZE + sizeof(CONFIG_SYS_PROMPT) + 16)
 
 #define CONFIG_STACKSIZE		SZ_8K
-
-/* Physical Memory Map */
-#define CONFIG_NR_DRAM_BANKS		1
 
 /* Address where u-boot will be loaded in memory*/
 #define CONFIG_SYS_TEXT_BASE		0x67800000
