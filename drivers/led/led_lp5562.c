@@ -335,7 +335,7 @@ static int lp5562_led_pattern_boot(u16 *p1, u16 *p2, u16 *p3)
 {
 	static const u16 bp1[] = { 0x087F, 0xE004, 0x04FF, 0xE200, 0x0000, };
 	static const u16 bp2[] = { 0xE080, 0x087F, 0xE008, 0x04FF, 0x0000, };
-	static const u16 bp3[] = { 0xE100, 0x087F, 0xE002, 0x04FF, 0x0000, };
+	static const u16 bp3[] = { 0xE100, 0x087F, 0x04FF, 0xE002, 0x0000, };
 
 	memcpy(p1, bp1, sizeof(bp1));
 	memcpy(p2, bp2, sizeof(bp2));
