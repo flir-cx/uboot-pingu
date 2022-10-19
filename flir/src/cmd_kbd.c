@@ -8,6 +8,10 @@
 #include <dm/device.h>
 #include "../../../flir/include/cmd_kbd.h"
 
+#if ! CONFIG_IS_ENABLED(DM_I2C)
+#error "Must configure DM_I2C to use GPIO expander"
+#endif
+
 static int get_gpio_ioexpander(unsigned int nr);
 
 struct button_key {
@@ -48,7 +52,6 @@ static char kbuf[ARRAY_SIZE(buttons) + 1];
  */
 static int init_kbd_devices(void)
 {
-#if CONFIG_IS_ENABLED(DM_I2C)
 	int ret;
 	int i;
 	struct udevice *bus;
@@ -75,10 +78,6 @@ static int init_kbd_devices(void)
 	kbd_is_initialized = 1;
 
 	return 0;
-#else
-	printf("GPIO expander error: Need DM_I2C configured\n");
-	return -ENXIO;
-#endif
 }
 
 /*
@@ -106,7 +105,7 @@ int read_keys(char **buf)
 		cond_log_return(ret < 0, ret,
 				"get_key failed for key '%c'\n", buttons[i].ident);
 	}
-	kbuf[numpressed] = '\0';
+
 	return numpressed;
 }
 
@@ -122,7 +121,7 @@ int read_keys(char **buf)
  */
 static int get_gpio_ioexpander(unsigned int combnr)
 {
-#define DATA_LEN 1
+	const int data_len = 1;
 	unsigned int nr = combnr & 0xff;
 	u8 buf[2] = {0xff, 0xff};
 	int i;
@@ -130,7 +129,7 @@ static int get_gpio_ioexpander(unsigned int combnr)
 
 	for (i = 0; i < ARRAY_SIZE(buttons); i++)
 		if (buttons[i].gpnum == combnr && buttons[i].dev)
-			ret = dm_i2c_read(buttons[i].dev, PCA9534_INPUT_PORT, buf, DATA_LEN);
+			ret = dm_i2c_read(buttons[i].dev, PCA9534_INPUT_PORT, buf, data_len);
 
 	return_on_status(ret, "read failed, status %d\n", ret);
 

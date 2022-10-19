@@ -5,6 +5,10 @@
 #include "../../../flir/include/cmd_kbd.h"
 #include "../../../flir/include/eeprom.h"
 
+#if ! CONFIG_IS_ENABLED(DM_I2C)
+#error "Must configure DM_I2C to access EEPROM"
+#endif
+
 /*
  * Raw hardware version struct (in EEPROM)
  */
@@ -35,7 +39,6 @@ int eeprom_read_rev(struct eeprom *eeprom)
 	const int addr_len = 1;
 	const int offs_len = 1;
 	struct hardware_version hwrev;
-#if CONFIG_DM_I2C
 	struct udevice *bus;
 	struct udevice *dev;
 
@@ -53,9 +56,6 @@ int eeprom_read_rev(struct eeprom *eeprom)
 
 	eeprom->article = simple_strtoul(&hwrev.article[1], NULL, 10);
 	eeprom->revision = simple_strtoul(hwrev.revision, NULL, 10);
-#else
-	printf("GPIO expander error: Need DM_I2C configured\n");
-	ret = -1;
-#endif
+
 	return ret;
 }
