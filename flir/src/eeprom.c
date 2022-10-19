@@ -10,52 +10,90 @@
 #endif
 
 /*
- * Raw hardware version struct (in EEPROM)
+ * EEPROM data structures,
+ * as specified in doc d1002343
  */
-struct hardware_version {
+
+// Product Version
+// 0x40 (64) bytes
+struct product_ver {
+	char name[20];
+	char article[16];
+	char serial[10];
+	char date[12];
+	char revision[4];
+	char chksum[2];
+};
+
+// CPU board Article Version
+// 0x20 (32) bytes
+struct article_ver {
 	char article[10];
 	char serial[10];
 	char revision[4];
-	char module_offset[2]; // Address of a parent module, ModRevstruct
-	char module_device[2]; // i2c device
-	char reserved[2];
-	// 2B checksum
+	char reserved[6];
+	char chksum[2];
 };
 
+#define PRODUCT_DATA_OFFSET (0x00)
+
+static int eeprom_read_data(struct eeprom *eeprom, unsigned int offset,
+			    u8 *data, unsigned int length)
+{
+	int ret = 0;
+	const int I2C_OFFS_LEN = 1;
+	struct udevice *dev;
+
+	ret = i2c_get_chip_for_busnum(eeprom->i2c_bus, (eeprom->i2c_address >> 1),
+				      I2C_OFFS_LEN, &dev);
+	return_on_status(ret, "EEPROM chip not found\n\n");
+
+	ret = dm_i2c_read(dev, offset, data, length);
+	return_on_status(ret, "Failed to read EEPROM\n");
+
+	return 0;
+}
+
 /*
- * Read EEPROM. The supplied argument must define
- * bus, address (a.k.a chip) and offset (a.k.a address)
- *
- * Article and revision are parsed and filled in.
+ * Read article data from the EEPROM.
+ * The supplied argument must define bus and address (a.k.a chip).
+ * (Offset will be ignored)
+ * Article data is parsed and written back to the eeprom struct.
  *
  * Return 0 on success, <0 on fail
  */
 int eeprom_read_rev(struct eeprom *eeprom)
 {
-	int ret = 0;
-	int bus_no = eeprom->i2c_bus;
-	int chip = eeprom->i2c_address >> 1;
-	int addr = eeprom->i2c_offset;
-	const int addr_len = 1;
-	const int offs_len = 1;
-	struct hardware_version hwrev;
-	struct udevice *bus;
-	struct udevice *dev;
+	struct article_ver data;
+	int ret = eeprom_read_data(eeprom, eeprom->i2c_offset, (u8 *)&data, sizeof(data));
 
-	ret = uclass_get_device_by_seq(UCLASS_I2C, bus_no, &bus);
-	return_on_status(ret, "No i2c bus 2 found\n");
-
-	ret = i2c_get_chip(bus, chip, addr_len, &dev);
-	return_on_status(ret, "Chip 0x%02x not found\n", chip);
-
-	ret = i2c_set_chip_offset_len(dev, offs_len);
-	return_on_status(ret, "Set offset_len on 0x%02x failed\n", chip);
-
-	ret = dm_i2c_read(dev, addr, (u8 *)&hwrev, sizeof(hwrev));
-	return_on_status(ret, "Read EEPROM failed\n");
-
-	eeprom->article = simple_strtoul(&hwrev.article[1], NULL, 10);
-	eeprom->revision = simple_strtoul(hwrev.revision, NULL, 10);
+	return_on_status(ret, "Read article info from EEPROM failed\n");
+	eeprom->article_number = simple_strtoul(&data.article[1], NULL, 10);
+	eeprom->article_revision = simple_strtoul(data.revision, NULL, 10);
+	eeprom->article_serial = simple_strtoul(data.serial, NULL, 10);
 
 	return ret;
 }
+
+/*
+ * Read product data from the EEPROM.
+ * The supplied argument must define bus and address (a.k.a chip).
+ * (Offset will be ignored)
+ * Product data is parsed and written back to the eeprom struct.
+ *
+ * Return 0 on success, <0 on fail
+ */
+int eeprom_read_product(struct eeprom *eeprom)
+{
+	struct product_ver data;
+	int ret = eeprom_read_data(eeprom, PRODUCT_DATA_OFFSET, (u8 *)&data, sizeof(data));
+
+	return_on_status(ret, "Read product info from EEPROM failed\n");
+	eeprom->product_number = simple_strtoul(data.article, NULL, 10);
+	eeprom->product_revision = simple_strtoul(data.revision, NULL, 10);
+	eeprom->product_serial = simple_strtoul(data.serial, NULL, 10);
+	memcpy(eeprom->product_name, data.name, sizeof(eeprom->product_name));
+
+	return ret;
+}
+

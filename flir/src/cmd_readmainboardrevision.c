@@ -13,6 +13,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#include <vsprintf.h>
 #include <command.h>
 #include "../../../flir/include/eeprom.h"
 #include "../../../flir/include/cmd_kbd.h"
@@ -27,16 +28,16 @@ static int get_mainboard_version(int *article, int *revision)
 		.i2c_bus = EEPROM_BUS_ID,
 		.i2c_address = MAIN_EEPROM_I2C_ADDR,
 		.i2c_offset = MAIN_EEPROM_I2C_OFFS,
-		.article = 0,
-		.revision = 0
+		.article_number = 0,
+		.article_revision = 0
 	};
 	int ret = 0;
 
-	if (!cache.article)
+	if (!cache.article_number)
 		ret = eeprom_read_rev(&cache);
 
-	*article = cache.article;
-	*revision = cache.revision;
+	*article = cache.article_number;
+	*revision = cache.article_revision;
 
 	return ret;
 }

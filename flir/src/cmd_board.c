@@ -4,7 +4,13 @@
 #include <malloc.h>
 #include "../../../flir/include/eeprom.h"
 
-#define Eeprom_entry(bus,address,i2c_offset,name) {bus,address,i2c_offset,0,0,name}
+#define Eeprom_entry(bus, addr, offs, nam) {		\
+		.i2c_bus = bus,			\
+		.i2c_address = addr,		\
+		.i2c_offset = offs,		\
+		.article_number = 0,		\
+		.article_revision = 0,		\
+		.name = nam }
 
 struct eeprom eeprom [] =
 {
@@ -38,11 +44,11 @@ static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[
 		char env[64];
 		char var[32];
 		snprintf(env, sizeof(env), "%s_board_revision", eeprom[i].name);
-		snprintf(var, sizeof(var), "%i", eeprom[i].revision);
+		snprintf(var, sizeof(var), "%i", eeprom[i].article_revision);
 		env_set(env, var);
 
 		snprintf(env, sizeof(env), "%s_board_article", eeprom[i].name);
-		snprintf(var, sizeof(var), "%i", eeprom[i].article);
+		snprintf(var, sizeof(var), "%i", eeprom[i].article_number);
 		env_set(env, var);
 		return CMD_RET_SUCCESS;
 	} else {

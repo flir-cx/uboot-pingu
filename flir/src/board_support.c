@@ -12,8 +12,7 @@ int board_support_setup(struct eeprom *ioboard, struct hw_support *hardware)
 	}
 
 	
-	switch (ioboard->article)
-	{
+	switch (ioboard->article_number) {
 	case EVIO_ARTICLE:
 	case EVIO2_ARTICLE:
 		hardware->display = true;
@@ -47,7 +46,7 @@ int board_support_setup(struct eeprom *ioboard, struct hw_support *hardware)
 
 	default:
 		printf("Unknown camera, using default hw support %d \n",
-		       ioboard->article);
+		       ioboard->article_number);
 	}
 	
 	return ret;

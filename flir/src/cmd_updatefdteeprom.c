@@ -48,8 +48,8 @@ void patch_fdt_eeprom(void *blob)
     struct Eeprom_list *tmp;
 
     list_for_each_entry(tmp, &eeprom_list.list, list){
-        int article  = cpu_to_fdt32(tmp->eeprom.article);
-        int revision = cpu_to_fdt32(tmp->eeprom.revision);
+        int article = cpu_to_fdt32(tmp->eeprom.article_number);
+        int revision = cpu_to_fdt32(tmp->eeprom.article_revision);
         do_fixup_by_path(blob,tmp->eeprom.name,"article",&article,sizeof(article),1);
         do_fixup_by_path(blob,tmp->eeprom.name,"rev",&revision,sizeof(revision),1);
     }
