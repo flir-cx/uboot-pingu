@@ -86,6 +86,9 @@ static int print_recovery_banner(void)
 	char msg[32] = "Recovery Mode";
 	unsigned int mlen = strlen(msg);
 
+	if (!sdim.rows || !sdim.cols)
+		goto bail_out;
+
 	set_cursor_pos(1, 1);
 	print_display(CLR_LINE);
 
@@ -110,8 +113,7 @@ static int print_recovery_banner(void)
 	return 0;
 
 bail_out:
-	set_cursor_pos(1, 1);
-	print_display("Recovery");
+	print_display(CLR_LINE "\r:..Recovery");
 	return 0;
 }
 
@@ -156,20 +158,15 @@ static int poll_key(char k)
 
 static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-	int ret;
 	char *chp = secret;
 
 	//MSD_LOAD button overrides security check
 	if (flir_get_safe_boot())
 		return 0;
 
-	ret = init_stdio();
-	return_on_status(ret, "fb-stdio error\n");
+	if (init_stdio() || compute_stdio_dimensions())
+		goto cmd_exit;
 
-	ret = compute_stdio_dimensions();
-	return_on_status(ret, "fb-stdio error\n");
-
-	// Clear line and indicate ready-for-secret
 	set_cursor_pos(1, 1);
 	print_display(CLR_LINE ":");
 
@@ -188,7 +185,7 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		}
 		chp++;
 	}
-
+cmd_exit:
 	if (*chp)
 		print_display("boot");
 	else
