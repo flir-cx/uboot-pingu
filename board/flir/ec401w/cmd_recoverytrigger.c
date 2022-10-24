@@ -203,8 +203,13 @@ int check_button_sequence(void)
         // User release button while steady leds
         // inject factory default here
         env_set("factorydefault_bootarg", "factorydefault");
-    }
-    
+	}
+	else
+	{
+		leds_off();
+		power_off();
+	}
+
     return FAIL;
 }
 
