@@ -4,8 +4,9 @@
 #include <errno.h>
 #include <vsprintf.h>
 #include <stdio_dev.h>
-#include <asm/mach-imx/video.h>
+#include <video.h>
 #include <video_font.h>
+#include <dm/uclass.h>
 #include "../include/cmd_kbd.h"
 #include "../include/cmd_kbdsecret.h"
 #include "../include/cmd_recoverykey.h"
@@ -30,7 +31,8 @@ static struct stdio_dim sdim;
 
 static inline void print_display(char *s)
 {
-	sdev->puts(sdev, s);
+	if (sdev)
+		sdev->puts(sdev, s);
 }
 
 static int init_stdio(void)
@@ -42,22 +44,15 @@ static int init_stdio(void)
 
 static int compute_stdio_dimensions(void)
 {
-	int i;
-	struct display_info_t const *pinfo;
-	const char *pname = env_get("panel");
+	int ret;
+	struct udevice *udev;
 
-	cond_log_return(!pname, -ENODEV, "Missing 'panel' in environment\n");
-	for (i = 0; i < display_count; i++)
-		if (!strcmp(pname, displays[i].mode.name)) {
-			pinfo = &displays[i];
-			break;
-		}
-	cond_log_return(!pinfo, -ENODEV, "No panel '%s' is defined\n", pname);
-	cond_log_return(!pinfo->mode.xres || !pinfo->mode.yres, -EINVAL,
-			"Illegal panel dim: (%d, %d)\n", pinfo->mode.xres, pinfo->mode.yres);
+	// 'vidconsole' will always have id 0, n.b., see stdio.c
+	ret = uclass_get_device_by_seq(UCLASS_VIDEO, 0, &udev);
+	return_on_status(ret, "Did not find a console video device\n");
 
-	sdim.rows = pinfo->mode.yres / VIDEO_FONT_HEIGHT;
-	sdim.cols = pinfo->mode.xres / VIDEO_FONT_WIDTH;
+	sdim.rows = video_get_ysize(udev) / VIDEO_FONT_HEIGHT;
+	sdim.cols = video_get_xsize(udev) / VIDEO_FONT_WIDTH;
 
 	return 0;
 }
@@ -164,8 +159,10 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	if (flir_get_safe_boot())
 		return 0;
 
-	if (init_stdio() || compute_stdio_dimensions())
-		goto cmd_exit;
+	if (init_stdio())
+		printf("Stdio error, proceed without visual feedback\n");
+	else
+		compute_stdio_dimensions();
 
 	set_cursor_pos(1, 1);
 	print_display(CLR_LINE ":");
@@ -185,7 +182,7 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		}
 		chp++;
 	}
-cmd_exit:
+
 	if (*chp)
 		print_display("boot");
 	else
