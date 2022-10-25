@@ -126,7 +126,8 @@ int check_recovery_sequence(void)
 
     printf("sequence 1 ok\n");
 
-    leds_charge(50);
+	// One led is on
+    leds_battery_solid(20);
 
     // sequence 2
     printf("sequence 2 start \n");
@@ -139,7 +140,7 @@ int check_recovery_sequence(void)
     if(trigger_wait_until(TRIG_ON, 2000) == OK)
         return FAIL; // dont press again.
 
-    leds_charge(85);
+    leds_boot();
 
     return OK;
 }
