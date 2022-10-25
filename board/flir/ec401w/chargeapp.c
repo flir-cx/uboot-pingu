@@ -50,11 +50,9 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 		if (soc != soc_last)
 			leds_charge(soc);
 
-		if(get_onoff_key())
-		{
-			//Turn on camera
-			leds_off();
-			reboot();
+		if(get_onoff_key()) {
+			leds_boot();
+			exit=1;
 		}
 
 		//poweroff camera if usb-cable is removed
