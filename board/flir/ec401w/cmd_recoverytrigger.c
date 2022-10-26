@@ -50,12 +50,15 @@ static iomux_cfg_t const btn_pwr_pad[] = {
 	MX7ULP_PAD_PTC13__PTC13 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
 };
 
-// HW reset 16s
-#define SEQ_BATTERY_STATUS_START_MS 4000
-#define SEQ_DISPLAY_SOC_MS          6000
-#define SEQ_SLOW_FDEFAULT_MS        3000
-#define SEQ_FAST_FDEFAULT_MS        2000
-#define SEQ_END_MS                  3000
+/* Total time has to be less than 16 seconds,
+ * since hw reset kicks in.
+ */
+// Circuit bootup is around 1.5 seconds
+#define SEQ_BATTERY_STATUS_START_MS 2500	/* 4s  */
+#define SEQ_DISPLAY_SOC_MS          6000	/* 10s */
+#define SEQ_SLOW_FDEFAULT_MS        2000	/* 12s */
+#define SEQ_FAST_FDEFAULT_MS        2000	/* 14s */
+#define SEQ_END_MS                  2000	/* 16s */
 
 #define TRIG_ON 0
 #define TRIG_OFF 1
@@ -204,6 +207,7 @@ int check_button_sequence(void)
         // User release button while steady leds
         // inject factory default here
         env_set("factorydefault_bootarg", "factorydefault");
+		leds_boot();
 	}
 	else
 	{
