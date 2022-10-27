@@ -345,7 +345,7 @@ void mipi_clk_enable(void)
 	writel(reg, &mxc_ccm->CCGR3);
 }
 
-int mxc_mipi_dsi_enable()
+int mxc_mipi_dsi_enable(void)
 {
 	struct mipi_dsi_info mipi_dsi;
 	int i;

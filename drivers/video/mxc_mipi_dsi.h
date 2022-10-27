@@ -182,7 +182,7 @@ struct mipi_dsi_info {
 
 };
 
-int mxc_mipi_dsi_enable();
+int mxc_mipi_dsi_enable(void);
 int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *buf, int len);
 
 int mipid_otm1287a_lcd_setup(struct mipi_dsi_info *mipi_dsi);

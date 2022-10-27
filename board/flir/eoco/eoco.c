@@ -119,6 +119,42 @@ static iomux_v3_cfg_t const ecspi4_pads[] = {
     MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
+int platform_check_pmic_boot_reason(void)
+{
+	spi_claim_bus(slave);
+
+	unsigned char fault_log;
+
+	// Check PMIC FAULT register for boot reason.
+	pmic_read_reg(DA9063_REG_FAULT_LOG,&fault_log);
+	pmic_write_reg(DA9063_REG_FAULT_LOG,fault_log);
+
+	//Long press on-key button
+	if(fault_log & DA9063_KEY_RESET)
+	{
+		printf("Powering off....\n");
+		// Prevent auto-boot and powerdown
+		pmic_write_bitfield(DA9063_REG_CONTROL_C, DA9063_DEBOUNCING_MASK, DA9063_DEBOUNCING_256MS);
+		pmic_write_bitfield(DA9063_REG_CONTROL_C, DA9063_AUTO_BOOT, 0);
+		pmic_write_bitfield(DA9063_REG_IRQ_MASK_A, DA9063_M_TICK, DA9063_M_TICK);
+		pmic_write_bitfield(DA9063_REG_CONTROL_A, DA9063_SYSTEM_EN, 0);
+
+		while(1) {}
+	}
+
+	spi_release_bus(slave);
+	return 0;
+}
+
+void setup_spi(void)
+{
+	SETUP_IOMUX_PADS(ecspi1_pads);
+	gpio_request(IMX_GPIO_NR(5, 28), "CS SPI1 0");
+	gpio_request(IMX_GPIO_NR(5, 29), "CS SPI1 1");
+	gpio_direction_output(IMX_GPIO_NR(5, 28),1);
+	gpio_direction_output(IMX_GPIO_NR(5, 29),1);
+}
+
 int platform_setup_pmic_voltages(void)
 {
     unsigned char dev_id, var_id, cust_id, conf_id;
@@ -189,14 +225,6 @@ int platform_setup_pmic_voltages(void)
 	return 0;
 }
 
-void setup_spi(void)
-{
-	SETUP_IOMUX_PADS(ecspi1_pads);
-	gpio_request(IMX_GPIO_NR(5, 28), "CS SPI1 0");
-	gpio_request(IMX_GPIO_NR(5, 29), "CS SPI1 1");
-	gpio_direction_output(IMX_GPIO_NR(5, 28),1);
-	gpio_direction_output(IMX_GPIO_NR(5, 29),1);
-}
 #endif
 
 static iomux_v3_cfg_t const rgb_pads[] = {
@@ -1000,7 +1028,7 @@ int board_init(void)
 
 #ifdef CONFIG_MXC_SPI
 	platform_setup_pmic_voltages();
-	setup_spi();
+	platform_check_pmic_boot_reason();
 #endif
 
 #ifdef CONFIG_SYS_I2C
