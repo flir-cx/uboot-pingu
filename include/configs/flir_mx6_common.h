@@ -502,6 +502,7 @@
                 "root=/dev/ram0 ethaddr=${ethaddr}\0"                \
         "recboot=echo Booting preloaded recovery...; "\
                 "run recargs; " \
+                "run hw_start;" \
                 "bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
         "parts_flir=\"uuid_disk=${uuid_disk};" \
                 "start=2MiB,name=recovery,size=40MiB,uuid=${part1_uuid};" \
@@ -551,6 +552,7 @@
                  "fi;\0" \
     "recoveryboot=echo Booting from mmc recovery;" \
                  "run selectrecfdtfile; run recargs; " \
+                 "run hw_start;" \
                  "setenv bootargs_linux ${bootargs}; " \
                  "setenv mmcpart 1; " \
                  "run loadfdt; run loadinitrd; run loaduimage; " \

@@ -13,7 +13,13 @@
 #include "../../../flir/include/cmd_loadfpga.h"
 #include "../../../flir/include/da9063.h"
 
+#define CMD_WRITE_ENABLE 0x06
+#define CMD_EN4BYTE_ADDR 0xB7
+#define CMD_WRITE_ENHANCED_VOLATILE_CONF 0x61
+#define SPI_FLASH_MAX_SIZE_BUF 32
+
 static void power_up_fpga(void);
+static int setup_fpga_spi_flash(void);
 
 __weak int fpga_power(bool enable)
 {
@@ -32,7 +38,7 @@ __weak int fpga_power(bool enable)
 #endif
 
 
-//FPGA Configuration is documented in 
+//FPGA Configuration is documented in
 // Altera: CV-52007 (2017.09.19)
 //         Cyclone Device Handbook Volume 1, Chapter 7 Configuration
 //
@@ -45,8 +51,8 @@ __weak int fpga_power(bool enable)
 //SPI1_MISO       hiZ                                            disable_spi_bus
 //FPGA_CE_n       output, must be low during config,             power_up_fpga
 //                set high to release spi
-//CONFIG_n        output, config triggered by L->H transition    power_up_fpga 
-//STATUS_n        input                                          power_up_fpga 
+//CONFIG_n        output, config triggered by L->H transition    power_up_fpga
+//STATUS_n        input                                          power_up_fpga
 //CONF_DONE       input                                          power_up_fpga
 
 
@@ -67,11 +73,11 @@ iomux_v3_cfg_t const no_ecspi1_pads[] = {
     MX6_PAD_CSI0_DAT5__GPIO5_IO23  | MUX_PAD_CTRL(NO_PAD_CTRL),
     MX6_PAD_CSI0_DAT6__GPIO5_IO24  | MUX_PAD_CTRL(NO_PAD_CTRL),
     MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
-};     
+};
 
 static void enable_spi_bus(void)
 {
-  LOG_MSG("%s\n",  __func__);  
+  LOG_MSG("%s\n",  __func__);
 	//restore cpu spi bus
          gpio_request(IMX_GPIO_NR(5, 28), "CS SPI1");
      //	 gpio_direction_output(IMX_GPIO_NR(5, 28),1);
@@ -91,7 +97,7 @@ static void disable_spi_bus(void)
 	gpio_direction_input(GPIO_SPI1_SCLK);
 	gpio_request(GPIO_SPI1_MOSI, "test-spi1");
 	gpio_direction_input(GPIO_SPI1_MOSI);
-	gpio_request(GPIO_SPI1_MISO, "test-spi2");	
+	gpio_request(GPIO_SPI1_MISO, "test-spi2");
 	gpio_direction_input(GPIO_SPI1_MISO);
 	gpio_request(GPIO_SPI1_CS, "test-spi3");
 	gpio_direction_output(GPIO_SPI1_CS,1);
@@ -179,9 +185,9 @@ static void power_up_fpga(void)
 
 	gpio_request(GPIO_FPGA_PROGRAM_n, "test-gpio0");
 	gpio_direction_output(GPIO_FPGA_PROGRAM_n ,0);
-	gpio_request(GPIO_FPGA_INIT_n, "test-gpio1");	
+	gpio_request(GPIO_FPGA_INIT_n, "test-gpio1");
 	gpio_direction_output(GPIO_FPGA_INIT_n ,0);
-	gpio_request(GPIO_FPGA_CONF_DONE, "test-gpio2");		
+	gpio_request(GPIO_FPGA_CONF_DONE, "test-gpio2");
 	gpio_direction_input(GPIO_FPGA_CONF_DONE);
 	fpga_power(true);
 	mdelay(10);
@@ -192,7 +198,7 @@ static void power_up_fpga(void)
 	gpio_direction_input(GPIO_FPGA_CONF_DONE);
 	gpio_direction_input(GPIO_FPGA_STATUS_n);
 	disable_fpga();
-	fpga_power(true);	
+	fpga_power(true);
 	mdelay(10);
 	enable_fpga();
 #else
@@ -206,7 +212,7 @@ static void start_fpga_configuration(void)
 #if defined(CONFIG_FPGA_XILINX)
 	gpio_request(GPIO_FPGA_INIT_n, "test-gpio");
 	gpio_direction_output(GPIO_FPGA_INIT_n ,0);
-	gpio_request(GPIO_FPGA_PROGRAM_n, "test-gpio2");	
+	gpio_request(GPIO_FPGA_PROGRAM_n, "test-gpio2");
 	gpio_direction_output(GPIO_FPGA_PROGRAM_n ,0);
 	mdelay(10);
 	gpio_direction_output(GPIO_FPGA_PROGRAM_n ,1);
@@ -243,9 +249,125 @@ static void request_fpga_config_pins(bool enable)
 	}
 }
 
-int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
+
+static int do_spi_xfer(int bus, int cs, int freq, int mode, uchar *dout, int len)
+{
+	struct spi_slave *slave;
+	int ret = 0;
+	int bitlen = (1 + len) * 8;
+	uchar din[SPI_FLASH_MAX_SIZE_BUF];
+
+#if CONFIG_IS_ENABLED(DM_SPI)
+	char name[30], *str;
+	struct udevice *dev;
+
+	snprintf(name, sizeof(name), "generic_%d:%d", bus, cs);
+	str = strdup(name);
+	if (!str)
+		return -ENOMEM;
+	ret = spi_get_bus_and_cs(bus, cs, freq, mode, "spi_generic_drv",
+				 str, &dev, &slave);
+	if (ret)
+		return ret;
+#else
+	slave = spi_setup_slave(bus, cs, freq, mode);
+	if (!slave) {
+		printf("Invalid device %d:%d\n", bus, cs);
+		return -EINVAL;
+	}
+#endif
+
+	ret = spi_claim_bus(slave);
+	if (ret)
+		goto done;
+
+	ret = spi_xfer(slave, bitlen, dout, din,
+			SPI_XFER_BEGIN | SPI_XFER_END);
+#if !CONFIG_IS_ENABLED(DM_SPI)
+	/* We don't get an error code in this case */
+	if (ret)
+		ret = -EIO;
+#endif
+
+done:
+	spi_release_bus(slave);
+#if !CONFIG_IS_ENABLED(DM_SPI)
+	spi_free_slave(slave);
+#endif
+
+	return ret;
+}
+
+/**
+ * @brief Write a command to the spi flash
+ *
+ * @param cmd
+ * @param dout the data to be written, null if no parameters to cmd
+ * @param len length of dout
+ * @return int
+ */
+static int spi_flash_cmd(uchar cmd, uchar *dout, size_t len)
+{
+	uchar buf[SPI_FLASH_MAX_SIZE_BUF] = {cmd};
+
+	if ((len + 1 >= SPI_FLASH_MAX_SIZE_BUF) || (len > 0 && dout == NULL))
+		return -EINVAL;
+
+	if (len > 0)
+		memcpy(&buf[1], dout, len);
+
+	unsigned int bus = 0;
+	unsigned int cs = 0;
+	unsigned int mode = CONFIG_DEFAULT_SPI_MODE;
+	unsigned int freq = 1000000;
+	return do_spi_xfer(bus, cs, freq, mode, buf, len);
+}
+
+/**
+ * @brief Set up spi flash according to altera spec
+ *
+ * @return int negative on error
+ */
+static int setup_fpga_spi_flash()
+{
+	uchar hold_disable_mask = 0xef;
+	int ret = 0;
+
+	enable_spi_bus(); //take control of spi bus
+	ret += spi_flash_cmd(CMD_WRITE_ENABLE, NULL, 0);
+	ret += spi_flash_cmd(CMD_WRITE_ENHANCED_VOLATILE_CONF, &hold_disable_mask, 1);
+	ret += spi_flash_cmd(CMD_WRITE_ENABLE, NULL, 0);
+	ret += spi_flash_cmd(CMD_EN4BYTE_ADDR, NULL, 0);
+
+	return ret;
+}
+
+/**
+ * @brief Power up the fpga without starting it.
+ * This is needed because the 3V15 is the same for the spi
+ * flash and the fpga.
+ *
+ *
+ */
+static void power_fpga_spi_flash(void)
+{
+	request_fpga_config_pins(true);
+	disable_fpga();
+
+	gpio_direction_input(GPIO_FPGA_CONFIG_n);
+	gpio_direction_input(GPIO_FPGA_CONF_DONE);
+	gpio_direction_input(GPIO_FPGA_STATUS_n);
+
+	fpga_power(true);
+	mdelay(10);
+
+	request_fpga_config_pins(false);
+}
+static int load_fpga(void)
 {
 	int ret;
+	int i;
+
 	disable_spi_bus();   //allow fpga to control spi bus
 	request_fpga_config_pins(true);
 	power_up_fpga();
@@ -254,10 +376,17 @@ int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 
 	/* Just start config, don't wait for it to complete */
 	start_fpga_configuration();
-	mdelay(1000);
+	mdelay(500); // Takes around 700ms, try up to 1s.
 
-	if (gpio_get_value(GPIO_FPGA_CONF_DONE) == 1) {
-		printf("FPGA Loading done\n");
+	for (i = 0; i < 25; i++) {
+		mdelay(20);
+		ret = gpio_get_value(GPIO_FPGA_CONF_DONE);
+		if (ret == 1)
+			break;
+	}
+
+	if (ret == 1) {
+		printf("FPGA Loading done\n(Took %i ms)\n", i * 20 + 500);
 		ret = CMD_RET_SUCCESS;
 	} else {
 		printf("FPGA Loading failed\n");
@@ -272,6 +401,17 @@ int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 	enable_spi_bus(); //take back control of spi bus
 
 	return ret;
+}
+
+// TODO: Move this kind of code into fpga load command
+int do_load_fpga(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
+{
+	power_fpga_spi_flash();
+	if (setup_fpga_spi_flash() != 0) {
+		pr_err("Failed to setup flash for fpga!\n");
+		// Try to continue anyway...
+	}
+	return load_fpga();
 }
 
 #else
