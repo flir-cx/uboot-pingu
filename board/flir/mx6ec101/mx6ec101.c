@@ -27,10 +27,10 @@
 #include <mmc.h>
 #include <fsl_esdhc_imx.h>
 #include <miiphy.h>
-#include <asm/arch/mxc_hdmi.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
+#include <fdt_support.h>
 #include <i2c.h>
 #include <input.h>
 #include <power/pmic.h>
@@ -40,7 +40,11 @@
 #include <usb/ehci-ci.h>
 #include <asm/arch/mx6-ddr.h>
 #include <power/regulator.h>
+#include <spi.h>
 #include <splash.h>
+#include "../../../drivers/video/mxc_mipi_dsi.h"
+#include "../../../drivers/video/mxcfb_otm1287.h"
+#include "../../../drivers/video/mxcfb_st7703.h"
 #if defined(CONFIG_MX6DL) && defined(CONFIG_MXC_EPDC)
 #include <lcd.h>
 #include <mxc_epdc_fb.h>
@@ -52,23 +56,24 @@
 #endif
 #endif /*CONFIG_FSL_FASTBOOT*/
 
-// #include <cmd_loadfpga.h>
 #include "../../../flir/include/cmd_loadfpga.h"
 #include "../../../flir/include/da9063.h"
 #include "../../../flir/include/da9063_regs.h"
 #include "../../../flir/include/board_support.h"
+#include "../../../flir/include/usbcharge.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
-char *get_last_reset_cause(void);
-void imx_bypass_ldo(void);
 struct spi_slave *slave;
-int setup_pmic_voltages(void);
-int platform_setup_pmic_voltages(void);
+
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+void imx_bypass_ldo(void);
+#endif
+static int setup_pmic_voltages(void);
+static int platform_setup_pmic_voltages(void);
 int fpga_power(bool enable);
-int pwm_init(int pwm_id, int div, int invert);
-int pwm_config(int pwm_id, int duty_ns, int period_ns);
-void pwm_enable(int pwm_id);
+
+static void setup_mipi_mux_i2c(void);
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
@@ -123,58 +128,7 @@ static struct hw_support hardware =
 	.name = "Unknown Camera"
 };
 
-/**
- * @brief Mimics the default_splash_locations in splash.c
- *
- */
-static struct splash_location flir_splash_locations[] = {
-	{
-		.name = "mmc_fs_system1",
-		.storage = SPLASH_STORAGE_MMC,
-		.flags = SPLASH_STORAGE_FS,
-		.devpart = "0:2",
-	},
-	{
-		.name = "mmc_fs_system2",
-		.storage = SPLASH_STORAGE_MMC,
-		.flags = SPLASH_STORAGE_FS,
-		.devpart = "0:3",
-	},
-};
-/**
- * @brief changes the envv variable splashsource to
- * be mmc_fs_system[1|2] to pickup the splashfile from
- * the rigth partition.
- *
- */
-static void fix_env_splash_source()
-{
-	char *env_splashsrc;
-	char *system_active;
-	char extended_splash_src[80] = "mmc_fs_";
-	size_t concat_len;
-	int ret;
 
-	system_active = env_get("system_active");
-	if (NULL == system_active){
-		log_err("Could not read system_active from env.\n");
-		return;
-	}
-
-
-	env_splashsrc = env_get("splashsource");
-	strncat(extended_splash_src, system_active, strlen(system_active));
-	ret = env_set("splashsource", extended_splash_src);
-	if (ret) {
-		log_err("Could not write splashsource from env.\n");
-		return;
-	}
-	if (env_splashsrc &&
-	    strncmp(env_splashsrc, extended_splash_src, sizeof(extended_splash_src) - 1) == 0)
-		log_info("splashsource not changed, still '%s'\n", extended_splash_src);
-	else
-		log_info("splashsource changed to '%s'\n", extended_splash_src);
-}
 
 /**
  * @brief Overrides the (weak) splash_screen_prepare in splash.c
@@ -225,38 +179,6 @@ static void setup_spi(void)
 }
 #endif
 
-static iomux_v3_cfg_t const rgb_pads[] = {
-	IOMUX_PADS(PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DI0_PIN15__IPU1_DI0_PIN15 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DI0_PIN2__IPU1_DI0_PIN02 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DI0_PIN3__IPU1_DI0_PIN03 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DI0_PIN4__IPU1_DI0_PIN04 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT0__IPU1_DISP0_DATA00 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT1__IPU1_DISP0_DATA01 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT2__IPU1_DISP0_DATA02 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT3__IPU1_DISP0_DATA03 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT4__IPU1_DISP0_DATA04 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT5__IPU1_DISP0_DATA05 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT6__IPU1_DISP0_DATA06 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT7__IPU1_DISP0_DATA07 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT8__IPU1_DISP0_DATA08 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT9__IPU1_DISP0_DATA09 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT10__IPU1_DISP0_DATA10 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT11__IPU1_DISP0_DATA11 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT12__IPU1_DISP0_DATA12 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT13__IPU1_DISP0_DATA13 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT14__IPU1_DISP0_DATA14 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT15__IPU1_DISP0_DATA15 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT16__IPU1_DISP0_DATA16 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT17__IPU1_DISP0_DATA17 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT18__IPU1_DISP0_DATA18 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT19__IPU1_DISP0_DATA19 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT20__IPU1_DISP0_DATA20 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT21__IPU1_DISP0_DATA21 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT22__IPU1_DISP0_DATA22 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-	IOMUX_PADS(PAD_DISP0_DAT23__IPU1_DISP0_DATA23 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-};
-
 int board_spi_cs_gpio(unsigned bus, unsigned cs)
 {
 	if (bus == 1) {
@@ -274,37 +196,14 @@ int board_spi_cs_gpio(unsigned bus, unsigned cs)
 	return -1;
 }
 
-static iomux_v3_cfg_t const bl_pads[] = {
-	IOMUX_PADS(PAD_SD1_DAT3__GPIO1_IO21 | MUX_PAD_CTRL(NO_PAD_CTRL)),
-};
-
-static void enable_backlight(void)
+static int detect_orise(struct display_info_t const *dev)
 {
-	struct gpio_desc desc;
-	int ret;
-
-	SETUP_IOMUX_PADS(bl_pads);
-
-	ret = dm_gpio_lookup_name("GPIO1_21", &desc);
-	if (ret)
-		return;
-
-	ret = dm_gpio_request(&desc, "Display Power Enable");
-	if (ret)
-		return;
-
-	dm_gpio_set_dir_flags(&desc, GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
+	return 1;
 }
 
-static void enable_rgb(struct display_info_t const *dev)
+static int detect_truly(struct display_info_t const *dev)
 {
-	SETUP_IOMUX_PADS(rgb_pads);
-	enable_backlight();
-}
-
-static void enable_lvds(struct display_info_t const *dev)
-{
-	enable_backlight();
+	return 0;
 }
 
 #ifdef CONFIG_ENV_IS_IN_MMC
@@ -810,111 +709,53 @@ void epdc_power_off(void)
 #endif
 
 #if defined(CONFIG_VIDEO_IPUV3)
-static void disable_lvds(struct display_info_t const *dev)
-{
-	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
-
-	int reg = readl(&iomux->gpr[2]);
-
-	reg &= ~(IOMUXC_GPR2_LVDS_CH0_MODE_MASK |
-		 IOMUXC_GPR2_LVDS_CH1_MODE_MASK);
-
-	writel(reg, &iomux->gpr[2]);
-}
-
-static void do_enable_hdmi(struct display_info_t const *dev)
-{
-	disable_lvds(dev);
-	imx_enable_hdmi_phy();
-}
 
 struct display_info_t const displays[] = {{
 	.bus	= 1,
 	.addr	= 0,
-	//.pixfmt	= IPU_PIX_FMT_BGR24,   //bpp = 24, FLIR logo
-	.pixfmt	= IPU_PIX_FMT_RGB24,   //bpp = 24, FLIR logo
-	//.pixfmt	= IPU_PIX_FMT_RGB565,
-	//.pixfmt	= IPU_PIX_FMT_GENERIC,   //bpp = 8, Freescale-NXP logo
+	.pixfmt	= IPU_PIX_FMT_RGB24,
 	.di = 0,
-	.detect	= NULL,
-	.enable	= enable_rgb,
+	.detect	= detect_orise,
+	.enable	= NULL,
 	.mode	= {
-		.name           = "KOPIN-VGA",
+		.name           = "ORISE-VGA",
 		.refresh        = 60,
-		.xres           = 640,  
+		.xres           = 640,
 		.yres           = 480,
-		//.pixclock       = 50000, // When using Lauterbach T32 to load the image
-		.pixclock       = 37000,   // When loading the imasge over USB using imx_usb 
+		.pixclock       = 37000,
 		.left_margin    = 100,
 		.right_margin   = 100,
 		.upper_margin   = 31,
 		.lower_margin   = 10,
-                .hsync_len      = 96,
+		.hsync_len      = 96,
 		.vsync_len      = 4,
 		.sync           = 0,
 		.vmode          = FB_VMODE_NONINTERLACED,
-        	.flag           = 0
+		.flag           = 0
 } }, {
-	.bus	= -1,
-	.addr	= 0,
-	.pixfmt	= IPU_PIX_FMT_RGB666,
-	.detect	= NULL,
-	.enable	= enable_lvds,
-	.mode	= {
-		.name           = "Hannstar-XGA",
-		.refresh        = 60,
-		.xres           = 1024,
-		.yres           = 768,
-		.pixclock       = 15384,
-		.left_margin    = 160,
-		.right_margin   = 24,
-		.upper_margin   = 29,
-		.lower_margin   = 3,
-		.hsync_len      = 136,
-		.vsync_len      = 6,
-		.sync           = FB_SYNC_EXT,
-		.vmode          = FB_VMODE_NONINTERLACED
-} }, {
-	.bus	= -1,
+	.bus	= 1,
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
-	.detect	= NULL,
-	.enable	= do_enable_hdmi,
+	.di = 0,
+	.detect	= detect_truly,
+	.enable	= NULL,
 	.mode	= {
-		.name           = "HDMI",
+		.name           = "TRULY-VGA",
 		.refresh        = 60,
 		.xres           = 640,
 		.yres           = 480,
-		.pixclock       = 39721,
-		.left_margin    = 48,
-		.right_margin   = 16,
-		.upper_margin   = 33,
-		.lower_margin   = 10,
-		.hsync_len      = 96,
-		.vsync_len      = 2,
+		.pixclock       = 33000,
+		.left_margin    = 150,
+		.right_margin   = 100,
+		.upper_margin   = 16,
+		.lower_margin   = 16,
+		.hsync_len      = 90,
+		.vsync_len      = 4,
 		.sync           = 0,
-		.vmode          = FB_VMODE_NONINTERLACED
-} }, {
-	.bus	= 0,
-	.addr	= 0,
-	.pixfmt	= IPU_PIX_FMT_RGB24,
-	.detect	= NULL,
-	.enable	= enable_rgb,
-	.mode	= {
-		.name           = "SEIKO-WVGA",
-		.refresh        = 60,
-		.xres           = 800,
-		.yres           = 480,
-		.pixclock       = 29850,
-		.left_margin    = 89,
-		.right_margin   = 164,
-		.upper_margin   = 23,
-		.lower_margin   = 10,
-		.hsync_len      = 10,
-		.vsync_len      = 10,
-		.sync           = 0,
-		.vmode          = FB_VMODE_NONINTERLACED
-} } };
+		.vmode          = FB_VMODE_NONINTERLACED,
+		.flag           = 0
+} }
+};
 size_t display_count = ARRAY_SIZE(displays);
 
 static void setup_display(void)
@@ -927,7 +768,6 @@ static void setup_display(void)
 	SETUP_IOMUX_PADS(di0_pads);
 
 	enable_ipu_clock();
-	imx_setup_hdmi();
 
 	/* Turn on LDB0, LDB1, IPU,IPU DI0 clocks */
 	reg = readl(&mxc_ccm->CCGR3);
@@ -1066,14 +906,6 @@ static void setup_mipi_mux_i2c()
 	}
 }
 
-static void setup_pwm_n_mipi_dsi()
-{
-	//init backlight to lcd
-	pwm_init(PWM1, 0, 0);
-	//duty cycle = 70%, period = 0.2ms (should match duty cycle in kernel)
-	pwm_config(PWM1, 140000, 200000);
-	pwm_enable(PWM1);
-}
 
 int board_early_init_f(void)
 {
@@ -1082,7 +914,6 @@ int board_early_init_f(void)
         setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
-	setup_pwm_n_mipi_dsi();
 	setup_mipi_mux_i2c();
 #endif
 
@@ -1585,7 +1416,6 @@ int board_late_init(void)
 	return 0;
 }
 
-
 #if defined(CONFIG_OF_BOARD_SETUP)
 
 /* Platform function to modify the FDT as needed */
@@ -1613,7 +1443,9 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 #endif
 	return 0;
 }
+#endif /* CONFIG_OF_BOARD_SETUP */
 
+#ifdef CONFIG_MXC_SPI
 int platform_setup_pmic_voltages(void)
 {
     unsigned char dev_id, var_id, cust_id, conf_id;
@@ -1681,7 +1513,9 @@ int platform_setup_pmic_voltages(void)
     setup_spi();
     return 0;
 }
+#endif /* CONFIG_MXC_SPI */
 
+#ifdef CONFIG_SYS_I2C_MXC
 int setup_pmic_voltages(void)
 {
     unsigned char dev_id, var_id, cust_id, conf_id;
@@ -1739,23 +1573,23 @@ int setup_pmic_voltages(void)
     spi_release_bus(slave);
     return 0;
 }
-
+#endif /* CONFIG_SYS_I2C_MXC */
 int fpga_power(bool enable)
 {
-    unsigned char conf_id;
-    if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-        printf("Could not read PMIC ID registers\n");
-        spi_release_bus(slave);
-        return -1;
-    }
+	unsigned char conf_id;
+	if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+		printf("Could not read PMIC ID registers\n");
+		spi_release_bus(slave);
+		return -1;
+	}
 
-  	spi_claim_bus(slave);
-    // BPRO_EN (1V0_FPGA)
-    pmic_write_bitfield(DA9063_REG_BPRO_CONT,DA9063_BUCK_EN,enable?DA9063_BUCK_EN:0);
-    // CORE_SW_EN  (1V8_FPGA)
-    pmic_write_bitfield(DA9063_REG_BCORE1_CONT,DA9063_CORE_SW_EN,enable?DA9063_CORE_SW_EN:0);
-    // PERI_SW_EN    (1V2_FPGA)
-    pmic_write_bitfield(DA9063_REG_BPERI_CONT,DA9063_PERI_SW_EN,enable?DA9063_PERI_SW_EN:0);
+	spi_claim_bus(slave);
+	// BPRO_EN (1V0_FPGA)
+	pmic_write_bitfield(DA9063_REG_BPRO_CONT,DA9063_BUCK_EN,enable?DA9063_BUCK_EN:0);
+	// CORE_SW_EN  (1V8_FPGA)
+	pmic_write_bitfield(DA9063_REG_BCORE1_CONT,DA9063_CORE_SW_EN,enable?DA9063_CORE_SW_EN:0);
+	// PERI_SW_EN    (1V2_FPGA)
+	pmic_write_bitfield(DA9063_REG_BPERI_CONT,DA9063_PERI_SW_EN,enable?DA9063_PERI_SW_EN:0);
 	if(conf_id == 0x3b) //revC
 	{
 		// BMEM_EN         (2V5_FPGA)
@@ -1772,7 +1606,5 @@ int fpga_power(bool enable)
 	}
 	spi_release_bus(slave);
 	return 0;
-	
 }
 
-#endif /* CONFIG_OF_BOARD_SETUP */

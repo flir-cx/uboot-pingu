@@ -10,7 +10,6 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 {
     printf("Check allowed charging current\n");
     unsigned long tmp, tmp2;
-    unsigned char buf[100];
     printf("USB Check charger I2C disabled...");
     /* i2c_set_bus_num(2); */
 
