@@ -339,22 +339,33 @@ static inline void mipi_dsi_set_mode(struct mipi_dsi_info *mipi_dsi,
 
 void mipi_clk_enable(void)
 {
-    struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 	int reg= readl(&mxc_ccm->CCGR3);
 	reg |= MXC_CCM_CCGR3_MIPI_CORE_CFG_MASK;
 	writel(reg, &mxc_ccm->CCGR3);
 }
 
-int mxc_mipi_dsi_enable(void)
+int mxc_mipi_dsi_enable(struct mipi_dsi_ops *ops)
 {
 	struct mipi_dsi_info mipi_dsi;
 	int i;
 
-	mipid_otm1287a_get_lcd_videomode(&mipi_dsi.mode, &mipi_dsi.lcd_config);
-#if 0  // Handled through displays in mx6ec101.c and board_video_skip() in video.c
-    ipuv3_fb_init(mipi_dsi.mode, 0,
-               IPU_PIX_FMT_RGB24);
-#endif
+	if (!ops) {
+		log_err("msi_dsi_ops = NULL, lcd init fail!\n");
+		return -EINVAL;
+	}
+
+	if (!ops->get_lcd_videomode) {
+		log_err("get_lcd_videomode not initialized, lcd fail!\n");
+		return -EINVAL;
+	}
+	if (!ops->lcd_setup) {
+		log_err("lcd_setup not initialized, lcd fail!\n");
+		return -EINVAL;
+	}
+
+	ops->get_lcd_videomode(&mipi_dsi.mode, &mipi_dsi.lcd_config);
+
 	mipi_clk_enable();
 
 	for (i = 0; i < ARRAY_SIZE(mipi_dsi_phy_pll_clk_table); i++) {
@@ -365,8 +376,8 @@ int mxc_mipi_dsi_enable(void)
 	if ((i == ARRAY_SIZE(mipi_dsi_phy_pll_clk_table)) ||
 		(mipi_dsi.lcd_config->max_phy_clk >
 			mipi_dsi_phy_pll_clk_table[0].max_phy_clk)) {
-		printf("failed to find data in"
-				"mipi_dsi_phy_pll_clk_table.\n");
+		printf("failed to find data in mipi_dsi_phy_pll_clk_table. %u\n",
+		       mipi_dsi.lcd_config->max_phy_clk);
 		return -1;
 	}
 	mipi_dsi.dphy_pll_config = mipi_dsi_phy_pll_clk_table[--i].config;
@@ -377,7 +388,7 @@ int mxc_mipi_dsi_enable(void)
 	mipi_dsi_dphy_init(&mipi_dsi, DSI_PHY_CLK_INIT_COMMAND,
 					   mipi_dsi.dphy_pll_config);
 
-	mipid_otm1287a_lcd_setup(&mipi_dsi);
+	ops->lcd_setup(&mipi_dsi);
 
 	mdelay(1);
 

@@ -23,6 +23,7 @@
 #include <linux/fb.h>
 #include <linux/delay.h>
 #include "mxc_mipi_dsi.h"
+#include "mxcfb_otm1287.h"
 
 #define OTM1287A_MAX_DPHY_CLK					(300)
 #define OTM1287A_ONE_DATA_LANE					(0x1)
@@ -125,7 +126,7 @@ static struct reg_value lcd_setup[] =
 
 static struct fb_videomode otm_lcd_modedb[] = {
 	{
-	 "KOPIN-VGA", 60, 640, 480, 37000,
+	 "ORISE-VGA", 60, 640, 480, 37000,
 	 100, 100,
 	 31, 10,
 	 96,4,

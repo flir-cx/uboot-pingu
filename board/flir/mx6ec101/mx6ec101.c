@@ -943,13 +943,13 @@ int board_init(void)
        	regulators_enable_boot_on(false);
 #endif
 
-#ifdef CONFIG_MXC_SPI
-	ret = platform_setup_pmic_voltages();
-	// ret = setup_pmic_voltages();
-       	if (ret)
-		return -1;
-	setup_spi();
-#endif
+	if (IS_ENABLED(CONFIG_MXC_SPI)) {
+		ret = platform_setup_pmic_voltages();
+		// ret = setup_pmic_voltages();
+		if (ret)
+			return -1;
+		setup_spi();
+	}
 
 #ifdef CONFIG_SYS_I2C
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
@@ -1383,7 +1383,17 @@ int board_late_init(void)
 #if defined(CONFIG_VIDEO_IPUV3)
 	if (hardware.display)
 	{
-		mxc_mipi_dsi_enable();
+		struct mipi_dsi_ops ops;
+
+		if (detect_orise(NULL)) {
+			ops.get_lcd_videomode = mipid_otm1287a_get_lcd_videomode;
+			ops.lcd_setup = mipid_otm1287a_lcd_setup;
+		}
+		if (detect_truly(NULL)) {
+			ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
+			ops.lcd_setup = mipid_st7703_lcd_setup;
+		}
+		mxc_mipi_dsi_enable(&ops);
 	}
 #endif
 #ifdef CONFIG_CMD_BMODE
@@ -1577,6 +1587,7 @@ int setup_pmic_voltages(void)
 int fpga_power(bool enable)
 {
 	unsigned char conf_id;
+
 	if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
 		printf("Could not read PMIC ID registers\n");
 		spi_release_bus(slave);
@@ -1585,24 +1596,31 @@ int fpga_power(bool enable)
 
 	spi_claim_bus(slave);
 	// BPRO_EN (1V0_FPGA)
-	pmic_write_bitfield(DA9063_REG_BPRO_CONT,DA9063_BUCK_EN,enable?DA9063_BUCK_EN:0);
+	pmic_write_bitfield(DA9063_REG_BPRO_CONT, DA9063_BUCK_EN,
+			    enable ? DA9063_BUCK_EN : 0);
 	// CORE_SW_EN  (1V8_FPGA)
-	pmic_write_bitfield(DA9063_REG_BCORE1_CONT,DA9063_CORE_SW_EN,enable?DA9063_CORE_SW_EN:0);
+	pmic_write_bitfield(DA9063_REG_BCORE1_CONT, DA9063_CORE_SW_EN,
+			    enable ? DA9063_CORE_SW_EN : 0);
 	// PERI_SW_EN    (1V2_FPGA)
-	pmic_write_bitfield(DA9063_REG_BPERI_CONT,DA9063_PERI_SW_EN,enable?DA9063_PERI_SW_EN:0);
+	pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
+			    enable ? DA9063_PERI_SW_EN : 0);
 	if(conf_id == 0x3b) //revC
 	{
 		// BMEM_EN         (2V5_FPGA)
-		pmic_write_bitfield(DA9063_REG_BMEM_CONT,DA9063_BUCK_EN,enable?DA9063_BUCK_EN:0);
+		pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
+				    enable ? DA9063_BUCK_EN : 0);
 		// LDO10_EN          (3V15_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO10_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
+		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
+				    enable ? DA9063_LDO_EN : 0);
 	}
 	else //revD
 	{
 		// LDO10_EN          (2V5_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO10_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
+		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
+				    enable ? DA9063_LDO_EN : 0);
 		// LDO8_EN          (3V15_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO8_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
+		pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
+				    enable ? DA9063_LDO_EN : 0);
 	}
 	spi_release_bus(slave);
 	return 0;

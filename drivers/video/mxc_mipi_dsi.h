@@ -172,7 +172,13 @@ struct mipi_lcd_config {
 	enum mipi_dsi_dpi_fmt		dpi_fmt;
 };
 
+struct mipi_dsi_info;
 
+struct mipi_dsi_ops {
+	int (*lcd_setup)(struct mipi_dsi_info *mipi_dsi);
+	void (*get_lcd_videomode)(struct fb_videomode **mode,
+				  struct mipi_lcd_config **data);
+};
 
 /* driver private data */
 struct mipi_dsi_info {
@@ -182,11 +188,8 @@ struct mipi_dsi_info {
 
 };
 
-int mxc_mipi_dsi_enable(void);
-int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi,u8 data_type, const u32 *buf, int len);
+int mxc_mipi_dsi_enable(struct mipi_dsi_ops *ops);
 
-int mipid_otm1287a_lcd_setup(struct mipi_dsi_info *mipi_dsi);
-void mipid_otm1287a_get_lcd_videomode(struct fb_videomode **mode,
-		struct mipi_lcd_config **data);
+int mipi_dsi_pkt_write(struct mipi_dsi_info *mipi_dsi, u8 data_type, const u32 *buf, int len);
 
 #endif
