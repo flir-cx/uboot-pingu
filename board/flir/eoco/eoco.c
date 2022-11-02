@@ -133,11 +133,10 @@ int platform_check_pmic_boot_reason(void)
 	if(fault_log & DA9063_KEY_RESET)
 	{
 		printf("Powering off....\n");
-		// Prevent auto-boot and powerdown
-		pmic_write_bitfield(DA9063_REG_CONTROL_C, DA9063_DEBOUNCING_MASK, DA9063_DEBOUNCING_256MS);
-		pmic_write_bitfield(DA9063_REG_CONTROL_C, DA9063_AUTO_BOOT, 0);
-		pmic_write_bitfield(DA9063_REG_IRQ_MASK_A, DA9063_M_TICK, DA9063_M_TICK);
-		pmic_write_bitfield(DA9063_REG_CONTROL_A, DA9063_SYSTEM_EN, 0);
+
+		// Power off using GPIO. 
+		gpio_request(IMX_GPIO_NR(2, 30), "PWR_OFF");
+		gpio_direction_output(IMX_GPIO_NR(2, 30),1);
 
 		while(1) {}
 	}
