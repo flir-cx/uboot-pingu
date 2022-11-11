@@ -119,7 +119,7 @@ static struct hw_support hardware =
 {
 	.mipi_mux =	false,
 	.display = true,
-	.usb_charge = true,
+	.usb_charge = IS_ENABLED(CONFIG_FLIR_USBCHARGE),
 	.name = "Unknown Camera"
 };
 
@@ -1130,7 +1130,9 @@ int board_init(void)
 		CONFIG_SYS_I2C_SLAVE, &i2c_pad_info2);
 #endif
 
-#ifdef CONFIG_SYS_I2C_MXC
+#ifndef CONFIG_SYS_I2C_MXC
+	assert("CONFIG_SYS_I2C_MXC needs to be defined for EC101")
+#endif
 	ret = setup_pmic_voltages();
 	if (ret)
 		return ret;
@@ -1146,10 +1148,10 @@ int board_init(void)
 	};
 
 
-	board_support_setup(&ioboard, &hardware);
-#endif
-	if (IS_ENABLED(CONFIG_FLIR_USBCHARGE))
-	{
+	ret = board_support_setup(&ioboard, &hardware);
+	if (ret < 0) {
+		printf("IO Board either missing or is not functioning!!\n");
+	} else {
 		if (hardware.usb_charge)
 			usb_charge_setup();
 	}
