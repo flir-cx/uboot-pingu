@@ -265,11 +265,11 @@ static int splash_load_fs(struct splash_location *location, u32 bmp_load_addr)
 	    printf("Error: malloc_cache_aligned returned NULL!\n");
 	    goto out;
 	}
-	res = fs_read(splash_file, mem_load_addr, 0, 0, &actread);
+	res = fs_read(splash_file, (u32)mem_load_addr, 0, 0, &actread);
 	if (!res)
-	    memcpy(bmp_load_addr, mem_load_addr, bmp_size);
+		memcpy((void *)bmp_load_addr, mem_load_addr, bmp_size);
 	else
-	    printf("Error: fs_read() error, unable to read from splash_file!\n");
+		printf("Error: fs_read() error, unable to read from splash_file!\n");
 	free(mem_load_addr);
 
 out:

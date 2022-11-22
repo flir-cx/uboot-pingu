@@ -241,7 +241,7 @@ void mipid_st7703_get_lcd_videomode(struct fb_videomode **mode,
 	*mode = &otm_lcd_modedb[0];
 	*data = &lcd_config;
 }
-#if 1 /* Left for use when reading panel later */
+#if 0 /* Left for use when reading panel later */
 static int st7703_write_reg(struct mipi_dsi_info *mipi_dsi, u32 reg, u32 data)
 {
 	int err;
