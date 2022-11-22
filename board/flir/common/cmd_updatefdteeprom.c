@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <i2c.h>
 #include <malloc.h>
-#include "../../../flir/include/cmd_updatefdteeprom.h"
+#include "cmd_updatefdteeprom.h"
 #include <fdt_support.h>
 #include "eeprom.h"
 

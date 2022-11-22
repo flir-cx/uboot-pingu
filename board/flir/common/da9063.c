@@ -22,8 +22,8 @@
 #include <asm/arch/crm_regs.h>
 #include <asm/mach-imx/mxc_i2c.h>
 #include <spi.h>
-#include "../../../flir/include/da9063.h"
-#include "../../../flir/include/da9063_regs.h"
+#include "da9063.h"
+#include "da9063_regs.h"
 
 
 extern struct spi_slave *slave;

@@ -1,0 +1,118 @@
+config FLIR_EEPROM
+	bool "EEPROM commons"
+	default n
+	help
+	  Common code for system EEPROM access
+
+config FLIR_DA9063
+	bool "DA9063 PMIC"
+	depends on MXC_SPI
+	depends on MX6
+	default n
+	help
+	  Command 'pmic', for accessing DA9063 PMIC registers
+
+config FLIR_BOARD_SUPPORT
+	bool "IO Board support"
+	default n
+	help
+	  Common functions for supplying camera-specific hardware settings
+
+config FLIR_COMMANDS
+	bool "Common FLIR commands"
+	default y
+	help
+	  Support FLIR-specific commands
+
+config FLIR_OLD_COMMAND_STYLE
+	bool "Old command style"
+	depends on FLIR_COMMANDS
+	default y
+	help
+	  Support old-style FLIR commands (without flir_)
+
+config FLIR_COMMAND_KBD
+	bool "Keyboard support (flir_kbd)"
+	depends on FLIR_COMMANDS
+	depends on CMD_I2C
+	default n
+	help
+	  GPIO-expander keyboard functionality, as well as a test
+	  command 'flir_kbd'.
+
+config FLIR_COMMAND_RECOVERYKEY
+	bool "Recovery key (recoverykey)"
+	depends on FLIR_COMMANDS
+	depends on FLIR_COMMAND_KBD
+	default n
+	help
+	  Command 'recoverykey' that detects whether the designated
+	  recovery-key is pressed. Returns 0 if it is pressed.
+
+
+config FLIR_COMMAND_KBDSECRET
+	bool "Recovery sequence (kbd_secret)"
+	depends on FLIR_COMMANDS
+	depends on FLIR_COMMAND_KBD
+	default n
+	help
+	  Command 'kbd_secret', for detecting secret keyboard
+	  sequence. Boot into recovery mode if so, otherwise
+	  perform normal boot.
+
+config FLIR_COMMAND_CHECKCHARGER
+	bool "Charger check (flir_checkcharger)"
+	depends on FLIR_COMMANDS
+	depends on CMD_I2C
+	default n
+	help
+	  Command 'flir_checkcharger'. Examines charger status.
+
+config FLIR_COMMAND_LOADFPGA
+	bool "Load FPGA (flir_loadfpga)"
+	depends on FLIR_COMMANDS
+	depends on CMD_SPI
+	default n
+	help
+	  Command 'flir_loadfpga' for loading FPGA from flash device.
+
+config FLIR_USBCHARGE
+	bool "USB charger state (chargeState)"
+	depends on FLIR_COMMANDS
+	depends on CMD_I2C
+	default n
+	help
+	  Command 'chargeState' for controlling the USB charger state
+
+config FLIR_SYS_EEPROM
+	bool "EEPROM MAC access (mac)"
+	depends on FLIR_COMMANDS
+	default n
+	help
+	  Command 'mac', for accessing MAC from SYS_EEPROM
+
+config READMAINBOARDREVISION
+	bool "Mainboard revision (readmainboardrevision/article)"
+	depends on FLIR_COMMANDS
+	default n
+	help
+	  Commands 'readmainboardrevision' and 'readmainboardarticle'
+
+config CMD_UPDATE_FDT_EEPROM
+	bool "Update FDT EEPROM (update_fdt_eeprom)"
+	depends on FLIR_COMMANDS
+	default n
+	help
+	  Command 'update_fdt_eeprom'. Create an FDT node with EEPROM info.
+
+config CMD_BOARD
+	bool "Board info (flir_board)"
+	depends on FLIR_COMMANDS
+	depends on CMD_I2C
+	default n
+	help
+	  Command 'flir_board', fills env vars with revision and article
+
+
+
+

@@ -2,7 +2,7 @@
 #include <command.h>
 #include <errno.h>
 #include <malloc.h>
-#include "../../../flir/include/eeprom.h"
+#include "eeprom.h"
 
 #define Eeprom_entry(bus, addr, offs, nam) {		\
 		.i2c_bus = bus,			\

@@ -11,4 +11,5 @@ config SYS_CONFIG_NAME
 config SYS_TEXT_BASE
     default 0x17800000
 
+source "board/flir/common/Kconfig"
 endif

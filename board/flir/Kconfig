@@ -1,0 +1,48 @@
+menu FLIR
+
+choice
+	prompt "Camera Platform"
+	default FLIR_PLATFORM_EC101
+
+config FLIR_PLATFORM_EOCO
+	bool "EOCO"
+	help
+	  EOCO Platforms differs some from the FLIR_PLATFORM model
+	  pins for FPGA configuration among other has been changed
+
+config FLIR_PLATFORM_EC101
+	bool "EC101"
+	help
+	  Cameras based on the EC101 board
+
+config FLIR_PLATFORM_EC401W
+	bool "EC401W"
+	help
+	  Cameras based on the EC401W board
+
+config NOFLIR
+	bool "Not FLIR"
+	help
+	  Other platform.
+endchoice
+
+choice
+	prompt "FPGA type"
+
+config FLIR_FPGA_XILINX
+	bool "XILINX"
+	imply FPGA_XILINX
+	help
+	  Platform has XILINX FPGA
+
+config FLIR_FPGA_ALTERA
+	bool "ALTERA"
+	imply FPGA_ALTERA
+	help
+	  Platform has ALTERA FPGA
+
+endchoice
+
+source "board/flir/common/Kconfig"
+
+endmenu

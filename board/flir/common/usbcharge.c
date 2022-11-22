@@ -29,8 +29,8 @@
 #include <spi.h>
 #include <log.h>
 #include <dm/uclass.h>
-#include "../../../flir/include/da9063.h"
-#include "../../../flir/include/da9063_regs.h"
+#include "da9063.h"
+#include "da9063_regs.h"
 
 extern struct spi_slave *slave;
 u32 get_imx_reset_cause(void);

@@ -7,10 +7,10 @@
 #include <video.h>
 #include <video_font.h>
 #include <dm/uclass.h>
-#include "../include/cmd_kbd.h"
-#include "../include/cmd_kbdsecret.h"
-#include "../include/cmd_recoverykey.h"
-#include "../include/eeprom.h"
+#include "cmd_kbd.h"
+#include "cmd_kbdsecret.h"
+#include "cmd_recoverykey.h"
+#include "eeprom.h"
 
 #define ESC "\x1b"
 #define CSI "\x1b["

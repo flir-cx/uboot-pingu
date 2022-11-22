@@ -46,13 +46,13 @@
 //#include <cmd_updatefdteeprom.h>
 // TODO: add this
 //#include <da9063.h>
-#include "../../../flir/include/eeprom.h"
+#include "../common/eeprom.h"
 #include <stdio_dev.h>
 // TODO: add this
 //#include <cmd_loadfpga.h>
 // TODO: add this
 //#include <cmd_kbd.h>
-#include "../../../flir/include/flir_generic.h"
+#include "../common/flir_generic.h"
 // TODO: add this
 //#include <usbcharge.h>
 /* #include "ec101.h" */
@@ -62,9 +62,9 @@
 /* #include <linux/delay.h> */
 /* #include <asm-generic/u-boot.h> */
 
-#include "../../../flir/include/da9063.h"
-#include "../../../flir/include/da9063_regs.h"
-#include "../../../flir/include/cmd_loadfpga.h"
+#include "../common/da9063.h"
+#include "../common/da9063_regs.h"
+#include "../common/cmd_loadfpga.h"
 /* #include "../../../flir/include/cmd_updatefdteeprom.h" */
 
 /* DECLARE_GLOBAL_DATA_PTR; */

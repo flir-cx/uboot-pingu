@@ -56,11 +56,11 @@
 #endif
 #endif /*CONFIG_FSL_FASTBOOT*/
 
-#include "../../../flir/include/cmd_loadfpga.h"
-#include "../../../flir/include/da9063.h"
-#include "../../../flir/include/da9063_regs.h"
-#include "../../../flir/include/board_support.h"
-#include "../../../flir/include/usbcharge.h"
+#include "../common/cmd_loadfpga.h"
+#include "../common/da9063.h"
+#include "../common/da9063_regs.h"
+#include "../common/board_support.h"
+#include "../common/usbcharge.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 

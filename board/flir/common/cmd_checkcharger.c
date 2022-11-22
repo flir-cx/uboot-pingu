@@ -4,7 +4,7 @@
 #include <i2c.h>
 #include <asm/io.h>
 
-#include "../../../flir/include/cmd_checkcharger.h"
+#include "cmd_checkcharger.h"
 
 static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {

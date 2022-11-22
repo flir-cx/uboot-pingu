@@ -50,8 +50,8 @@
 #include <recovery.h>
 #endif
 #endif /*CONFIG_FSL_FASTBOOT*/
-#include "../../../flir/include/da9063.h"
-#include "../../../flir/include/da9063_regs.h"
+#include "../common/da9063.h"
+#include "../common/da9063_regs.h"
 
 #define ENABLE_DEBUG 0
 

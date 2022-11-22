@@ -16,8 +16,8 @@
 
 #ifndef __BOARD_SUPPORT_H
 #define __BOARD_SUPPORT_H
-#include "../../flir/include/flir_generic.h"
-#include "../../flir/include/eeprom.h"
+#include "flir_generic.h"
+#include "eeprom.h"
 
 int board_support_setup(struct eeprom *ioboard, struct hw_support *hardware);
 

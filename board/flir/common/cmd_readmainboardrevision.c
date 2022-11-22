@@ -15,8 +15,8 @@
  */
 #include <vsprintf.h>
 #include <command.h>
-#include "../../../flir/include/eeprom.h"
-#include "../../../flir/include/cmd_kbd.h"
+#include "eeprom.h"
+#include "cmd_kbd.h"
 
 #define EEPROM_BUS_ID (2)
 #define MAIN_EEPROM_I2C_ADDR (0xae)

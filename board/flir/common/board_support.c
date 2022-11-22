@@ -1,6 +1,6 @@
-#include "../../../flir/include/board_support.h"
-#include "../../../flir/include/flir_generic.h"
-#include "../../../flir/include/eeprom.h"
+#include "board_support.h"
+#include "flir_generic.h"
+#include "eeprom.h"
 
 int board_support_setup(struct eeprom *ioboard, struct hw_support *hardware)
 {

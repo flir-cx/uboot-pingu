@@ -10,8 +10,8 @@
 #include <asm/arch/iomux.h>
 #include <asm/arch/mx6-pins.h>
 
-#include "../../../flir/include/cmd_loadfpga.h"
-#include "../../../flir/include/da9063.h"
+#include "cmd_loadfpga.h"
+#include "da9063.h"
 
 #define CMD_WRITE_ENABLE 0x06
 #define CMD_EN4BYTE_ADDR 0xB7
@@ -19,7 +19,9 @@
 #define SPI_FLASH_MAX_SIZE_BUF 32
 
 static void power_up_fpga(void);
+#ifdef CONFIG_FLIR_PLATFORM_EOCO
 static int setup_fpga_spi_flash(void);
+#endif
 
 __weak int fpga_power(bool enable)
 {

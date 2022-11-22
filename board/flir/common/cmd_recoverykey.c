@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0+
-#include "../../../flir/include/cmd_kbd.h"
+#include "cmd_kbd.h"
 #include <command.h>
 
 static int safe_boot;

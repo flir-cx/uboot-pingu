@@ -2,8 +2,8 @@
 #include <i2c.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
-#include "../../../flir/include/cmd_kbd.h"
-#include "../../../flir/include/eeprom.h"
+#include "cmd_kbd.h"
+#include "eeprom.h"
 
 #if ! CONFIG_IS_ENABLED(DM_I2C)
 #error "Must configure DM_I2C to access EEPROM"
