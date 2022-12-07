@@ -1,0 +1,12 @@
+if TARGET_MX7ULP_EC201
+
+config SYS_BOARD
+	default "ec201"
+
+config SYS_VENDOR
+	default "flir"
+
+config SYS_CONFIG_NAME
+	default "ec201"
+
+endif

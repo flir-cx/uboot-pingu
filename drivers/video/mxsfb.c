@@ -50,6 +50,8 @@
 #define BITS_PP		18
 #define BYTES_PP	4
 
+DECLARE_GLOBAL_DATA_PTR;
+
 struct mxs_dma_desc desc;
 
 /**
@@ -356,6 +358,7 @@ void *video_hw_init(void)
 	memset(fb, 0, panel.memSize);
 
 	panel.frameAdrs = (u32)fb;
+	gd->fb_base = fb;
 
 	printf("%s\n", panel.modeIdent);
 
