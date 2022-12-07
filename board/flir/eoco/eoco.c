@@ -359,19 +359,41 @@ void board_late_mmc_env_init(void)
 }
 #endif
 
-#ifdef CONFIG_SYS_I2C
-static struct i2c_pads_info i2c_pad_info1 = {
-	.scl = {
-		.i2c_mode = MX6_PAD_KEY_COL3__I2C2_SCL | I2C_PAD,
-		.gpio_mode = MX6_PAD_KEY_COL3__GPIO4_IO12 | I2C_PAD,
-		.gp = IMX_GPIO_NR(4, 12)
-	},
-	.sda = {
-		.i2c_mode = MX6_PAD_KEY_ROW3__I2C2_SDA | I2C_PAD,
-		.gpio_mode = MX6_PAD_KEY_ROW3__GPIO4_IO13 | I2C_PAD,
-		.gp = IMX_GPIO_NR(4, 13)
+#ifdef CONFIG_DM_I2C
+
+int platform_check_fuelgauge(void)
+{
+	int ret;
+	unsigned char battery_level;
+	struct udevice *bus, *dev;
+
+	ret = uclass_get_device_by_seq(UCLASS_I2C, BQ40Z50_I2C_BUS, &bus);
+	if (ret != 0) {
+		printf("uclass_get_device_by_seq() error!\n");
+		return ret;
 	}
-};
+
+	ret = dm_i2c_probe(bus, BQ40Z50_I2C_ADDR, 0, &dev);
+	if (ret == 0) {
+		ret = dm_i2c_read(dev, BQ40Z50_REG_STATE_OF_CHARGE, &battery_level, 1);
+		if (ret == 0) {
+			printf("Battery: charge level %d%%\n", battery_level);
+			if (battery_level <= BQ40Z50_BATT_CRITICAL_LEVEL) {
+				printf("Battery level critical. Shuting down.\n");
+				// Power off using GPIO.
+				gpio_request(IMX_GPIO_NR(2, 30), "PWR_OFF");
+				gpio_direction_output(IMX_GPIO_NR(2, 30), 1);
+			}
+		} else {
+			printf("Battery read level failed.\n");
+		}
+	} else {
+		printf("Battery missing, running on DC.\n");
+	}
+
+	return ret;
+}
+
 #endif
 
 #if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
@@ -1030,8 +1052,8 @@ int board_init(void)
 	platform_check_pmic_boot_reason();
 #endif
 
-#ifdef CONFIG_SYS_I2C
-	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
+#ifdef CONFIG_DM_I2C
+	platform_check_fuelgauge();
 #endif
 
 #if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)

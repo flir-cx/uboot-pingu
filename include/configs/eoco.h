@@ -38,6 +38,12 @@
 #define DA9063_SPI_CS               0 // used to be IMX_GPIO_NR(3, 20), n.b.
 #define DA9063_SPI_BUS              3
 
+/* FUELGAUGE BQ40Z50 */
+#define BQ40Z50_I2C_ADDR 0x0b
+#define BQ40Z50_I2C_BUS 1
+#define BQ40Z50_REG_STATE_OF_CHARGE 0x0d
+#define BQ40Z50_BATT_CRITICAL_LEVEL 0x0
+
 /* Falcon Mode */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"args"
 #define CONFIG_SPL_FS_LOAD_KERNEL_NAME	"uImage"
