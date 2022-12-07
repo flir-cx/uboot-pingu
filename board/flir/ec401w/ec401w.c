@@ -28,8 +28,6 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SNVS_LPCR_BTN_PRESS_TIME_DISABLE	(0x3<<16)
 #define SNVS_LP_LPCR	                        (0x41070038)
 
-void hx8394_init(void);
-
 int dram_init(void)
 {
 	gd->ram_size = PHYS_SDRAM_SIZE;

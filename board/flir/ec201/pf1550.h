@@ -286,7 +286,9 @@ int get_usb_cable_state(void);
 
 int get_onoff_key(void);
 
-void power_off();
+void pmic_goto_core_off(bool enable);
+
+void power_off(void);
 
 void reboot(void);
 

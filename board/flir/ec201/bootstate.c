@@ -21,6 +21,7 @@
 #include <pf1550.h>
 #include <lc709203.h>
 #include <ec201_splash.h>
+#include <command.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -222,7 +223,7 @@ int boot_state_init(void)
 	return 0;
 }
 
-static int do_boot_state(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	if(state.force_boot_state != INVALID_STATE){
 		state.boot_state = state.force_boot_state;
@@ -267,8 +268,8 @@ static int do_boot_state(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv
 	case NO_BATTERY:
 		printf("Battery missing\n");
 	case LOW_BATTERY:
-		set_boot_logo();
-		splash_screen_update();
+		/* set_boot_logo(); */
+		/* splash_screen_update(); */
 
 		/* Give user a chance to see splash. */
 		udelay(2000000);
@@ -278,8 +279,8 @@ static int do_boot_state(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv
 		break;
 	case USB_CHARGE:
 		printf("Camera: charge state \n");
-		set_boot_logo();
-		splash_screen_update();
+		/* set_boot_logo(); */
+		/* splash_screen_update(); */
 		run_command("chargeapp",0);
 		break;
 	default:

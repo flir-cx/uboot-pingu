@@ -35,6 +35,7 @@
 #include <dm.h>
 #include <i2c.h>
 #include <asm/arch/pcc.h>
+#include <video.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -55,28 +56,28 @@ static iomux_cfg_t const btn_trig_pad[] = {
 	MX7ULP_PAD_PTC12__PTC12 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
 };
 
-void print_display(char *s)
-{
-	static struct stdio_dev *dev = NULL;
-	dev = stdio_get_by_name("vga");
-	if(!dev)
-		return;
+/* void print_display(char *s) */
+/* { */
+/* 	static struct stdio_dev *dev = NULL; */
+/* 	dev = stdio_get_by_name("vga"); */
+/* 	if(!dev) */
+/* 		return; */
 
-	dev->puts(dev,s);
-}
+/* 	dev->puts(dev,s); */
+/* } */
 
 void print_recovery(char *s)
 {
-    char buf[64];
-	int y = video_get_screen_columns() /2-(strlen(s)/2);
-	int x = video_get_screen_rows() /2+4;
+    /* char buf[64]; */
+	/* int y = video_get_screen_columns() /2-(strlen(s)/2); */
+	/* int x = video_get_screen_rows() /2+4; */
 
-	print_display(CSI "l");
-	snprintf(buf,64,CSI "%d;%dH",x,y);
-	print_display(buf);
+	/* print_display(CSI "l"); */
+	/* snprintf(buf,64,CSI "%d;%dH",x,y); */
+	/* print_display(buf); */
 
-	snprintf(buf,64, "%s",s);
-	print_display(buf);
+	/* snprintf(buf,64, "%s",s); */
+	/* print_display(buf); */
 }
 
 // timeout in ms

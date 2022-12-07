@@ -16,7 +16,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 #include <common.h>
-#include <imx_mipi_dsi_bridge.h>
+/* #include <imx_mipi_dsi_bridge.h> */
 #include <mipi_display.h>
 
 
@@ -77,19 +77,19 @@ int mipid_hx8394_lcd_setup(struct mipi_dsi_client_dev *panel_dev)
 
 	for(i=0;i<ARRAY_SIZE(lcd_setup);i++)
 	{
-		imx_mipi_dsi_bridge_pkt_write(lcd_setup[i].command,
-					(u32*) lcd_setup[i].buf, lcd_setup[i].buf_size);
+		/* imx_mipi_dsi_bridge_pkt_write(lcd_setup[i].command, */
+		/* 			(u32*) lcd_setup[i].buf, lcd_setup[i].buf_size); */
 		mdelay(lcd_setup[i].delay);
 	}
 	return 0;
 }
 
-static struct mipi_dsi_client_driver hx8394_drv = {
-	.name = "TRULY-VGA-SHERLOCK",
-	.dsi_client_setup = mipid_hx8394_lcd_setup,
-};
+/* static struct mipi_dsi_client_driver hx8394_drv = { */
+/* 	.name = "TRULY-VGA-SHERLOCK", */
+/* 	.dsi_client_setup = mipid_hx8394_lcd_setup, */
+/* }; */
 
 void hx8394_init(void)
 {
-	imx_mipi_dsi_bridge_add_client_driver(&hx8394_drv);
+	/* imx_mipi_dsi_bridge_add_client_driver(&hx8394_drv); */
 }

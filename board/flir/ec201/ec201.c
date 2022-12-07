@@ -16,10 +16,7 @@
 #include <usb.h>
 #include <dm.h>
 #include <asm/mach-imx/video.h>
-#include <mipi_dsi_northwest.h>
-#include <imx_mipi_dsi_bridge.h>
-#include <mipi_dsi_panel.h>
-#include <ec201_splash.h>
+#include "ec201_splash.h"
 #include <mxsfb.h>
 #include <i2c.h>
 #include <bootstate.h>
@@ -34,7 +31,7 @@ DECLARE_GLOBAL_DATA_PTR;
 #define SNVS_LPCR_BTN_PRESS_TIME_DISABLE	(0x3<<16)
 #define SNVS_LP_LPCR	                        (0x41070038)
 
-void hx8394_init(void);
+/* void hx8394_init(void); */
 
 int dram_init(void)
 {
@@ -118,94 +115,8 @@ int board_late_init(void)
 	return 0;
 }
 
-
-#ifdef CONFIG_VIDEO_MXS
-#define MIPI_GPIO_PAD_CTRL	(PAD_CTL_OBE_ENABLE)
-
-#define MIPI_RESET_GPIO	IMX_GPIO_NR(3, 7)
-#define LED_PWM_EN_GPIO	IMX_GPIO_NR(3, 6)
-
-static iomux_cfg_t const mipi_reset_pad[] = {
-	MX7ULP_PAD_PTC7__PTC7 | MUX_PAD_CTRL(MIPI_GPIO_PAD_CTRL),
-};
-
-static iomux_cfg_t const led_pwm_en_pad[] = {
-	MX7ULP_PAD_PTC6__PTC6 | MUX_PAD_CTRL(MIPI_GPIO_PAD_CTRL),
-};
-
-struct mipi_dsi_client_dev hx8394_dev = {
-	.channel	= 0,
-	.lanes = 2,
-	.format  = MIPI_DSI_FMT_RGB888,
-	.mode_flags = MIPI_DSI_MODE_VIDEO | MIPI_DSI_MODE_VIDEO_SYNC_PULSE |
-			  MIPI_DSI_MODE_EOT_PACKET | MIPI_DSI_MODE_VIDEO_HSE,
-};
-
-int board_mipi_panel_reset(void)
-{
-	gpio_direction_output(MIPI_RESET_GPIO, 0);
-	udelay(1000);
-	gpio_direction_output(MIPI_RESET_GPIO, 1);
-	return 0;
-}
-
-int board_mipi_panel_shutdown(void)
-{
-	gpio_direction_output(MIPI_RESET_GPIO, 0);
-	gpio_direction_output(LED_PWM_EN_GPIO, 0);
-	return 0;
-}
-
-void setup_mipi_reset(void)
-{
-	mx7ulp_iomux_setup_multiple_pads(mipi_reset_pad, ARRAY_SIZE(mipi_reset_pad));
-	gpio_request(MIPI_RESET_GPIO, "mipi_panel_reset");
-}
-
-void do_enable_mipi_dsi(struct display_info_t const *dev)
-{
-	setup_mipi_reset();
-
-	/* Enable backlight */
-	mx7ulp_iomux_setup_multiple_pads(led_pwm_en_pad, ARRAY_SIZE(mipi_reset_pad));
-	gpio_request(LED_PWM_EN_GPIO, "led_pwm_en");
-	gpio_direction_output(LED_PWM_EN_GPIO, 1);
-
-	/* Setup DSI host driver */
-	mipi_dsi_northwest_setup(DSI_RBASE, SIM0_RBASE);
-
-	/* Init hx8394 driver, must after dsi host driver setup */
-	hx8394_init();
-	hx8394_dev.name = displays[0].mode.name;
-	imx_mipi_dsi_bridge_attach(&hx8394_dev); /* attach hx8394 device */
-
-}
-
-struct display_info_t const displays[] = {{
-	.bus = LCDIF_RBASE,
-	.addr = 0,
-	.pixfmt = 24,
-	.detect = NULL,
-	.enable	= do_enable_mipi_dsi,
-	.mode	= {
-		.name			= "TRULY-VGA-SHERLOCK",
-		.xres           = 640,
-		.yres           = 480,
-		.pixclock       = 46894,
-		.left_margin    = 15,
-		.right_margin   = 26,
-		.upper_margin   = 9,
-		.lower_margin   = 16,
-		.hsync_len      = 20,
-		.vsync_len      = 2,
-		.sync           = 0,
-		.vmode          = FB_VMODE_NONINTERLACED
-} } };
-size_t display_count = ARRAY_SIZE(displays);
-#endif
-
 #if defined(CONFIG_OF_BOARD_SETUP)
-int ft_board_setup(void *blob, bd_t *bd)
+int ft_board_setup(void *blob, struct bd_info *bd)
 {
 	int temp[2];
 	struct display_panel dispanel;

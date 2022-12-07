@@ -12,8 +12,9 @@
 #include <command.h>
 #include <stdio_dev.h>
 #include <video.h>
-#include <pf1550.h>
-#include <lc709203.h>
+#include "pf1550.h"
+#include "lc709203.h"
+#include <video.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -37,52 +38,52 @@ enum {
 display_state = DISPLAY_ON;
 uint64_t  display_timer;
 
-static void print_display(char *s)
-{
-	struct stdio_dev *dev = NULL;
-	dev = stdio_get_by_name("vga");
-	if(!dev)
-		return;
+/* static void print_display(char *s) */
+/* { */
+/* 	struct stdio_dev *dev = NULL; */
+/* 	dev = stdio_get_by_name("vga"); */
+/* 	if(!dev) */
+/* 		return; */
 
-	dev->puts(dev,s);
-}
-
-
-
-void print_charge(int c)
-{
-	char buf[10];
-	int y = video_get_screen_columns() /2;
-	int x = video_get_screen_rows() /2+4;
-
-	print_display(CSI "l");
-	snprintf(buf,10,CSI "%d;%dH",x,y);
-	print_display(buf);
+/* 	dev->puts(dev,s); */
+/* } */
 
 
-	snprintf(buf,10, "%d%%",c);
-	print_display(buf);
 
-}
+/* void print_charge(int c) */
+/* { */
+/* 	char buf[10]; */
+/* 	int y = video_get_screen_columns() /2; */
+/* 	int x = video_get_screen_rows() /2+4; */
 
-void draw_box(int x, int y, int width, int height, int color, void * framebuffer)
-{
-	int bpp = 4;
-	int stride = video_get_pixel_width()*bpp;
-	int skip = stride - width * bpp;
+/* 	print_display(CSI "l"); */
+/* 	snprintf(buf,10,CSI "%d;%dH",x,y); */
+/* 	print_display(buf); */
 
-	char * dst = framebuffer + x *bpp + y * stride;
 
-	while(height--)
-	{
-		for(int w=0;w<width;w++)
-		{
-			*(u32*)dst  = color;
-			dst+= bpp;
-		}
-		dst+= skip;
-	}
-}
+/* 	snprintf(buf,10, "%d%%",c); */
+/* 	print_display(buf); */
+
+/* } */
+
+/* void draw_box(int x, int y, int width, int height, int color, void * framebuffer) */
+/* { */
+/* 	int bpp = 4; */
+/* 	int stride = video_get_pixel_width()*bpp; */
+/* 	int skip = stride - width * bpp; */
+
+/* 	char * dst = framebuffer + x *bpp + y * stride; */
+
+/* 	while(height--) */
+/* 	{ */
+/* 		for(int w=0;w<width;w++) */
+/* 		{ */
+/* 			*(u32*)dst  = color; */
+/* 			dst+= bpp; */
+/* 		} */
+/* 		dst+= skip; */
+/* 	} */
+/* } */
 
 
 void do_charge_update(int level)
@@ -94,9 +95,9 @@ void do_charge_update(int level)
 		else if (level < 60)
 			color = COLOR_YELLOW;
 
-		draw_box(276,217,level,45,color, (void*) (gd->fb_base));
+		/* draw_box(276,217,level,45,color, (void*) (gd->fb_base)); */
 
-		print_charge(level);
+		/* print_charge(level); */
 }
 
 void turn_on_display(void)
@@ -125,7 +126,7 @@ void display_off_timer(void)
 }
 
 
-void test_charge_levels()
+void test_charge_levels(void)
 {
 	for(int i=0;i<=100;i++)
 	{
@@ -134,7 +135,7 @@ void test_charge_levels()
 	}
 }
 
-static int do_chargeapp(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
+static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 
 	int exit = 0;
