@@ -125,7 +125,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	temp[1] = cpu_to_fdt32(dispanel.width * dispanel.height * dispanel.gdfbytespp);
 	do_fixup_by_path(blob, "lcdif", "bootlogo", temp, sizeof(temp), 0);
 
-	do_fixup_by_path_string(blob, "/u-boot", "version", U_BOOT_VERSION_STRING);
+	do_fixup_by_path_string(blob, "/chosen", "u-boot,version", U_BOOT_VERSION_STRING);
 
 	return 0;
 }

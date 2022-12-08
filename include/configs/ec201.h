@@ -22,16 +22,13 @@
 
 /* Fuses */
 #define CONFIG_CMD_FUSE
-#define CONFIG_MXC_OCOTP
 
 #define CONFIG_BOUNCE_BUFFER
-#define CONFIG_FSL_ESDHC
-#define CONFIG_FSL_USDHC
-#define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
 
+/* MMC */
+#define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
 #define CONFIG_SYS_FSL_USDHC_NUM        1
 #define CONFIG_SYS_FSL_ESDHC_ADDR       0
-
 
 /* Using ULP WDOG for reset */
 #define WDOG_BASE_ADDR			WDG1_RBASE
@@ -50,7 +47,7 @@
 /* UART */
 #define LPUART_BASE			LPUART4_RBASE
 
-/* allow to overwrite serial and ethaddr */
+/* Allow to overwrite serial and ethaddr */
 #define CONFIG_ENV_OVERWRITE
 #define CONFIG_CONS_INDEX		1
 #define CONFIG_BAUDRATE			115200
@@ -70,10 +67,9 @@
 
 #define CONFIG_STACKSIZE		SZ_8K
 
-/* Physical Memory Map */
-#define CONFIG_NR_DRAM_BANKS		1
-
+/* Address where u-boot will be loaded in memory */
 #define CONFIG_SYS_TEXT_BASE		0x67800000
+
 #define PHYS_SDRAM			0x60000000
 #define PHYS_SDRAM_SIZE			SZ_512M
 #define CONFIG_SYS_MEMTEST_START	PHYS_SDRAM
@@ -156,11 +152,11 @@
 
 #else /* CONFIG_MFG */
 
-#define CONFIG_SYS_MMC_ENV_DEV		0		/* emmc0 */
-#define CONFIG_ENV_SIZE			SZ_16K
-#define CONFIG_ENV_OFFSET		(1792 * 1024)	/* 256kB below 2MiB */
-#define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + (128 * 1024))
-#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
+/* #define CONFIG_SYS_MMC_ENV_DEV		0		/1* emmc0 *1/ */
+/* #define CONFIG_ENV_SIZE			SZ_16K */
+/* #define CONFIG_ENV_OFFSET		(1792 * 1024)	/1* 256kB below 2MiB *1/ */
+/* #define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + (128 * 1024)) */
+/* #define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE */
 
 #define CONFIG_BOOTCOMMAND \
 	"setmac;" \
@@ -374,7 +370,12 @@
 #define CONFIG_M4_BOOT_ENV \
 	"m4_image=imx7ulpm4.bin\0" \
 	"m4_addr=0x1ffd2000\0" \
-	"loadM4=ext4load mmc ${mmcdev}:${mmcpart} ${m4_addr} boot/${m4_image}\0" \
+	"m4_bin_size=ext4size mmc ${mmcdev}:${mmcpart} boot/${m4_image}\0" \
+	"copyM4=cp.b ${tempaddr} ${m4_addr} ${filesize}\0" \
+	"loadM4_to_temp=ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} boot/${m4_image}\0" \
+	"loadM4=if run loadM4_to_temp; then " \
+		"run copyM4;" \
+	"fi;\0" \
 \
 	"startM4=echo Starting M4 ...; " \
 			"if run loadM4; then " \

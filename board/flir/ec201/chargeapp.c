@@ -14,7 +14,6 @@
 #include <video.h>
 #include "pf1550.h"
 #include "lc709203.h"
-#include <video.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
