@@ -19,16 +19,19 @@
 #include "ec201_splash.h"
 #include <mxsfb.h>
 #include <i2c.h>
-#include <bootstate.h>
-#include <pf1550.h>
-#include <lc709203.h>
+#include "bootstate.h"
+#include "pf1550.h"
+#include "lc709203.h"
 #include <version.h>
-#include <usbdcd.h>
+#include "usbdcd.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
 #define UART_PAD_CTRL	                        (PAD_CTL_PUS_UP)
 #define SNVS_LPCR_BTN_PRESS_TIME_DISABLE	(0x3<<16)
+
+/* We need to redefine this, because it is set to the wrong address. This is likely because there are multiple imx7ulp revision. */
+#undef SNVS_LP_LPCR
 #define SNVS_LP_LPCR	                        (0x41070038)
 
 /* void hx8394_init(void); */

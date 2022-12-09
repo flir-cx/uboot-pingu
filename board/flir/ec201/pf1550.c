@@ -74,8 +74,7 @@ int get_onoff_key(void)
 
 void pmic_goto_core_off(bool enable)
 {
-	struct udevice *dev;
-	u8 buf = enable?2:0;
+	u8 buf = enable ? 2 : 0;
 	//set go to core off mode
 	pf1550_write_reg(PF1550_PMIC_REG_PWRCTRL3, buf);
 }

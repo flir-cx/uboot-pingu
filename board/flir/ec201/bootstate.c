@@ -18,10 +18,11 @@
 #include <asm/arch/sys_proto.h>
 #include <dm.h>
 #include <i2c.h>
-#include <pf1550.h>
-#include <lc709203.h>
-#include <ec201_splash.h>
+#include "pf1550.h"
+#include "lc709203.h"
+#include "ec201_splash.h"
 #include <command.h>
+#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -235,7 +236,7 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 			break;
 		case RESET:
 		case ONKEY:
-			get_battery_voltage(&state.battery_mV);
+			get_battery_voltage((int *)&state.battery_mV);
 			printf("Battery voltage mV=%d... ",state.battery_mV);
 			if(state.battery_mV < LOW_BATTERY_mV){
 				printf("LOW\n");

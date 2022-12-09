@@ -1,4 +1,5 @@
-#include <usbdcd.h>
+#include "usbdcd.h"
+#include <linux/delay.h>
 
 #define usbdcd_clear_interrupt_field() writel(readl(USB_DCD_CONTROL) | USB_DCD_CONTROL_IACK, USB_DCD_CONTROL)
 #define usbdcd_control_if(reg) ((reg) & USB_DCD_CONTROL_IF)
@@ -15,6 +16,8 @@
 #define usbdcd_print(str, ...) do {			\
 		printf("USB DCD [%d]: "str, usbdcd_get_tunitcon(), ##__VA_ARGS__); \
 	} while(0)
+
+static int usbdcd_start_charger_detection_sequence(void);
 
 int usbdcd_get_charge_current_mA(int *charge_current_mA)
 {
@@ -82,7 +85,7 @@ int usbdcd_get_charge_current_mA(int *charge_current_mA)
 	return 0;
 }
 
-int usbdcd_start_charger_detection_sequence(void)
+static int usbdcd_start_charger_detection_sequence(void)
 {
 
 	/* Set data pin contact debounce timer. */

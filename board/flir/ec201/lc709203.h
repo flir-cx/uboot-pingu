@@ -1,5 +1,7 @@
-#include <dm.h>
-#include <i2c.h>
+#ifndef _LC709203_
+#define _LC709203_
+
+#include <linux/types.h>
 
 #define FUELGAUGE_I2C_ADDR 0xb
 #define FUELGAUGE_I2C_BUS 5
@@ -30,3 +32,5 @@ int fuelgauge_operational(void);
 int fuelgauge_battery_profile_one(void);
 int fuelgauge_thermistor_mode(void);
 int fuelgauge_write_reg(uint reg, u8 lb, u8 hb);
+
+#endif // _LC709203_

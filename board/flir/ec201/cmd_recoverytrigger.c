@@ -36,6 +36,7 @@
 #include <i2c.h>
 #include <asm/arch/pcc.h>
 #include <video.h>
+#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -129,7 +130,7 @@ int seq(int no)
     return OK;
 }
 
-int get_serial(char *buf)
+int get_serial(uint8_t *buf)
 {
     struct udevice *dev;
     int ret = i2c_get_chip_for_busnum(6, 0x57, 1, &dev); //get eprom
@@ -182,7 +183,7 @@ int check_recovery_sequence(void)
         char buf[24];
         buf[0] = '\0';
         char buf2[24];
-        get_serial(buf);
+        get_serial((uint8_t *) buf);
 
         if(buf[0] == 0xff || strlen(buf) == 0)
             print_recovery("Recovery *");//No Serial
@@ -199,7 +200,7 @@ int check_recovery_sequence(void)
     return ret;
 }
 
-int do_recoverytrigger(void)
+int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
     int trig = 0;
     int res = FAIL;

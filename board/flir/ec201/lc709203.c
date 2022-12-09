@@ -7,7 +7,10 @@
  * published by the Free Software Foundation.
  */
 
-#include <lc709203.h>
+#include <dm.h>
+#include <i2c.h>
+#include "lc709203.h"
+#include <linux/delay.h>
 
 static uint8_t crc8(const void* vptr, int len) {
 	const uint8_t *data = vptr;
@@ -54,7 +57,7 @@ int fuelgauge_write_reg(uint reg, u8 lb, u8 hb)
 	return 0;
 }
 
-int fuelguage_get_type()
+static int fuelguage_get_type(void)
 {
 	u8 buf[4];
 	int ret;

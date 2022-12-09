@@ -7,7 +7,7 @@
 #include <i2c.h>
 #include <asm/arch/pcc.h>
 
-int get_board_serial(char *buf)
+int get_board_serial(uint8_t *buf)
 {
     struct udevice *dev;
     int ret = i2c_get_chip_for_busnum(6, 0x57, 1, &dev); //get eprom
@@ -24,11 +24,11 @@ int get_board_serial(char *buf)
 
 int setmac_func(bool bt)
 {
-    u8 addr[18];
+    char addr[18];
 	u32 addrI = 0;
-    uint8_t buf[16];
+    char buf[16];
 
-    int res = get_board_serial(buf);
+    int res = get_board_serial((uint8_t *) buf);
 
     if(res == 0)
     {
@@ -57,18 +57,20 @@ int setmac_func(bool bt)
 
     if(res != 0)
     {
-        strcpy(addr, bt?"00:04:f3:ff:ff:fc":"00:04:f3:ff:ff:fb");
+        strcpy(addr, bt ? "00:04:f3:ff:ff:fc":"00:04:f3:ff:ff:fb");
     }
 
-    env_set(bt?"btaddr":"wlanaddr", addr);
+    env_set(bt ? "btaddr" : "wlanaddr", addr);
 
     return 0;
 }
 
-int do_setmac(void)
+int do_setmac(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
     setmac_func(false);
     setmac_func(true);
+
+	return 0;
 }
 
 U_BOOT_CMD(

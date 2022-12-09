@@ -1,13 +1,13 @@
-#include <ec201_splash.h>
+#include "ec201_splash.h"
 
-static struct splash_location splash_locations[] = {
-	{
-		.name = "mmc_fs",
-		.storage = SPLASH_STORAGE_MMC,
-		.flags = SPLASH_STORAGE_FS,
-		.devpart = "0:2",
-	}
-};
+/* static struct splash_location splash_locations[] = { */
+/* 	{ */
+/* 		.name = "mmc_fs", */
+/* 		.storage = SPLASH_STORAGE_MMC, */
+/* 		.flags = SPLASH_STORAGE_FS, */
+/* 		.devpart = "0:2", */
+/* 	} */
+/* }; */
 
 #ifdef CONFIG_VIDEO_MXS
 int splash_screen_prepare(void)

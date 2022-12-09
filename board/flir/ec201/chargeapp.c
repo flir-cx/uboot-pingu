@@ -7,13 +7,14 @@
 #include <asm/arch/iomux.h>
 #include <asm/gpio.h>
 #include <dm.h>
-#include <bootstate.h>
+#include "bootstate.h"
 #include <console.h>
 #include <command.h>
 #include <stdio_dev.h>
 #include <video.h>
 #include "pf1550.h"
 #include "lc709203.h"
+#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
