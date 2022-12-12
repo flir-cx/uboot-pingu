@@ -129,8 +129,8 @@ int platform_check_pmic_boot_reason(void)
 	pmic_read_reg(DA9063_REG_FAULT_LOG,&fault_log);
 	pmic_write_reg(DA9063_REG_FAULT_LOG,fault_log);
 
-	//Long press on-key button
-	if(fault_log & DA9063_KEY_RESET)
+	//Don't boot on Long press on-key button or watchdog timeout
+	if(fault_log & (DA9063_KEY_RESET | DA9063_TWD_ERROR))
 	{
 		printf("Powering off....\n");
 
