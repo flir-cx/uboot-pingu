@@ -95,7 +95,10 @@ DECLARE_GLOBAL_DATA_PTR;
 struct spi_slave *slave;
 int dram_init(void)
 {
-	gd->ram_size = imx_ddr_size();
+	/* Since imx_ddr_size does not know about interleaved multiply by 2 */
+	/* It calculates only on one mem capsule*/
+	gd->ram_size = imx_ddr_size() * 2;
+	printf("dram_init gd->ram_size=%d\n", gd->ram_size);
 	return 0;
 }
 
