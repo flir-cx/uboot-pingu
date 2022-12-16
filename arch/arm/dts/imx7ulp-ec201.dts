@@ -28,6 +28,40 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 	};
+
+	backlight: backlight {
+		compatible = "gpio-backlight";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight>;
+		gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+		default-on;
+		status = "okay";
+	};
+
+	mipi_dsi_reset: mipi-dsi-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+		reset-delay-us = <5000>;
+		#reset-cells = <0>;
+	};
+
+	dsi_host: dsi-host {
+		compatible = "northwest,mipi-dsi";
+		status = "okay";
+	};
+
+	hx8394_panel {
+		compatible = "himax,hx8394";
+		reset-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+		backlight = <&backlight>;
+		status = "okay";
+
+		port {
+			hx8394_from_dsim: endpoint {
+				remote-endpoint = <&dsim_to_hx8394>;
+			};
+		};
+	};
 };
 
 &iomuxc1 {
@@ -58,6 +92,18 @@
 			IMX7ULP_PAD_PTE0__SDHC1_D1     0x43
 			IMX7ULP_PAD_PTE5__SDHC1_D2     0x43
 			IMX7ULP_PAD_PTE4__SDHC1_D3     0x43
+		>;
+	};
+
+	pinctrl_mipi_dsi_reset: mipi_dsi_reset_grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTC7__PTC7    0x3 /* DISPLAY_RESET */
+			>;
+	};
+
+	pinctrl_backlight: backlight_grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTC6__PTC6    0x3
 		>;
 	};
 
@@ -96,6 +142,48 @@
 			IMX7ULP_PAD_PTE9__LPUART6_RTS_B    0x3
 			IMX7ULP_PAD_PTE8__LPUART6_CTS_B    0x3
 		>;
+	};
+};
+
+&lcdif {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	display = <&display0>;
+
+	display0: display@0 {
+		bits-per-pixel = <24>;
+		bus-width = <24>;
+	};
+
+	lcdif_disp0: port@0 {
+		reg = <0>;
+
+		lcdif_to_dsim: endpoint {
+			remote-endpoint = <&dsim_from_lcdif>;
+		};
+	};
+};
+
+&mipi_dsi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mipi_dsi_reset>;
+	lcd_panel = "TRULY-VGA-SHERLOCK";
+	resets = <&mipi_dsi_reset>;
+	status = "okay";
+
+	port@0 {
+		dsim_from_lcdif: endpoint {
+			remote-endpoint = <&lcdif_to_dsim>;
+		};
+	};
+
+	port@1 {
+		dsim_to_hx8394: endpoint {
+			remote-endpoint = <&hx8394_from_dsim>;
+		};
 	};
 };
 

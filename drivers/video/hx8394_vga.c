@@ -237,31 +237,31 @@ static struct reg_value lcd_setup[] = {
 	{
 		.command = MIPI_DSI_DCS_SHORT_WRITE_PARAM,
 		.delay = 0,
-		.buf_size = 0,
+		.buf_size = 2,
 		.buf = {MCS_UCMD_SETIOOPT, 0x02}
 	},
 	{
 		.command = MIPI_DSI_DCS_SHORT_WRITE_PARAM,
 		.delay = 0,
-		.buf_size = 0,
+		.buf_size = 2,
 		.buf = {MCS_UCMD_SETOFFSET, 0x77}
 	},
 	{
 		.command = MIPI_DSI_DCS_SHORT_WRITE_PARAM,
 		.delay = 0,
-		.buf_size = 0,
+		.buf_size = 2,
 		.buf = {0xC6, 0xED}
 	},
 	{
 		.command = MIPI_DSI_DCS_SHORT_WRITE,
 		.delay = 150,
-		.buf_size = 0,
+		.buf_size = 1,
 		.buf = {MCS_SCMD_SLPOUT}
 	},
 	{
 		.command = MIPI_DSI_DCS_SHORT_WRITE,
 		.delay = 50,
-		.buf_size = 0,
+		.buf_size = 1,
 		.buf = {MCS_SCMD_DISPON}
 	}
 };
@@ -272,7 +272,6 @@ static void hx8394_init_sequence(struct udevice *dev)
 	struct mipi_dsi_device *device = plat->device;
 	int err;
 	int i;
-	debug("MIPI DSI LCD HX8363 setup.\n");
 
 	for (i = 0; i < ARRAY_SIZE(lcd_setup); i++) {
 		err = mipi_dsi_dcs_write_buffer(device, lcd_setup[i].buf, lcd_setup[i].buf_size);
