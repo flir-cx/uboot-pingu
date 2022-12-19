@@ -85,7 +85,7 @@ struct ipu_ch_param {
 
 #define IPUV3_CLK_MX51		133000000
 #define IPUV3_CLK_MX53		200000000
-#define IPUV3_CLK_MX6Q		264000000
+#define IPUV3_CLK_MX6Q		198000000
 #define IPUV3_CLK_MX6DL		198000000
 
 void clk_enable(struct clk *clk)

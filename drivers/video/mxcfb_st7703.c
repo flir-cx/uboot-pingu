@@ -306,7 +306,7 @@ int mipid_st7703_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 		if (ret)
 			printk("st7703_lcd_setup Error %i writing %u\n", ret, i);
 		else
-			printk("st7703_lcd_setup wrote OK type=0x%02X cmd=0x%02X size %u \n",
+			printk("st7703_lcd_setup wrote OK type=0x%02X cmd=0x%02X size %u\n",
 			       lcd_setup[i].dsi_data_type, lcd_setup[i].buf[0],
 			       lcd_setup[i].buf_size);
 	}
