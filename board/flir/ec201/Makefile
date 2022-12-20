@@ -13,5 +13,4 @@ obj-y  += pf1550.o
 obj-y  += lc709203.o
 obj-y  += cmd_recoverytrigger.o
 obj-y  += cmd_setmac.o
-obj-y  += ec201_splash.o
 obj-y  += usbdcd.o

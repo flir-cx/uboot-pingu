@@ -97,20 +97,9 @@
 #define CONFIG_CMD_CACHE
 #endif
 
-#ifdef CONFIG_VIDEO
+#ifdef CONFIG_DM_VIDEO
 #define CONFIG_VIDEO_MXS
 #define CONFIG_VIDEO_LOGO
-#define CONFIG_SPLASH_SCREEN
-#define CONFIG_SPLASH_SCREEN_ALIGN
-#define CONFIG_CMD_BMP
-#define CONFIG_BMP_16BPP
-#define CONFIG_VIDEO_BMP_RLE8
-#define CONFIG_VIDEO_BMP_LOGO
-#define CONFIG_IMX_VIDEO_SKIP
-#define CONFIG_HX8394
-
-#define CONFIG_SPLASH_SOURCE
-#define CONFIG_VIDEO_BMP_GZIP
 #define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE 1024*1024
 #endif
 #define CONFIG_CFB_CONSOLE_ANSI
@@ -386,6 +375,8 @@
 	"splashimage=0x67000000\0" \
 	"splashsource=mmc_fs\0" \
 	"splashfile=/boot/bootlogo.bmp.gz\0" \
+    "bootlogo=bootlogo.bmp.gz\0"\
+    "loadsplash=run select_boot; ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} /boot/${bootlogo};cp.w ${tempaddr} ${splashimage} ${filesize}\0" \
 	"panel=TRULY-VGA-SHERLOCK\0"
 
 #define CONFIG_EXTRA_ENV_SETTINGS \

@@ -16,7 +16,6 @@
 #include <usb.h>
 #include <dm.h>
 #include <asm/mach-imx/video.h>
-#include "ec201_splash.h"
 #include <mxsfb.h>
 #include <i2c.h>
 #include "bootstate.h"
@@ -33,8 +32,6 @@ DECLARE_GLOBAL_DATA_PTR;
 /* We need to redefine this, because it is set to the wrong address. This is likely because there are multiple imx7ulp revision. */
 #undef SNVS_LP_LPCR
 #define SNVS_LP_LPCR	                        (0x41070038)
-
-/* void hx8394_init(void); */
 
 int dram_init(void)
 {
@@ -121,13 +118,6 @@ int board_late_init(void)
 #if defined(CONFIG_OF_BOARD_SETUP)
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
-	int temp[2];
-	struct display_panel dispanel;
-	mxs_lcd_get_panel(&dispanel);
-	temp[0] = cpu_to_fdt32(gd->fb_base);
-	temp[1] = cpu_to_fdt32(dispanel.width * dispanel.height * dispanel.gdfbytespp);
-	do_fixup_by_path(blob, "lcdif", "bootlogo", temp, sizeof(temp), 0);
-
 	do_fixup_by_path_string(blob, "/chosen", "u-boot,version", U_BOOT_VERSION_STRING);
 
 	return 0;

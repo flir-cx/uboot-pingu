@@ -18,6 +18,7 @@ obj-$(CONFIG_PANEL) += panel-uclass.o
 obj-$(CONFIG_PANEL_HX8238D) += hx8238d.o
 obj-$(CONFIG_SIMPLE_PANEL) += simple_panel.o
 obj-$(CONFIG_VIDEO_LINK) += video_link.o
+obj-$(CONFIG_VIDEO_LCD_HIMAX_HX8394) += hx8394_vga.o
 endif
 
 obj-${CONFIG_EXYNOS_FB} += exynos/
@@ -83,7 +84,6 @@ obj-$(CONFIG_VIDEO_VADC) += mxc_vadc.o
 obj-$(CONFIG_VIDEO_CSI) += mxc_csi.o
 obj-$(CONFIG_VIDEO_PXP) += mxc_pxp.o
 obj-$(CONFIG_VIDEO_GIS) += mxc_gis.o
-obj-$(CONFIG_HX8394) += hx8394_vga.o
 
 obj-y += bridge/
 obj-y += sunxi/

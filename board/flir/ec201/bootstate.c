@@ -18,11 +18,11 @@
 #include <asm/arch/sys_proto.h>
 #include <dm.h>
 #include <i2c.h>
-#include "pf1550.h"
-#include "lc709203.h"
-#include "ec201_splash.h"
+#include <splash.h>
 #include <command.h>
 #include <linux/delay.h>
+#include "pf1550.h"
+#include "lc709203.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -176,10 +176,10 @@ void set_boot_logo(void)
 	{
 	case NO_BATTERY:
 	case LOW_BATTERY:
-		env_set("splashfile","/boot/no_battery.bmp.gz");
+		env_set("bootlogo", "no_battery.bmp.gz");
 		break;
 	case USB_CHARGE:
-		env_set("splashfile","/boot/battery_logo.bmp.gz");
+		env_set("bootlogo", "battery_logo.bmp.gz");
 		break;
 	case NORMAL_BOOT:
 		break;
@@ -221,6 +221,30 @@ int boot_state_init(void)
 		printf("NO\n");
 	}
 
+	return 0;
+}
+
+int splash_screen_prepare(void)
+{
+	char *env_loadsplash;
+
+	set_boot_logo();
+
+	if (!env_get("splashimage")) {
+		log_err("Environment variable splashimage not found!\n");
+		return -EINVAL;
+	}
+
+	env_loadsplash = env_get("loadsplash");
+	if (env_loadsplash == NULL) {
+		log_err("Environment variable loadsplash not found!\n");
+		return -EINVAL;
+	}
+
+	if (run_command_list(env_loadsplash, -1, 0)) {
+		log_err("Failed to run loadsplash %s\n\n", env_loadsplash);
+		return -ENOSYS;
+	}
 	return 0;
 }
 
@@ -269,8 +293,8 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	case NO_BATTERY:
 		printf("Battery missing\n");
 	case LOW_BATTERY:
-		/* set_boot_logo(); */
-		/* splash_screen_update(); */
+		set_boot_logo();
+		splash_display();
 
 		/* Give user a chance to see splash. */
 		udelay(2000000);
@@ -280,8 +304,8 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		break;
 	case USB_CHARGE:
 		printf("Camera: charge state \n");
-		/* set_boot_logo(); */
-		/* splash_screen_update(); */
+		set_boot_logo();
+		splash_display();
 		run_command("chargeapp",0);
 		break;
 	default:
