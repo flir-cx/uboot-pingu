@@ -12,6 +12,16 @@ config FLIR_DA9063
 	help
 	  Command 'pmic', for accessing DA9063 PMIC registers
 
+config FLIR_ORIG_FORMAT_SERIAL_MX6
+	bool "Serial in high-low format"
+	depends on ARCH_MX6
+	default n
+	help
+	  Serial in high-low format for backwards compatibility.
+	  Use in products, which have been previously released 
+	  with the serial in high-low format. Those will need to
+	  keep the same format after the u-boot upgrade.
+
 config FLIR_BOARD_SUPPORT
 	bool "IO Board support"
 	default n

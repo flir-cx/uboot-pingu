@@ -999,9 +999,13 @@ static void setup_serial_number(void)
 
 	if (env_get("serial#"))
 		return;
-
+#ifdef CONFIG_FLIR_ORIG_FORMAT_SERIAL_MX6
+	snprintf(serial_string, sizeof(serial_string), "%08x%08x",
+		 fuse->uid_high, fuse->uid_low);
+#else
 	snprintf(serial_string, sizeof(serial_string), "%08x%08x",
 		 fuse->uid_low, fuse->uid_high);
+#endif
 	env_set("serial#", serial_string);
 }
 
