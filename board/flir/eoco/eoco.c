@@ -32,6 +32,7 @@
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
 #include <i2c.h>
+#include <fdt_support.h>
 #include <input.h>
 #include <power/pmic.h>
 #include <power/pfuze100_pmic.h>
@@ -261,6 +262,39 @@ int platform_setup_pmic_voltages(void)
 }
 #endif
 
+#if defined(CONFIG_OF_BOARD_SETUP)
+
+/* Platform function to modify the FDT as needed */
+int ft_board_setup(void *blob, struct bd_info *bd)
+{
+	/*
+	uchar enetaddr[6];
+	//fix ethernet mac-address using direct path to node
+	eth_env_get_enetaddr("ethaddr", enetaddr);
+	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000",
+			"mac-address", &enetaddr, 6, 1);
+	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000",
+			"local-mac-address", &enetaddr, 6, 1);
+
+	do_fixup_by_path_string(blob, "/u-boot", "version", U_BOOT_VERSION_STRING);
+	do_fixup_by_path_string(blob, "/u-boot", "reset-cause", get_last_reset_cause());
+	*/
+
+	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		int temp[2];
+
+		temp[0] = cpu_to_fdt32(gd->fb_base);
+		temp[1] = cpu_to_fdt32(640 * 480 * 2);
+		printf("%s base=%i, size=%i\n", __func__, temp[0], temp[1]);
+		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
+	}
+
+#if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
+	patch_fdt_eeprom(blob);
+#endif
+	return 0;
+}
+#endif /* CONFIG_OF_BOARD_SETUP */
 
 int board_spi_cs_gpio(unsigned bus, unsigned cs)
 {
@@ -849,11 +883,9 @@ size_t display_count = ARRAY_SIZE(displays);
 static void setup_display(void)
 {
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
 	int reg;
 
 	enable_ipu_clock();
-	imx_setup_hdmi();
 
 	/* Turn on LDB0, LDB1, IPU,IPU DI0 clocks */
 	reg = readl(&mxc_ccm->CCGR3);
