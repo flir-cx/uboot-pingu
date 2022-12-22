@@ -237,7 +237,7 @@ static struct mipi_lcd_config lcd_config = {
 void mipid_st7703_get_lcd_videomode(struct fb_videomode **mode,
 				    struct mipi_lcd_config **data)
 {
-	pr_err("%s\n", __func__);
+	pr_devel("%s\n", __func__);
 	*mode = &otm_lcd_modedb[0];
 	*data = &lcd_config;
 }
@@ -250,7 +250,7 @@ static int st7703_write_reg(struct mipi_dsi_info *mipi_dsi, u32 reg, u32 data)
 	err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_DCS_SHORT_WRITE_PARAM,
 				 &buf, 0);
 	if (err)
-		printk("st7703_write_reg err:%d \n", err);
+		pr_err("%s err:%d\n", __func__, err);
 	return err;
 }
 
@@ -260,7 +260,7 @@ static int st7703_write_cmd(struct mipi_dsi_info *mipi_dsi, u32 cmd)
 				     &cmd, 0);
 	msleep(1);
 	if (err)
-		printk("%s err:%d \n", __func__, err);
+		pr_err("%s err:%d\n", __func__, err);
 	return err;
 }
 #endif
@@ -269,7 +269,7 @@ int mipid_st7703_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	int ret;
 	int i;
 
-	printk("%s enter\n", __func__);
+	pr_devel("%s enter\n", __func__);
 //	if (mipi_dsi->lcd_mipi_sel_gpio)
 //		gpio_set_value_cansleep(mipi_dsi->lcd_mipi_sel_gpio, 1);
 	msleep(20);
@@ -296,19 +296,19 @@ int mipid_st7703_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 	}
 #endif
 	for (i = 0; i < ARRAY_SIZE(lcd_setup); i++) {
-		printk("st7703_lcd_setup write type=0x%02X cmd=0x%02X size %u \n",
-		       lcd_setup[i].dsi_data_type, lcd_setup[i].buf[0], lcd_setup[i].buf_size);
+		pr_devel("st7703_lcd_setup write type=0x%02X cmd=0x%02X size %u\n",
+			 lcd_setup[i].dsi_data_type, lcd_setup[i].buf[0], lcd_setup[i].buf_size);
 
 		ret = mipi_dsi_pkt_write(mipi_dsi, lcd_setup[i].dsi_data_type,
 					 (u32 *)&lcd_setup[i].buf, lcd_setup[i].buf_size);
 		if (lcd_setup[i].delay_after_write)
 			msleep(lcd_setup[i].delay_after_write);
 		if (ret)
-			printk("st7703_lcd_setup Error %i writing %u\n", ret, i);
+			pr_err("st7703_lcd_setup Error %i writing %u\n", ret, i);
 		else
-			printk("st7703_lcd_setup wrote OK type=0x%02X cmd=0x%02X size %u\n",
-			       lcd_setup[i].dsi_data_type, lcd_setup[i].buf[0],
-			       lcd_setup[i].buf_size);
+			pr_devel("st7703_lcd_setup wrote OK type=0x%02X cmd=0x%02X size %u\n",
+				 lcd_setup[i].dsi_data_type, lcd_setup[i].buf[0],
+				 lcd_setup[i].buf_size);
 	}
 	return 0;
 }
