@@ -36,6 +36,7 @@
 #include <input.h>
 #include <power/pmic.h>
 #include <power/pfuze100_pmic.h>
+#include <pwm.h>
 #include "../../freescale/common/pfuze.h"
 #include "../../../drivers/video/mxc_mipi_dsi.h"
 #include "../../../drivers/video/mxcfb_st7703.h"
@@ -326,6 +327,30 @@ static int detect_truly(struct display_info_t const *dev)
 {
 	return 1;
 }
+
+
+static void enable_truly_backlight(struct display_info_t const *dev)
+{
+	struct udevice *pwm_dev;
+	int ret;
+
+	printf("%s\n", __func__);
+	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
+	if (ret) {
+		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
+		return;
+	}
+
+	// Set to 50% duty cycle
+	ret = pwm_set_config(pwm_dev, 0, 500000, 250000);
+	if (ret) {
+		log_err("%s: pwm_set_config failed '%d'\n", __func__, ret);
+		return;
+	}
+
+	pwm_set_enable(pwm_dev, 0, 1);
+}
+
 
 #ifdef CONFIG_ENV_IS_IN_MMC
 int board_mmc_get_env_dev(int devno)
@@ -859,7 +884,7 @@ struct display_info_t const displays[] = {{
 	.pixfmt	= IPU_PIX_FMT_RGB24,
 	.di = 0,
 	.detect	= detect_truly,
-	.enable	= NULL,
+	.enable	= enable_truly_backlight,
 	.mode	= {
 		.name           = "TRULY-VGA",
 		.refresh        = 60,

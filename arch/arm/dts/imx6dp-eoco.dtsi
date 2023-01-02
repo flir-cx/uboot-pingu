@@ -629,12 +629,10 @@
 };
 
 &iomuxc {
-
-	imx6dl-ec101 {
-
+	imx6qp-eoco {
 		pinctrl_pwm1: pwm1 {
 			fsl,pins = <
-				MX6QDL_PAD_GPIO_9__PWM1_OUT		0x80000000
+				MX6QDL_PAD_GPIO_9__PWM1_OUT		0x1b0b1
 			>;
 		};
 
@@ -815,6 +813,13 @@
 &pcie {
 	status = "okay";
 	reset-gpio = <&gpio2 3 0>;
+};
+
+&pwm1 {
+	#pwm-cells = <2>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pwm1>;
+	status = "okay";
 };
 
 /*Active serial port*/
