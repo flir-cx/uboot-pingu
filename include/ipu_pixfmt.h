@@ -63,5 +63,5 @@ int ipuv3_fb_init(struct fb_videomode const *mode,
 		  uint8_t disp,
 		  uint32_t pixfmt);
 void ipuv3_fb_shutdown(void);
-
+void set_backlight_off(void);
 #endif

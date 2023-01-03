@@ -334,7 +334,6 @@ static void enable_truly_backlight(struct display_info_t const *dev)
 	struct udevice *pwm_dev;
 	int ret;
 
-	printf("%s\n", __func__);
 	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
 	if (ret) {
 		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
@@ -991,7 +990,22 @@ int board_early_init_f(void)
 #ifdef CONFIG_LDO_BYPASS_CHECK
 void ldo_mode_set(int ldo_bypass)
 {
+}
+#endif
 
+#if defined(CONFIG_VIDEO_BACKLIGHT_OFF_HANDOVER)
+void set_backlight_off()
+{
+	struct udevice *pwm_dev;
+	int ret;
+
+	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
+	if (ret) {
+		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
+		return;
+	}
+
+	pwm_set_enable(pwm_dev, 0, 0);
 }
 #endif
 
