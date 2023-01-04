@@ -15,6 +15,11 @@ config FLIR_PLATFORM_EC101
 	help
 	  Cameras based on the EC101 board
 
+config FLIR_PLATFORM_EC701
+	bool "EC701"
+	help
+	  Cameras based on the EC701 board
+
 config FLIR_PLATFORM_EC401W
 	bool "EC401W"
 	help

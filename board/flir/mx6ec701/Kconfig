@@ -1,0 +1,16 @@
+if TARGET_MX6EC701
+
+config SYS_BOARD
+	default "mx6ec701"
+
+config SYS_VENDOR
+	default "flir"
+
+config SYS_CONFIG_NAME
+	default "mx6ec701"
+
+config SYS_TEXT_BASE
+    default 0x17800000
+
+source "board/flir/common/Kconfig"
+endif

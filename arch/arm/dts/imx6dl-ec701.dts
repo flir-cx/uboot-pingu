@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
+//
+// Copyright (C) 2013 Freescale Semiconductor, Inc.
+
+/dts-v1/;
+
+#include "imx6dl.dtsi"
+#include "imx6dl-ec701.dtsi"
+
+/ {
+	model = "FLIR i.MX6 Solo ec701 Board";
+	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
+};
