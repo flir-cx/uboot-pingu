@@ -62,14 +62,14 @@
 #include "../common/da9063_regs.h"
 #include "../common/board_support.h"
 #include "../common/usbcharge.h"
+#include "../common/cmd_updatefdteeprom.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
 struct spi_slave *slave;
 
-#if defined(CONFIG_IMX6_LDO_BYPASS)
 void imx_bypass_ldo(void);
-#endif
+
 static int setup_pmic_voltages(void);
 static int platform_setup_pmic_voltages(void);
 int fpga_power(bool enable);
@@ -98,7 +98,6 @@ static void setup_mipi_mux_i2c(void);
 	PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |		\
 	PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
-
 #define I2C_PMIC	1
 
 #define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
@@ -121,15 +120,12 @@ iomux_v3_cfg_t const ecspi4_pads[] = {
 };
 
 //default hw support
-static struct hw_support hardware =
-{
+static struct hw_support hardware = {
 	.mipi_mux =	false,
 	.display = true,
 	.usb_charge = IS_ENABLED(CONFIG_FLIR_USBCHARGE),
 	.name = "Unknown Camera"
 };
-
-
 
 /**
  * @brief Overrides the (weak) splash_screen_prepare in splash.c
@@ -148,7 +144,7 @@ int splash_screen_prepare(void)
 	}
 
 	env_loadsplash = env_get("loadsplash");
-	if (env_loadsplash == NULL) {
+	if (!env_loadsplash) {
 		log_err("Environment variable loadsplash not found!\n");
 		return -EINVAL;
 	}
@@ -168,10 +164,10 @@ int dram_init(void)
 
 #ifdef CONFIG_MXC_SPI
 static iomux_v3_cfg_t const ecspi1_pads[] = {
-    MX6_PAD_CSI0_DAT4__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_CSI0_DAT5__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_CSI0_DAT6__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT4__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_CSI0_DAT5__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_CSI0_DAT6__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 static void setup_spi(void)
@@ -180,19 +176,16 @@ static void setup_spi(void)
 }
 #endif
 
-int board_spi_cs_gpio(unsigned bus, unsigned cs)
+int board_spi_cs_gpio(unsigned int bus, unsigned int cs)
 {
 	if (bus == 1) {
-		if(cs == 0) {
+		if (cs == 0)
 			return IMX_GPIO_NR(5, 28); //SPI1_CS0_n
-		} else if(cs == 1) {
+		else if (cs == 1)
 			return IMX_GPIO_NR(5, 29); //SPI1_CS1_n
-		}
-	} else if (bus == 3) {
-		if(cs == 0) {
+	} else if (bus == 3)
+		if (cs == 0)
 			return IMX_GPIO_NR(3, 20); //DA9063 CS
-		}
-	}
 
 	return -1;
 }
@@ -434,7 +427,7 @@ int board_mmc_getcd(struct mmc *mmc)
 int board_mmc_init(struct bd_info *bis)
 {
 	struct src *psrc = (struct src *)SRC_BASE_ADDR;
-	unsigned reg = readl(&psrc->sbmr1) >> 11;
+	unsigned int reg = readl(&psrc->sbmr1) >> 11;
 	/*
 	 * Upon reading BOOT_CFG register the following map is done:
 	 * Bit 11 and 12 of BOOT_CFG register can determine the current
@@ -474,7 +467,7 @@ static int ar8031_phy_fixup(struct phy_device *phydev)
 {
 	unsigned short val;
 
-	/* To enable AR8031 ouput a 125MHz clk from CLK_25M */
+	/* To enable AR8031 output a 125MHz clk from CLK_25M */
 	if (!is_mx6dqp()) {
 		phy_write(phydev, MDIO_DEVAD_NONE, 0xd, 0x7);
 		phy_write(phydev, MDIO_DEVAD_NONE, 0xe, 0x8016);
@@ -778,6 +771,7 @@ struct display_info_t const displays[] = {{
 		.flag           = 0
 } }
 };
+
 size_t display_count = ARRAY_SIZE(displays);
 
 static void setup_display(void)
@@ -853,7 +847,7 @@ static void setup_fec(void)
 		imx_iomux_set_gpr_register(5, 9, 1, 1);
 		ret = enable_fec_anatop_clock(0, ENET_125MHZ);
 		if (ret)
-		    printf("Error fec anatop clock settings!\n");
+			printf("Error fec anatop clock settings!\n");
 	}
 }
 
@@ -863,7 +857,7 @@ int board_ehci_hcd_init(int port)
 	switch (port) {
 	case 0:
 		/*
-		  * Set daisy chain for otg_pin_id on 6q.
+		 * Set daisy chain for otg_pin_id on 6q.
 		 *  For 6dl, this bit is reserved.
 		 */
 		imx_iomux_set_gpr_register(1, 13, 1, 0);
@@ -894,24 +888,25 @@ void board_setup_timer(void)
 	writel(reg, &mxc_ccm->CCGR1);
 }
 
-static void setup_mipi_mux_i2c()
+static void setup_mipi_mux_i2c(void)
 {
 	const struct dm_i2c_ops *i2c_ops = NULL;
 	struct udevice *i2c_devp = NULL;
 
-	if (hardware.mipi_mux)
-	{
+	if (hardware.mipi_mux) {
 		unsigned char buf[2];
 		struct i2c_msg msg;
+
 		if (uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &i2c_devp) == -ENODEV) {
-			printf("%s, %s, %d: dev i2c@21f8000 not found!\n", __FILE__, __FUNCTION__, __LINE__);
+			printf("%s, %s, %d: dev i2c@21f8000 not found!\n",
+			       __FILE__, __func__, __LINE__);
 			return;
 		}
 		i2c_ops = device_get_ops(i2c_devp);
-		if (i2c_ops == NULL) {
+		if (!i2c_ops) {
 			log_err("Failed to get i2c_ops from device at i2c@21f8000\n");
 			return;
-		}		
+		}
 
 		msg.addr  = LEIF_PCA9534_ADDRESS;
 		msg.flags = 0; // Write
@@ -928,12 +923,11 @@ static void setup_mipi_mux_i2c()
 	}
 }
 
-
 int board_early_init_f(void)
 {
 	arch_cpu_init();
-        board_setup_timer();
-        setup_iomux_uart();
+	board_setup_timer();
+	setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
 	setup_mipi_mux_i2c();
@@ -945,25 +939,24 @@ int board_early_init_f(void)
 #ifdef CONFIG_LDO_BYPASS_CHECK
 void ldo_mode_set(int ldo_bypass)
 {
-
 }
 #endif
 
 int checkboard(void)
 {
-    printf("Board: %s - %s\n", CONFIG_BOARD_DESCRIPTION, hardware.name);
+	printf("Board: %s - %s\n", CONFIG_BOARD_DESCRIPTION, hardware.name);
 	return 0;
 }
 
 int board_init(void)
 {
-        int ret = 0;
+	int ret = 0;
+
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
-#if defined(CONFIG_DM_REGULATOR)
-       	regulators_enable_boot_on(false);
-#endif
+	if (IS_ENABLED(CONFIG_DM_REGULATOR))
+		regulators_enable_boot_on(false);
 
 	if (IS_ENABLED(CONFIG_MXC_SPI)) {
 		ret = platform_setup_pmic_voltages();
@@ -977,10 +970,10 @@ int board_init(void)
 	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 	/* Setup I2C4  */
 	ret = setup_i2c(3, CONFIG_SYS_I2C_SPEED,
-		CONFIG_SYS_I2C_SLAVE, &i2c_pad_info1);
+			CONFIG_SYS_I2C_SLAVE, &i2c_pad_info1);
 	/* Setup I2C3 */
 	ret = setup_i2c(2, CONFIG_SYS_I2C_SPEED,
-		CONFIG_SYS_I2C_SLAVE, &i2c_pad_info2);
+			CONFIG_SYS_I2C_SLAVE, &i2c_pad_info2);
 #endif
 
 #ifndef CONFIG_SYS_I2C_MXC
@@ -990,8 +983,7 @@ int board_init(void)
 	if (ret)
 		return ret;
 
-	struct eeprom ioboard =
-	{
+	struct eeprom ioboard = {
 	 .i2c_bus = 2,
 	 .i2c_address = 0xaa,
 	 .i2c_offset = 0x0,
@@ -999,7 +991,6 @@ int board_init(void)
 	 //.revision = 0,
 	 //.name = "\0",
 	};
-
 
 	ret = board_support_setup(&ioboard, &hardware);
 	if (ret < 0) {
@@ -1017,9 +1008,8 @@ int board_init(void)
 	setup_epdc();
 #endif
 
-#ifdef CONFIG_FEC_MXC
-	setup_fec();
-#endif
+	if (IS_ENABLED(CONFIG_FEC_MXC))
+		setup_fec();
 
 	return 0;
 }
@@ -1401,45 +1391,40 @@ static const struct boot_mode board_boot_modes[] = {
 
 int board_late_init(void)
 {
+	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		if (hardware.display) {
+			struct mipi_dsi_ops ops;
 
-#if defined(CONFIG_VIDEO_IPUV3)
-	if (hardware.display)
-	{
-		struct mipi_dsi_ops ops;
-
-		if (detect_truly(NULL)) {
-			ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
-			ops.lcd_setup = mipid_st7703_lcd_setup;
+			if (detect_truly(NULL)) {
+				ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
+				ops.lcd_setup = mipid_st7703_lcd_setup;
+			}
+			mxc_mipi_dsi_enable(&ops);
 		}
-		mxc_mipi_dsi_enable(&ops);
 	}
-#endif
-#ifdef CONFIG_CMD_BMODE
-	add_board_boot_modes(board_boot_modes);
-#endif
-	
-#ifdef CONFIG_SYS_USE_SPINOR
-       	setup_spinor();
-#endif
+	if (IS_ENABLED(CONFIG_CMD_BMODE))
+		add_board_boot_modes(board_boot_modes);
+
+	if (IS_ENABLED(CONFIG_SYS_USE_SPINOR))
+		setup_spinor();
+
 	env_set("tee", "no");
-#ifdef CONFIG_IMX_OPTEE
-	env_set("tee", "yes");
-#endif
+	if (IS_ENABLED(CONFIG_IMX_OPTEE))
+		env_set("tee", "yes");
 
-#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
-	env_set("board_name", "EVCO");
+	if (IS_ENABLED(CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG)) {
+		env_set("board_name", "EVCO");
 
-	if (is_mx6dqp())
-		env_set("board_rev", "MX6QP");
-	else if (is_mx6dq())
-		env_set("board_rev", "MX6Q");
-	else if (is_mx6sdl())
-		env_set("board_rev", "MX6DL");
-#endif
+		if (is_mx6dqp())
+			env_set("board_rev", "MX6QP");
+		else if (is_mx6dq())
+			env_set("board_rev", "MX6Q");
+		else if (is_mx6sdl())
+			env_set("board_rev", "MX6DL");
+	}
 
-#ifdef CONFIG_ENV_IS_IN_MMC
-	board_late_mmc_env_init();
-#endif
+	if (IS_ENABLED(CONFIG_ENV_IS_IN_MMC))
+		board_late_mmc_env_init();
 
 	return 0;
 }
@@ -1452,23 +1437,25 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	uchar enetaddr[6];
 	//fix ethernet mac-address using direct path to node
 	eth_env_get_enetaddr("ethaddr", enetaddr);
-	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000", "mac-address", &enetaddr, 6, 1);
-	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000", "local-mac-address", &enetaddr, 6, 1);
+	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000",
+			 "mac-address", &enetaddr, 6, 1);
+	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000",
+			 "local-mac-address", &enetaddr, 6, 1);
 
-	/*	do_fixup_by_path_string(blob, "/u-boot", "version", U_BOOT_VERSION_STRING);
-	do_fixup_by_path_string(blob, "/u-boot", "reset-cause", get_last_reset_cause());
-	*/
+	/* do_fixup_by_path_string(blob, "/u-boot", "version", U_BOOT_VERSION_STRING); */
+	/* do_fixup_by_path_string(blob, "/u-boot", "reset-cause", get_last_reset_cause()); */
 
-#if defined(CONFIG_VIDEO_IPUV3)
-    int temp[2];
-    temp[0] = cpu_to_fdt32(gd->fb_base);
-    temp[1] = cpu_to_fdt32(640*480*2);
-    do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
-#endif
+	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		int temp[2];
 
-#if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
-    patch_fdt_eeprom(blob);
-#endif
+		temp[0] = cpu_to_fdt32(gd->fb_base);
+		temp[1] = cpu_to_fdt32(640 * 480 * 2);
+		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
+	}
+
+	if (IS_ENABLED(CONFIG_CMD_UPDATE_FDT_EEPROM))
+		patch_fdt_eeprom(blob);
+
 	return 0;
 }
 #endif /* CONFIG_OF_BOARD_SETUP */
@@ -1476,130 +1463,128 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 #ifdef CONFIG_MXC_SPI
 int platform_setup_pmic_voltages(void)
 {
-    unsigned char dev_id, var_id, cust_id, conf_id;
-    struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	unsigned char dev_id, var_id, cust_id, conf_id;
+	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 
-    gpio_request(IMX_GPIO_NR(3, 20), "CS SPI4");
-    gpio_direction_output(IMX_GPIO_NR(3, 20),1);
-    imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
-                                     ARRAY_SIZE(ecspi4_pads));
-    // enable ecspi4_clk
-    setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
-    slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
-    if (!slave)
-        return -1;
-    spi_claim_bus(slave);
+	gpio_request(IMX_GPIO_NR(3, 20), "CS SPI4");
+	gpio_direction_output(IMX_GPIO_NR(3, 20), 1);
+	imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
+					 ARRAY_SIZE(ecspi4_pads));
+	// enable ecspi4_clk
+	setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
+	slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
+	if (!slave)
+		return -1;
+	spi_claim_bus(slave);
 
-    /* Read and print PMIC identification */
-    if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-        printf("Could not read PMIC ID registers\n");
-        spi_release_bus(slave);
-        return -1;
-    }
-    printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, "
-           "Customer: 0x%02x, Config: 0x%02x\n", __FUNCTION__, dev_id, var_id,
-           cust_id, conf_id);
-    if (dev_id != 0x61 ||
-       var_id != 0x63) {
-           printf("PMIC DA90631 detected wrong device");
-           spi_release_bus(slave);
-           return -1;
-    }
+	/* Read and print PMIC identification */
+	if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+		printf("Could not read PMIC ID registers\n");
+		spi_release_bus(slave);
+		return -1;
+	}
+	printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, Customer: 0x%02x, Config: 0x%02x\n",
+	       __func__, dev_id, var_id, cust_id, conf_id);
+	if (dev_id != 0x61 || var_id != 0x63) {
+		printf("PMIC DA90631 detected wrong device");
+		spi_release_bus(slave);
+		return -1;
+	}
 
-    //turn on nONKEY_PIN to port mode, e.g. power switch reacts
-    //to button press, instead of button release!
-    pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
+	//turn on nONKEY_PIN to port mode, e.g. power switch reacts
+	//to button press, instead of button release!
+	pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
 
 	//disable comparator
 	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
 	//disable watchdog
 	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
 
-#if defined(CONFIG_IMX6_LDO_BYPASS)
-    /* 1V3 is highest allowable voltage when LDO is bypassed */
-    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
-	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
-	    printf("Could not configure VBCORE1 voltage to 1V3\n");
-    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
-	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
-	    printf("Could not configure VBCORE2 voltage to 1V3\n");
-    //    imx_bypass_ldo();
-    /* 1V2 is an acceptable level up to 800 MHz */
-    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
-	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
-	    printf("Could not configure VBCORE1 voltage to 1V2\n");
-    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
-	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
-	    printf("Could not configure VBCORE2 voltage to 1V2\n");
-#endif
-    /* gpio_free(IMX_GPIO_NR(3,20)); */
+	if (IS_ENABLED(CONFIG_IMX6_LDO_BYPASS)) {
+		/* 1V3 is highest allowable voltage when LDO is bypassed */
+		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+			printf("Could not configure VBCORE1 voltage to 1V3\n");
+		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+			printf("Could not configure VBCORE2 voltage to 1V3\n");
+		//    imx_bypass_ldo();
+		/* 1V2 is an acceptable level up to 800 MHz */
+		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+			printf("Could not configure VBCORE1 voltage to 1V2\n");
+		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+			printf("Could not configure VBCORE2 voltage to 1V2\n");
+	}
+	/* gpio_free(IMX_GPIO_NR(3,20)); */
 
-    spi_release_bus(slave);
-    setup_spi();
-    return 0;
+	spi_release_bus(slave);
+	setup_spi();
+	return 0;
 }
 #endif /* CONFIG_MXC_SPI */
 
 #ifdef CONFIG_SYS_I2C_MXC
 int setup_pmic_voltages(void)
 {
-    unsigned char dev_id, var_id, cust_id, conf_id;
-    struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	unsigned char dev_id, var_id, cust_id, conf_id;
+	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
 
-    imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
-                                     ARRAY_SIZE(ecspi4_pads));
-    // enable ecspi4_clk
-    setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
-    slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
-    if (!slave)
-        return -1;
-    spi_claim_bus(slave);
+	imx_iomux_v3_setup_multiple_pads(ecspi4_pads, ARRAY_SIZE(ecspi4_pads));
+	// enable ecspi4_clk
+	setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
+	slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
+	if (!slave)
+		return -1;
+	spi_claim_bus(slave);
 
-    /* Read and print PMIC identification */
-    if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-        printf("Could not read PMIC ID registers\n");
-        spi_release_bus(slave);
-        return -1;
-    }
-    printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, "
-           "Customer: 0x%02x, Config: 0x%02x\n", __FUNCTION__, dev_id, var_id,
-           cust_id, conf_id);
+	/* Read and print PMIC identification */
+	if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+		printf("Could not read PMIC ID registers\n");
+		spi_release_bus(slave);
+		return -1;
+	}
+	printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, Customer: 0x%02x, Config: 0x%02x\n",
+	       __func__, dev_id, var_id, cust_id, conf_id);
 
-    //turn on nONKEY_PIN to port mode, e.g. power switch reacts
-    //to button press, instead of button release!
-    pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
+	//turn on nONKEY_PIN to port mode, e.g. power switch reacts
+	//to button press, instead of button release!
+	pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
 
 	//disable comparator
 	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
 	//disable watchdog
 	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
 
-#if defined(CONFIG_IMX6_LDO_BYPASS)
-    /* 1V3 is highest allowable voltage when LDO is bypassed */
-    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
-	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
-	    printf("Could not configure VBCORE1 voltage to 1V3\n");
-    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
-	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
-	    printf("Could not configure VBCORE2 voltage to 1V3\n");
-    imx_bypass_ldo();
-    /* 1V2 is an acceptable level up to 800 MHz */
-    if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
-	pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
-	    printf("Could not configure VBCORE1 voltage to 1V2\n");
-    if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
-	pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
-	    printf("Could not configure VBCORE2 voltage to 1V2\n");
-#endif
+	if (IS_ENABLED(CONFIG_IMX6_LDO_BYPASS)) {
+		/* 1V3 is highest allowable voltage when LDO is bypassed */
+		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+			printf("Could not configure VBCORE1 voltage to 1V3\n");
+		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+			printf("Could not configure VBCORE2 voltage to 1V3\n");
 
-    spi_release_bus(slave);
-    return 0;
+		imx_bypass_ldo();
+
+		/* 1V2 is an acceptable level up to 800 MHz */
+		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+			printf("Could not configure VBCORE1 voltage to 1V2\n");
+		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+			printf("Could not configure VBCORE2 voltage to 1V2\n");
+	}
+
+	spi_release_bus(slave);
+	return 0;
 }
 #endif /* CONFIG_SYS_I2C_MXC */
 int fpga_power(bool enable)
@@ -1622,17 +1607,14 @@ int fpga_power(bool enable)
 	// PERI_SW_EN    (1V2_FPGA)
 	pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
 			    enable ? DA9063_PERI_SW_EN : 0);
-	if(conf_id == 0x3b) //revC
-	{
+	if (conf_id == 0x3b) { //revC
 		// BMEM_EN         (2V5_FPGA)
 		pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
 				    enable ? DA9063_BUCK_EN : 0);
 		// LDO10_EN          (3V15_FPGA)
 		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
 				    enable ? DA9063_LDO_EN : 0);
-	}
-	else //revD
-	{
+	} else { //revD
 		// LDO10_EN          (2V5_FPGA)
 		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
 				    enable ? DA9063_LDO_EN : 0);

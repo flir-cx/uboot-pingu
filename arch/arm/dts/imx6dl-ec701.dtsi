@@ -1,12 +1,8 @@
+// SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2015 FLIR Systems.
+ * Copyright 2022 FLIR Systems.
  *
- * The code contained herein is licensed under the GNU General Public
- * License. You may obtain a copy of the GNU General Public License
- * Version 2 or later at the following locations:
- *
- * http://www.opensource.org/licenses/gpl-license.html
- * http://www.gnu.org/copyleft/gpl.html
+ * Author: Fabio Estevam <fabio.estevam@freescale.com>
  */
 
 #include <dt-bindings/gpio/gpio.h>
@@ -87,10 +83,9 @@
 	};
 
 	u-boot{
-		version = "Unkown";
-		reset-cause = "Unkown";
+		version = "Unknown";
+		reset-cause = "Unknown";
 	};
-
 
 	mxcfb1: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
@@ -167,7 +162,7 @@
 		pinctrl-2 = <&pinctrl_ecspi1_idle>;
 		fpga-program-gpio	= <&gpio5 25 GPIO_ACTIVE_HIGH>;
 		fpga-init-gpio		= <&gpio5 26 GPIO_ACTIVE_HIGH>;
-		fpga-conf-done-gpio 	= <&gpio5 27 GPIO_ACTIVE_HIGH>;
+		fpga-conf-done-gpio	= <&gpio5 27 GPIO_ACTIVE_HIGH>;
 		fpga-ready-gpio		= <&gpio3 19 GPIO_ACTIVE_HIGH>;
 		spi-sclk-gpio		= <&gpio5 22 GPIO_ACTIVE_HIGH>;
 		spi-mosi-gpio		= <&gpio5 23 GPIO_ACTIVE_HIGH>;
@@ -182,7 +177,7 @@
 		disp_id = <2>;
 		status = "okay";
 	};
-	
+
 	fakedisp: fake-vga {
 		display-timings {
 			timing {
@@ -198,7 +193,7 @@
 			};
 		};
 	};
-	
+
 	lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
@@ -211,7 +206,7 @@
 	};
 
 	lcdtiming: lcdtiming {
-		display-timings { 
+		display-timings {
 			timing {
 				clock-frequency = <25175000>;
 				hactive = <640>;
@@ -235,7 +230,7 @@
 		mux-int-port = <2>;
 		mux-ext-port = <4>;
 	};
-	
+
 	yildun {
 		compatible = "flir,yildun";
 		pinctrl-names = "default", "idle";
@@ -243,7 +238,7 @@
 		pinctrl-1 = <&pinctrl_yildun_spi_idle>;
 		fpga2-config-gpio	= <&gpio3 0 GPIO_ACTIVE_HIGH>;
 		fpga2-status-gpio	= <&gpio3 1 GPIO_ACTIVE_HIGH>;
-		fpga2-conf-done-gpio 	= <&gpio3 2 GPIO_ACTIVE_HIGH>;
+		fpga2-conf-done-gpio	= <&gpio3 2 GPIO_ACTIVE_HIGH>;
 		fpga2-ce-gpio		= <&gpio3 3 GPIO_ACTIVE_HIGH>;
 		spi2-sclk-gpio		= <&gpio2 23 GPIO_ACTIVE_HIGH>;
 		spi2-mosi-gpio		= <&gpio2 24 GPIO_ACTIVE_HIGH>;
@@ -261,7 +256,7 @@
 
 &ssi1 {
 	status = "okay";
-        fsl,mode = "i2s-slave";
+	fsl,mode = "i2s-slave";
 };
 
 &ssi2 {
@@ -298,13 +293,13 @@
 		spi-max-frequency = <20000000>;
 		reg = <1>;
 	};
-	
+
 	spidev: spidev@2 {
 		status = "okay";
 		compatible = "linux,spidev";
 		spi-max-frequency = <1000000>;
 		reg = <2>;
-	};	
+	};
 
 };
 
@@ -377,7 +372,6 @@
 			compatible = "dlg,da9063-reset";
 		};
 
-
 		/* For DA9063 revision AD */
 		regulators {
 			compatible = "dlg,da9063-regulators";
@@ -398,8 +392,8 @@
 				/*regulator-initial-mode = <1>;*/
 				regulator-initial-mode = <DA9063_BUCK_MODE_SYNC>;
 				/* regulator-initial-state = "suspend-mem"; */
-				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>, 
-										  <DA9063_BUCK_MODE_SYNC>;
+				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>,
+							  <DA9063_BUCK_MODE_SYNC>;
 				regulator-state-mem {
 					regulator-mode = <DA9063_BUCK_MODE_SLEEP>;
 					regulator-suspend-uv= <950000>;
@@ -417,8 +411,8 @@
 
 				regulator-initial-mode = <DA9063_BUCK_MODE_SYNC>;
 				/* regulator-initial-state = "suspend-mem"; */
-				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>, 
-										  <DA9063_BUCK_MODE_SYNC>;
+				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>,
+							  <DA9063_BUCK_MODE_SYNC>;
 				regulator-state-mem {
 					regulator-mode = <DA9063_BUCK_MODE_SLEEP>;
 					regulator-suspend-uv= <950000>;
@@ -431,8 +425,8 @@
 				regulator-initial-mode = <DA9063_BUCK_MODE_SYNC>;
 				regulator-name = "DA9063_BPRO";
 				regulator-boot-on;
-				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>, 
-										  <DA9063_BUCK_MODE_SYNC>;
+				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>,
+							  <DA9063_BUCK_MODE_SYNC>;
 				regulator-state-mem {
 					regulator-mode = <DA9063_BUCK_MODE_SLEEP>;
 				};
@@ -442,8 +436,8 @@
 			DA9063_BMEM:bmem  {
 				regulator-initial-mode = <DA9063_BUCK_MODE_SYNC>;
 				regulator-name = "DA9063_BMEM";
-				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>, 
-										  <DA9063_BUCK_MODE_SYNC>;
+				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>,
+							  <DA9063_BUCK_MODE_SYNC>;
 				regulator-state-mem {
 					regulator-mode = <DA9063_BUCK_MODE_SLEEP>;
 				};
@@ -455,8 +449,8 @@
 				regulator-name = "DA9063_BIO";
 				regulator-boot-on;
 				regulator-always-on;
-				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>, 
-										  <DA9063_BUCK_MODE_SYNC>;
+				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>,
+							  <DA9063_BUCK_MODE_SYNC>;
 				regulator-state-mem {
 					regulator-mode = <DA9063_BUCK_MODE_SLEEP>;
 				};
@@ -468,8 +462,8 @@
 				regulator-name = "DA9063_BPERI";
 				regulator-boot-on;
 				regulator-always-on;
-				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>, 
-										  <DA9063_BUCK_MODE_SYNC>;
+				regulator-allowed-modes = <DA9063_BUCK_MODE_SLEEP>,
+							  <DA9063_BUCK_MODE_SYNC>;
 				regulator-state-mem {
 					regulator-mode = <DA9063_BUCK_MODE_SLEEP>;
 				};
@@ -554,7 +548,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c4>;
 	status = "okay";
-	
+
 	hdmi_edid: edid@50 {
 		compatible = "fsl,imx6-hdmi-i2c";
 		i2c_en_gpio = <&gpio2 0 GPIO_ACTIVE_HIGH>;
@@ -730,7 +724,7 @@
 				MX6QDL_PAD_CSI0_DATA_EN__IPU1_CSI0_DATA_EN	0x80000000
 				>;
 		};
-	
+
 		pinctrl_evco_csi1: ipuevcogrp-1 { /* parallel camera - visual */
 			fsl,pins = <
 				MX6QDL_PAD_EIM_A17__IPU1_CSI1_DATA12	0x80000000
@@ -753,7 +747,7 @@
 				MX6QDL_PAD_ENET_RX_ER__USB_OTG_ID		0x17059
 			>;
 		};
-		
+
 		pinctrl_ipu1: ipu1grp {
 			fsl,pins = <
 				MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK 0x10
@@ -790,19 +784,19 @@
 				MX6QDL_PAD_EIM_DA13__GPIO3_IO13		   0x10
 			>;
 		};
-		
+
 		pinctrl_audmux: audmuxgrp {
 			fsl,pins = <
 				MX6QDL_PAD_KEY_COL0__AUD5_TXC    0x130b0
 				MX6QDL_PAD_KEY_ROW0__AUD5_TXD    0x110b0
 				MX6QDL_PAD_KEY_COL1__AUD5_TXFS   0x130b0
 				MX6QDL_PAD_KEY_ROW1__AUD5_RXD    0x130b0
-				MX6QDL_PAD_SD2_DAT1__AUD4_TXFS   0x130b0    
-				MX6QDL_PAD_SD2_DAT2__AUD4_TXD    0x110b0    
-				MX6QDL_PAD_SD2_DAT3__AUD4_TXC    0x130b0    
+				MX6QDL_PAD_SD2_DAT1__AUD4_TXFS   0x130b0
+				MX6QDL_PAD_SD2_DAT2__AUD4_TXD    0x110b0
+				MX6QDL_PAD_SD2_DAT3__AUD4_TXC    0x130b0
 			>;
-                };
-                
+		};
+
 		pinctrl_yildun_fpga: yildunfpgagrp {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_DA0__GPIO3_IO00	0x10030
@@ -811,7 +805,7 @@
 				MX6QDL_PAD_EIM_DA3__GPIO3_IO03	0x10030
 			>;
 		};
-		
+
 		pinctrl_yildun_spi: yildunspigrp {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_CS0__ECSPI2_SCLK	0x100b1
@@ -827,7 +821,7 @@
 				MX6QDL_PAD_EIM_OE__GPIO2_IO25	0x100b1
 			>;
 		};
-		
+
 		pinctrl_fvd: fvdgrp {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_D16__GPIO3_IO16  0x10010
@@ -864,7 +858,6 @@
 	pinctrl-0 = <&pinctrl_uart2>;
 	status = "okay";
 };
-
 
 /*eMMC*/
 &usdhc4 {
@@ -918,11 +911,10 @@
 	iram = <&ocram>;
 };
 
-
 &ipu1 {
 	bypass_reset = <1>;
-	// IOMUX_GPR6: ID0 = F (real time), ID1 = 4 (high prio), ID2 = 2 (normal prio) 
-	axi-id = <&gpr 0x18 0x024F024F>;	
+	// IOMUX_GPR6: ID0 = F (real time), ID1 = 4 (high prio), ID2 = 2 (normal prio)
+	axi-id = <&gpr 0x18 0x024F024F>;
 };
 
 &reg_arm {
