@@ -1407,10 +1407,6 @@ int board_late_init(void)
 	{
 		struct mipi_dsi_ops ops;
 
-		if (detect_orise(NULL)) {
-			ops.get_lcd_videomode = mipid_otm1287a_get_lcd_videomode;
-			ops.lcd_setup = mipid_otm1287a_lcd_setup;
-		}
 		if (detect_truly(NULL)) {
 			ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
 			ops.lcd_setup = mipid_st7703_lcd_setup;
