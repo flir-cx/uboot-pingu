@@ -37,6 +37,8 @@
 #include <asm/arch/pcc.h>
 #include <video.h>
 #include <linux/delay.h>
+#include <video_console.h>
+#include <splash.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -57,28 +59,54 @@ static iomux_cfg_t const btn_trig_pad[] = {
 	MX7ULP_PAD_PTC12__PTC12 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
 };
 
-/* void print_display(char *s) */
-/* { */
-/* 	static struct stdio_dev *dev = NULL; */
-/* 	dev = stdio_get_by_name("vga"); */
-/* 	if(!dev) */
-/* 		return; */
+static void set_charge_text_color(void)
+{
+	struct udevice *dev_console;
+	struct video_priv *vid_priv;
 
-/* 	dev->puts(dev,s); */
-/* } */
+	printf("Setting recovery text color!\n");
+
+	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev_console)) {
+		printf("no text console device found!\n");
+		return;
+	}
+
+	vid_priv = dev_get_uclass_priv(dev_console->parent);
+
+	/* foreground color */
+	vid_priv->fg_col_idx &= ~7;
+	vid_priv->fg_col_idx |= 15;
+	vid_priv->colour_fg = vid_console_color(
+			vid_priv, vid_priv->fg_col_idx);
+
+	/* background color, also mask the bold bit */
+	vid_priv->bg_col_idx &= ~0xf;
+	vid_priv->bg_col_idx |= 0;
+	vid_priv->colour_bg = vid_console_color(
+			vid_priv, vid_priv->bg_col_idx);
+}
 
 void print_recovery(char *s)
 {
-    /* char buf[64]; */
-	/* int y = video_get_screen_columns() /2-(strlen(s)/2); */
-	/* int x = video_get_screen_rows() /2+4; */
+	char buf[64];
+	struct udevice *dev_console;
+	int xpos, ypos;
 
-	/* print_display(CSI "l"); */
-	/* snprintf(buf,64,CSI "%d;%dH",x,y); */
-	/* print_display(buf); */
+	printf("Recovery printing!\n");
 
-	/* snprintf(buf,64, "%s",s); */
-	/* print_display(buf); */
+	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev_console)) {
+		printf("no text console device found!\n");
+		return;
+	}
+
+	xpos = (80 / 2) - (strlen(s) / 2);
+	ypos = 19;
+
+	vidconsole_position_cursor(dev_console, xpos, ypos);
+	snprintf(buf, 64, "%s", s);
+	vidconsole_put_string(dev_console, buf);
+
+	video_sync(dev_console->parent, true);
 }
 
 // timeout in ms
@@ -148,7 +176,7 @@ int check_recovery_sequence(void)
 {
     int ret = -1;
 
-    //turn_on_display();
+	set_charge_text_color();
 
     print_recovery(" *");
     //wait for 0
