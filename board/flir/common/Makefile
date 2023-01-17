@@ -11,3 +11,4 @@ obj-$(CONFIG_READMAINBOARDREVISION) += cmd_readmainboardrevision.o
 obj-$(CONFIG_CMD_UPDATE_FDT_EEPROM) += cmd_updatefdteeprom.o
 obj-$(CONFIG_CMD_BOARD) += cmd_board.o
 obj-$(CONFIG_FLIR_DA9063) += da9063.o
+obj-y += pf1550.o

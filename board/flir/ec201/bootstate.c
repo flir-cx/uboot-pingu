@@ -21,8 +21,9 @@
 #include <splash.h>
 #include <command.h>
 #include <linux/delay.h>
-#include "pf1550.h"
 #include "lc709203.h"
+
+#include "../common/pf1550.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 

@@ -14,14 +14,11 @@
 #include <asm/gpio.h>
 #include "pf1550.h"
 
-
-
 #define PMIC_WDOG_GPIO	IMX_GPIO_NR(1, 14)
 
 static iomux_cfg_t const pmic_wdog_pad[] = {
 	MX7ULP_PAD_PTA14__PTA14 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
-
 
 
 int pf1550_write_reg(int reg, u8 val)
@@ -66,8 +63,14 @@ int get_onoff_key(void)
 	pf1550_read_reg(PF1550_PMIC_REG_ONKEY_INT_STAT0 ,&onkey_int);
 	pf1550_write_reg(PF1550_PMIC_REG_ONKEY_INT_STAT0, onkey_int);
 
-	if(onkey_int &  ONKEY_IRQ_PUSHI)
+#ifdef CONFIG_TARGET_MX7ULP_EC401W
+	if(onkey_int & ONKEY_IRQ_1SI)
 		return 1;
+#elif defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+	if(onkey_int & ONKEY_IRQ_PUSHI)
+		return 1;
+#endif
+
 	return 0;
 }
 
@@ -125,7 +128,11 @@ void init_pf1550_pmic(void)
 
 	//set time to press off button before triggering a PMIC reset
 	pf1550_read_reg(PF1550_PMIC_REG_PWRCTRL0, &curr_pwr_ctrl0);
+#ifdef CONFIG_TARGET_MX7ULP_EC401W
+	new_pwr_ctrl0 = (curr_pwr_ctrl0 & ~PF1550_PMIC_REG_PWRCTRL0_TGRESET_MASK) | PF1550_PMIC_REG_PWRCTRL0_TGRESET_16S;
+#elif defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
 	new_pwr_ctrl0 = (curr_pwr_ctrl0 & ~PF1550_PMIC_REG_PWRCTRL0_TGRESET_MASK) | PF1550_PMIC_REG_PWRCTRL0_TGRESET_4S;
+#endif
 	pf1550_write_reg(PF1550_PMIC_REG_PWRCTRL0, new_pwr_ctrl0);
 
 	mx7ulp_iomux_setup_multiple_pads(pmic_wdog_pad, ARRAY_SIZE(pmic_wdog_pad));

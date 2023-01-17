@@ -16,11 +16,12 @@
 #include <usb.h>
 #include <dm.h>
 #include <i2c.h>
-#include "bootstate.h"
-#include "pf1550.h"
-#include "lc709203.h"
 #include <version.h>
+#include "bootstate.h"
+#include "lc709203.h"
 #include "usbdcd.h"
+
+#include "../common/pf1550.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 

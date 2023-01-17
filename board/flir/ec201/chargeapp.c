@@ -14,9 +14,10 @@
 #include <video_console.h>
 #include <linux/delay.h>
 #include "bootstate.h"
-#include "pf1550.h"
 #include "lc709203.h"
 #include "display_utils.h"
+
+#include "../common/pf1550.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
