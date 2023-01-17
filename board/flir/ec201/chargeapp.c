@@ -7,15 +7,16 @@
 #include <asm/arch/iomux.h>
 #include <asm/gpio.h>
 #include <dm.h>
-#include "bootstate.h"
 #include <console.h>
 #include <command.h>
 #include <stdio_dev.h>
 #include <video.h>
 #include <video_console.h>
+#include <linux/delay.h>
+#include "bootstate.h"
 #include "pf1550.h"
 #include "lc709203.h"
-#include <linux/delay.h>
+#include "display_utils.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -40,74 +41,6 @@ enum {
 display_state = DISPLAY_ON;
 uint64_t  display_timer;
 
-static void set_charge_text_color(void)
-{
-	struct udevice *dev_console;
-	struct video_priv *vid_priv;
-
-	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev_console)) {
-		printf("no text console device found!\n");
-		return;
-	}
-
-	vid_priv = dev_get_uclass_priv(dev_console->parent);
-
-	/* foreground color */
-	vid_priv->fg_col_idx &= ~7;
-	vid_priv->fg_col_idx |= 15;
-	vid_priv->colour_fg = vid_console_color(
-			vid_priv, vid_priv->fg_col_idx);
-
-	/* background color, also mask the bold bit */
-	vid_priv->bg_col_idx &= ~0xf;
-	vid_priv->bg_col_idx |= 0;
-	vid_priv->colour_bg = vid_console_color(
-			vid_priv, vid_priv->bg_col_idx);
-}
-
-void print_charge(int c)
-{
-	char buf[10];
-	struct udevice *dev_console;
-
-	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev_console)) {
-		printf("no text console device found!\n");
-		return;
-	}
-
-	vidconsole_position_cursor(dev_console, 40, 19);
-	snprintf(buf, 10, "%d%%", c);
-	vidconsole_put_string(dev_console, buf);
-}
-
-void draw_box(int x_start, int y_start, int width, int height, int color, void *framebuffer)
-{
-	struct udevice *dev;
-	int ret;
-
-	ret = uclass_get_device(UCLASS_VIDEO, 0, &dev);
-	if (ret) {
-		printf("Couldnt get video device!\n");
-		return;
-	}
-
-	int bpp = 4; /* Bytes per pixel */
-	int stride = video_get_xsize(dev) * bpp; /* Bytes per row */
-	int skip = stride - width * bpp; /* Bytes to jump */
-
-	char *dst = framebuffer + (x_start * bpp) + (y_start * stride);
-
-	while(height--) {
-		for(int w = 0; w < width; w++) {
-			*(u32*)dst = color;
-			dst += bpp;
-		}
-		dst += skip;
-	}
-
-	video_sync(dev, true);
-}
-
 void do_charge_update(int level)
 {
 		int color = COLOR_GREEN;
@@ -117,9 +50,9 @@ void do_charge_update(int level)
 		else if (level < 60)
 			color = COLOR_YELLOW;
 
-		draw_box(276, 217, level, 45, color, (void*) (gd->fb_base));
+		display_draw_box(276, 217, level, 45, color, (void*) (gd->fb_base));
 
-		print_charge(level);
+		display_print_charge_level(level);
 }
 
 void turn_on_display(void)
@@ -162,7 +95,7 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 	int exit = 0;
 	display_timer = get_ticks();
 
-	set_charge_text_color();
+	display_set_text_color();
 
 	//Test for drawing  charge progess bar on screen
 	if(argc == 2 && argv[1][0]=='t')

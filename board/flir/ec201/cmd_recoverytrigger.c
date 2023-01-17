@@ -39,6 +39,7 @@
 #include <linux/delay.h>
 #include <video_console.h>
 #include <splash.h>
+#include "display_utils.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -58,56 +59,6 @@ DECLARE_GLOBAL_DATA_PTR;
 static iomux_cfg_t const btn_trig_pad[] = {
 	MX7ULP_PAD_PTC12__PTC12 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
 };
-
-static void set_charge_text_color(void)
-{
-	struct udevice *dev_console;
-	struct video_priv *vid_priv;
-
-	printf("Setting recovery text color!\n");
-
-	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev_console)) {
-		printf("no text console device found!\n");
-		return;
-	}
-
-	vid_priv = dev_get_uclass_priv(dev_console->parent);
-
-	/* foreground color */
-	vid_priv->fg_col_idx &= ~7;
-	vid_priv->fg_col_idx |= 15;
-	vid_priv->colour_fg = vid_console_color(
-			vid_priv, vid_priv->fg_col_idx);
-
-	/* background color, also mask the bold bit */
-	vid_priv->bg_col_idx &= ~0xf;
-	vid_priv->bg_col_idx |= 0;
-	vid_priv->colour_bg = vid_console_color(
-			vid_priv, vid_priv->bg_col_idx);
-}
-
-void print_recovery(char *s)
-{
-	char buf[64];
-	struct udevice *dev_console;
-	int xpos, ypos;
-
-	printf("Recovery printing!\n");
-
-	if (uclass_first_device_err(UCLASS_VIDEO_CONSOLE, &dev_console)) {
-		printf("no text console device found!\n");
-		return;
-	}
-
-	xpos = (80 / 2) - (strlen(s) / 2);
-	ypos = 19;
-
-	vidconsole_position_cursor(dev_console, xpos, ypos);
-	snprintf(buf, 64, "%s", s);
-	vidconsole_put_string(dev_console, buf);
-
-	video_sync(dev_console->parent, true);
-}
 
 // timeout in ms
 int trigger_wait_until(int btn_state, int mtimeout)
@@ -158,7 +109,7 @@ int seq(int no)
     return OK;
 }
 
-int get_serial(uint8_t *buf)
+int get_serial_number(uint8_t *buf)
 {
     struct udevice *dev;
     int ret = i2c_get_chip_for_busnum(6, 0x57, 1, &dev); //get eprom
@@ -176,9 +127,9 @@ int check_recovery_sequence(void)
 {
     int ret = -1;
 
-	set_charge_text_color();
+	display_set_text_color();
 
-    print_recovery(" *");
+    display_print_string(" *");
     //wait for 0
     ret = trigger_wait_until(TRIG_OFF, 3000);
 
@@ -194,9 +145,8 @@ int check_recovery_sequence(void)
             return FAIL; // dont press again.
 
         printf("sequence 1 ok\n");
+        display_print_string("**");
 
-        // display dot
-        print_recovery("**");
         // sequence 2
         printf("sequence 2 start \n");
 
@@ -211,17 +161,15 @@ int check_recovery_sequence(void)
         char buf[24];
         buf[0] = '\0';
         char buf2[24];
-        get_serial((uint8_t *) buf);
+        get_serial_number((uint8_t *) buf);
 
         if(buf[0] == 0xff || strlen(buf) == 0)
-            print_recovery("Recovery *");//No Serial
+            display_print_string("Recovery *");//No Serial
         else
         {
             snprintf(buf2, 19, "Recovery %s", buf);
-            print_recovery(buf2);
+            display_print_string(buf2);
         }
-
-
     }
 
     printf("get_recovery_sequence: %d\n", ret);
@@ -258,7 +206,7 @@ int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char *const ar
 
         if(res == FAIL)
         {
-            print_recovery("                      "); //clear screen
+            display_print_string("                      "); //clear screen
         }
     }
 
