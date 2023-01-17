@@ -49,6 +49,10 @@ config TARGET_MX7ULP_EC201
 	bool "Support FLIR low cost platform board (EC201)"
 	select MX7ULP
 
+config TARGET_MX7ULP_EC302
+	bool "Support FLIR EX platform board (EC302)"
+	select MX7ULP
+
 config TARGET_MX7ULP_EC401W
 	bool "Support FLIR low cost platform board (EC401W)"
 	select MX7ULP
@@ -59,6 +63,7 @@ source "board/ea/mx7ulp_com/Kconfig"
 source "board/freescale/mx7ulp_val/Kconfig"
 source "board/freescale/mx7ulp_evk/Kconfig"
 source "board/flir/ec201/Kconfig"
+source "board/flir/ec302/Kconfig"
 source "board/flir/ec401w/Kconfig"
 
 endif

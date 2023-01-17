@@ -1,0 +1,263 @@
+/*
+ * Copyright 2023 FLIR
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 as
+ * published by the Free Software Foundation.
+ */
+
+/dts-v1/;
+
+#include "imx7ulp.dtsi"
+
+/ {
+	model = "FLIR EX Platform Board (EC302)";
+	compatible = "flir,imx7ulp-ec302", "fsl,imx7ulp", "Generic DT based system";
+
+	chosen {
+		stdout-path = &lpuart4;
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x60000000 0x20000000>;
+	};
+
+	regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+	};
+
+	backlight: backlight {
+		compatible = "gpio-backlight";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_backlight>;
+		gpios = <&gpio0 6 GPIO_ACTIVE_HIGH>;
+		default-on;
+		status = "okay";
+	};
+
+	mipi_dsi_reset: mipi-dsi-reset {
+		compatible = "gpio-reset";
+		reset-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+		reset-delay-us = <5000>;
+		#reset-cells = <0>;
+	};
+
+	dsi_host: dsi-host {
+		compatible = "northwest,mipi-dsi";
+		status = "okay";
+	};
+
+	hx8394_panel {
+		compatible = "himax,hx8394";
+		reset-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
+		backlight = <&backlight>;
+		status = "okay";
+
+		port {
+			hx8394_from_dsim: endpoint {
+				remote-endpoint = <&dsim_to_hx8394>;
+			};
+		};
+	};
+};
+
+&iomuxc1 {
+	pinctrl-names = "default";
+
+	pinctrl_usdhc0: usdhc0grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTD0__PTD0         0x20000     /* USDHC0 RST */
+			IMX7ULP_PAD_PTD1__SDHC0_CMD    0x43
+			IMX7ULP_PAD_PTD2__SDHC0_CLK    0x10042
+			IMX7ULP_PAD_PTD3__SDHC0_D7     0x43
+			IMX7ULP_PAD_PTD4__SDHC0_D6     0x43
+			IMX7ULP_PAD_PTD5__SDHC0_D5     0x43
+			IMX7ULP_PAD_PTD6__SDHC0_D4     0x43
+			IMX7ULP_PAD_PTD7__SDHC0_D3     0x43
+			IMX7ULP_PAD_PTD8__SDHC0_D2     0x43
+			IMX7ULP_PAD_PTD9__SDHC0_D1     0x43
+			IMX7ULP_PAD_PTD10__SDHC0_D0    0x43
+			IMX7ULP_PAD_PTD11__SDHC0_DQS   0x42
+		>;
+	};
+
+	pinctrl_usdhc1: usdhc1grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTE3__SDHC1_CMD    0x43
+			IMX7ULP_PAD_PTE2__SDHC1_CLK    0x10042
+			IMX7ULP_PAD_PTE1__SDHC1_D0     0x43
+			IMX7ULP_PAD_PTE0__SDHC1_D1     0x43
+			IMX7ULP_PAD_PTE5__SDHC1_D2     0x43
+			IMX7ULP_PAD_PTE4__SDHC1_D3     0x43
+		>;
+	};
+
+	pinctrl_mipi_dsi_reset: mipi_dsi_reset_grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTC7__PTC7    0x3 /* DISPLAY_RESET */
+			>;
+	};
+
+	pinctrl_backlight: backlight_grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTC6__PTC6    0x3
+		>;
+	};
+
+	pinctrl_lpi2c5: lpi2c5grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTC4__LPI2C5_SCL   0x27
+			IMX7ULP_PAD_PTC5__LPI2C5_SDA   0x27
+		>;
+	};
+
+	pinctrl_lpi2c6: lpi2c6grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTC8__LPI2C6_SCL   0x27
+			IMX7ULP_PAD_PTC9__LPI2C6_SDA   0x27
+		>;
+	};
+
+	pinctrl_lpi2c7: lpi2c7grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTE12__LPI2C7_SCL   0x27
+			IMX7ULP_PAD_PTE13__LPI2C7_SDA   0x27
+		>;
+	};
+
+	pinctrl_lpuart4: lpuart4grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTC3__LPUART4_RX   0x3
+			IMX7ULP_PAD_PTC2__LPUART4_TX   0x3
+		>;
+	};
+
+	pinctrl_lpuart6: lpuart6grp {
+		fsl,pins = <
+			IMX7ULP_PAD_PTE10__LPUART6_TX      0x3
+			IMX7ULP_PAD_PTE11__LPUART6_RX      0x3
+			IMX7ULP_PAD_PTE9__LPUART6_RTS_B    0x3
+			IMX7ULP_PAD_PTE8__LPUART6_CTS_B    0x3
+		>;
+	};
+};
+
+&lcdif {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	display = <&display0>;
+
+	display0: display@0 {
+		bits-per-pixel = <24>;
+		bus-width = <24>;
+	};
+
+	lcdif_disp0: port@0 {
+		reg = <0>;
+
+		lcdif_to_dsim: endpoint {
+			remote-endpoint = <&dsim_from_lcdif>;
+		};
+	};
+};
+
+&mipi_dsi {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_mipi_dsi_reset>;
+	lcd_panel = "TRULY-VGA-SHERLOCK";
+	resets = <&mipi_dsi_reset>;
+	status = "okay";
+
+	port@0 {
+		dsim_from_lcdif: endpoint {
+			remote-endpoint = <&lcdif_to_dsim>;
+		};
+	};
+
+	port@1 {
+		dsim_to_hx8394: endpoint {
+			remote-endpoint = <&hx8394_from_dsim>;
+		};
+	};
+};
+
+/* Touch screen */
+&lpi2c7 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default",  "sleep";
+	pinctrl-0 = <&pinctrl_lpi2c7>;
+	pinctrl-1 = <&pinctrl_lpi2c7>;
+	status = "okay";
+};
+
+/*  IO expander for keyboard, VCAM, Lepton, Temp sensor 1 and 2, EEPROM */
+&lpi2c6 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpi2c6>;
+	pinctrl-1 = <&pinctrl_lpi2c6>;
+	status = "okay";
+};
+
+/*  PMIC */
+&lpi2c5 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpi2c5>;
+	pinctrl-1 = <&pinctrl_lpi2c5>;
+	status = "okay";
+};
+
+&lpuart4 { /* console */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart4>;
+	pinctrl-1 = <&pinctrl_lpuart4>;
+	status = "okay";
+};
+
+&lpuart6 { /* BT */
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_lpuart6>;
+	pinctrl-1 = <&pinctrl_lpuart6>;
+	status = "okay";
+};
+
+&usbotg1 {
+	dr_mode = "peripheral";
+	srp-disable;
+	hnp-disable;
+	adp-disable;
+	status = "okay";
+};
+
+/* emmc */
+&usdhc0 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_usdhc0>;
+	pinctrl-1 = <&pinctrl_usdhc0>;
+	bus-width = <8>;
+	non-removable;
+	status = "okay";
+};
+
+/* wifi */
+&usdhc1 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_usdhc1>;
+	pinctrl-1 = <&pinctrl_usdhc1>;
+	bus-width = <4>;
+	pm-ignore-notify;
+	keep-power-in-suspend;
+	non-removable;
+	wifi-host;
+	status = "okay";
+};
