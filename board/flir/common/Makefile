@@ -14,3 +14,4 @@ obj-$(CONFIG_FLIR_DA9063) += da9063.o
 obj-y += pf1550.o
 obj-y  += usbdcd.o
 obj-y  += lc709203.o
+obj-y  += cmd_setmac.o
