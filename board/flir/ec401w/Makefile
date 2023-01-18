@@ -12,5 +12,4 @@ obj-y  += chargeapp.o
 obj-y  += lc709203.o
 obj-y  += cmd_recoverytrigger.o
 obj-y  += cmd_setmac.o
-obj-y  += usbdcd.o
 obj-y  += leds.o

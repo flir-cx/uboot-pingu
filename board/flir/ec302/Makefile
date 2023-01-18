@@ -13,4 +13,3 @@ obj-y  += display_utils.o
 obj-y  += lc709203.o
 obj-y  += cmd_recoverytrigger.o
 obj-y  += cmd_setmac.o
-obj-y  += usbdcd.o

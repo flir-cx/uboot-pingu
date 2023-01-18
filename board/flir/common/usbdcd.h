@@ -1,7 +1,7 @@
 #include <asm/io.h>
 #include <usb.h>
 
-#include "../common/pf1550.h"
+#include "pf1550.h"
 
 #define USBPHY_ANACTRL                               (USB_PHY0_BASE_ADDR + 0x100)
 #define USBPHY_ANACTRL_DEV_PULLDOWN                  (1 << 10)
