@@ -13,3 +13,4 @@ obj-$(CONFIG_CMD_BOARD) += cmd_board.o
 obj-$(CONFIG_FLIR_DA9063) += da9063.o
 obj-y += pf1550.o
 obj-y  += usbdcd.o
+obj-y  += lc709203.o

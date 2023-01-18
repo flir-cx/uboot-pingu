@@ -10,6 +10,5 @@ obj-y  += ec302.o
 obj-y  += bootstate.o
 obj-y  += chargeapp.o
 obj-y  += display_utils.o
-obj-y  += lc709203.o
 obj-y  += cmd_recoverytrigger.o
 obj-y  += cmd_setmac.o

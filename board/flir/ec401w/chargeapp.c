@@ -7,9 +7,9 @@
 #include <command.h>
 #include <stdio_dev.h>
 #include <linux/delay.h>
-#include "lc709203.h"
 #include "leds.h"
 
+#include "../common/lc709203.h"
 #include "../common/pf1550.h"
 
 DECLARE_GLOBAL_DATA_PTR;

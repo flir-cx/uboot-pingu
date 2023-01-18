@@ -9,8 +9,9 @@
 
 #include <dm.h>
 #include <i2c.h>
-#include "lc709203.h"
 #include <linux/delay.h>
+
+#include "lc709203.h"
 
 static uint8_t crc8(const void* vptr, int len) {
 	const uint8_t *data = vptr;
@@ -145,10 +146,14 @@ int fuelgauge_init(void)
 	if (ret == 0 && type == LC709204F)
 	{
 		/* Setup as LC709204 */
-		fuelgauge_write_reg(LC709204_APA, 0x002d, 0x002d);	  // set APA value 2d2d
-		fuelgauge_write_reg(LC709204_ChgTermCurr, 0x0003, 0); // set ChgTermCurr (taper current in 0.01C), 0.03C => 54mA with 1800mA battery
-		fuelgauge_write_reg(LC709204_Empty_Volt, 0x0000, 0);  // Empty Cell Voltage. 0 will disable ITE offset update.
-		fuelgauge_write_reg(LC709204_ITE_Offset, 0x0015, 0);  // set ITE Offset, will scale RSOC to reach 0% when 3.2V
+#ifdef CONFIG_TARGET_MX7ULP_EC401W
+		fuelgauge_write_reg(LC709204_APA, 0x29, 0x29);		// set APA value 2929
+#elif defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+		fuelgauge_write_reg(LC709204_APA, 0x2d, 0x2d);		// set APA value 2d2d
+#endif
+		fuelgauge_write_reg(LC709204_ChgTermCurr, 0x03, 0);	// set ChgTermCurr (taper current in 0.01C), 0.03C => 54mA with 1800mA battery
+		fuelgauge_write_reg(LC709204_Empty_Volt, 0x00, 0);	// Empty Cell Voltage. 0 will disable ITE offset update.
+		fuelgauge_write_reg(LC709204_ITE_Offset, 0x15, 0);	// set ITE Offset, will scale RSOC to reach 0% when 3.2V
 	}
 
 	return 0;
