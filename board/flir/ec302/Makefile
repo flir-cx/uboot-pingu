@@ -8,4 +8,3 @@
 
 obj-y  += ec302.o
 obj-y  += bootstate.o
-obj-y  += cmd_recoverytrigger.o

@@ -8,5 +8,4 @@
 
 obj-y  += ec401w.o
 obj-y  += bootstate.o
-obj-y  += cmd_recoverytrigger.o
 obj-y  += leds.o
