@@ -12,6 +12,37 @@ config FLIR_DA9063
 	help
 	  Command 'pmic', for accessing DA9063 PMIC registers
 
+config FLIR_PF1550
+	bool "PF1550 PMIC"
+	default n
+	help
+	  Common code interface for PF1550 PMIC.
+
+config FLIR_USBDCD
+	bool "USBDCD"
+	depends on FLIR_PF1550
+	default n
+	help
+	  Common code interface for USB-DCD negotiation.
+
+config FLIR_LC709203
+	bool "LC709203"
+	default n
+	help
+	  Common code interface for LC709203 fuelgauge.
+
+config FLIR_DISPLAY_UTILS
+	bool "Display utils"
+	default n
+	help
+	  Common code interface for display interaction.
+
+config FLIR_LED_UTILS
+	bool "LED utils"
+	default n
+	help
+	  Common code interface for LED interaction.
+
 config FLIR_ORIG_FORMAT_SERIAL_MX6
 	bool "Serial in high-low format"
 	depends on ARCH_MX6
@@ -122,6 +153,34 @@ config CMD_BOARD
 	default n
 	help
 	  Command 'flir_board', fills env vars with revision and article
+
+config FLIR_SET_MAC
+	bool "Set mac"
+	depends on FLIR_COMMANDS
+	default n
+	help
+	  Command 'setmac', for setting the mac address.
+
+config FLIR_CHARGEAPP
+	bool "Chargeapp"
+	depends on FLIR_COMMANDS
+	default n
+	help
+	  Command 'chargeapp', for charging in u-boot.
+
+config FLIR_RECOVERY_TRIGGER
+	bool "Recovery trigger"
+	depends on FLIR_COMMANDS
+	default n
+	help
+	  Command 'recoverytrigger', for running recovery sequence.
+
+config FLIR_BOOTSTATE
+	bool "Bootstate"
+	depends on FLIR_COMMANDS
+	default n
+	help
+	  Command 'bootstate', for running booting sequence.
 
 
 
