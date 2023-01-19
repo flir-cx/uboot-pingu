@@ -66,7 +66,7 @@ static int fuelguage_get_type(void)
 
 	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
 	if (ret) {
-		printf("Cannot find fuelgauge LC 709203: %d\n", ret);
+		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;
 	}
 
@@ -76,6 +76,25 @@ static int fuelguage_get_type(void)
 		return ret;
 
 	return *(u16 *)buf == 0x301;
+}
+
+int fuelgauge_get_state_of_charge(int *soc)
+{
+	struct udevice *dev;
+	u8 buf[4];
+	int ret;
+
+	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	if (ret) {
+		printf("Cannot find fuelgauge LC709203: %d\n", ret);
+		return ret;
+	}
+
+	ret = dm_i2c_read(dev, 0xd, buf, 2);
+	if(!ret)
+		*soc = *(u16*)buf;
+
+	return ret;
 }
 
 int fuelgauge_sleep(void)
@@ -119,7 +138,7 @@ int fuelgauge_init(void)
 
 	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
 	if (ret) {
-		printf("Cannot find fuelgauge LC 709203: %d\n", ret);
+		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;
 	}
 
@@ -131,7 +150,7 @@ int fuelgauge_init(void)
 
 	// param should be 1 for lc709203f and 0 for lc709203f
 	type = fuelguage_get_type();
-	printf("found %s\n",type?"LC709203":"LC709204");
+	printf("found %s\n", type ? "LC709203" : "LC709204");
 
 	/* Check if battery profile already is selected
 	* Every write to this register will recalibrate the fuelgauge,

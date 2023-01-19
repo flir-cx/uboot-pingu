@@ -26,6 +26,7 @@
 
 int fuelgauge_init(void);
 
+int fuelgauge_get_state_of_charge(int *soc);
 int fuelgauge_sleep(void);
 int fuelgauge_operational(void);
 

@@ -15,3 +15,5 @@ obj-y += pf1550.o
 obj-y  += usbdcd.o
 obj-y  += lc709203.o
 obj-y  += cmd_setmac.o
+obj-y  += chargeapp.o
+obj-y  += display_utils.o

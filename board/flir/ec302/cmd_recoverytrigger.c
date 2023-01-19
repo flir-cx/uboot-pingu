@@ -39,7 +39,8 @@
 #include <linux/delay.h>
 #include <video_console.h>
 #include <splash.h>
-#include "display_utils.h"
+
+#include "../common/display_utils.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 

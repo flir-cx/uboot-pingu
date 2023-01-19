@@ -1,6 +1,21 @@
 #include <dm.h>
 #include <video.h>
 #include <video_console.h>
+#include <time.h>
+#include <asm/arch/mx7ulp-pins.h>
+#include <asm/arch/iomux.h>
+#include <asm/gpio.h>
+
+#define DISPLAY_ENABLE			IMX_GPIO_NR(3, 6)
+
+#define DISPLAY_COLOR_GREEN 	0x3dbe54
+#define DISPLAY_COLOR_YELLOW 	0xfff959
+#define DISPLAY_COLOR_RED 		0xe93b3b
+
+#define DISPLAY_TIMEOUT 20
+
+bool display_enabled = true;
+uint64_t  display_timer;
 
 void display_set_text_color(void)
 {
@@ -61,6 +76,8 @@ void display_print_charge_level(int c)
 	vidconsole_position_cursor(dev_console, 40, 19);
 	snprintf(buf, 10, "%d%%", c);
 	vidconsole_put_string(dev_console, buf);
+
+	video_sync(dev_console->parent, true);
 }
 
 void display_draw_box(int x_start, int y_start, int width, int height, int color, void *framebuffer)
@@ -89,4 +106,51 @@ void display_draw_box(int x_start, int y_start, int width, int height, int color
 	}
 
 	video_sync(dev, true);
+}
+
+void display_update_charge(int level)
+{
+	int color = DISPLAY_COLOR_GREEN;
+
+	if(level < 20)
+		color = DISPLAY_COLOR_RED;
+	else if (level < 60)
+		color = DISPLAY_COLOR_YELLOW;
+
+	display_draw_box(276, 217, level, 45, color, (void*) (gd->fb_base));
+
+	display_print_charge_level(level);
+}
+
+void display_timer_reset(void)
+{
+	display_timer = get_ticks();
+}
+
+void display_on(void)
+{
+	gpio_direction_output(DISPLAY_ENABLE, 1);
+	display_timer_reset();
+	display_enabled = true;
+}
+
+void display_off(void)
+{
+	if(!display_enabled)
+		return;
+	gpio_direction_output(DISPLAY_ENABLE, 0);
+	display_enabled = false;
+}
+
+bool display_is_on(void)
+{
+	return display_enabled;
+}
+
+void display_check_timer(void)
+{
+	uint64_t etime = display_timer + CONFIG_SYS_HZ_CLOCK * DISPLAY_TIMEOUT;
+
+	if(get_ticks() > etime)
+		display_off();
 }
