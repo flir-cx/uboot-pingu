@@ -7,4 +7,3 @@
 #
 
 obj-y  += ec201.o
-obj-y  += bootstate.o

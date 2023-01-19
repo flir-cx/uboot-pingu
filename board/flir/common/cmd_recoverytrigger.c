@@ -229,7 +229,7 @@ int check_button_sequence(void)
 	/* Hold button 4 seconds in total to see battery SOC */
     if (trigger_wait_until(TRIG_OFF, SEQ_BATTERY_STATUS_START_MS) == OK)
         return FAIL;
-    get_battery_state_of_charge(&soc);
+    fuelgauge_get_state_of_charge(&soc);
 	leds_battery_pulse(soc);
     printf("Displaying battery charge\n");
 

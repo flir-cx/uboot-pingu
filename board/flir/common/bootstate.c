@@ -20,10 +20,15 @@
 #include <i2c.h>
 #include <command.h>
 #include <linux/delay.h>
-#include "leds.h"
+#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC201)
+#include <splash.h>
+#endif
 
-#include "../common/lc709203.h"
-#include "../common/pf1550.h"
+#include "lc709203.h"
+#include "pf1550.h"
+#if defined(CONFIG_TARGET_MX7ULP_EC401W)
+#include "../ec401w/leds.h"
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -131,45 +136,47 @@ static u8 get_wake_event(struct udevice *dev)
 	return wake_event;
 }
 
-
-int get_battery_voltage(int *voltage)
+#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+static void set_boot_logo(void)
 {
-	//Read battery voltage
-	struct udevice *dev;
-	u8 buf[4];
-	int ret;
-
-	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
-	if (ret) {
-		printf("Cannot find fuelgauge LC709203: %d\n", ret);
-		return ret;
+	switch(state.boot_state)
+	{
+	case NO_BATTERY:
+	case LOW_BATTERY:
+		env_set("bootlogo", "no_battery.bmp.gz");
+		break;
+	case USB_CHARGE:
+		env_set("bootlogo", "battery_logo.bmp.gz");
+		break;
+	case NORMAL_BOOT:
+		break;
 	}
-
-	ret = dm_i2c_read(dev, 0x9, buf, 2);
-	if(!ret)
-		*voltage = *(u16*)buf;
-
-	return ret;
 }
 
-int get_battery_state_of_charge(int *soc)
+int splash_screen_prepare(void)
 {
-	struct udevice *dev;
-	u8 buf[4];
-	int ret;
+	char *env_loadsplash;
 
-	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
-	if (ret) {
-		printf("Cannot find fuelgauge LC709203: %d\n", ret);
-		return ret;
+	set_boot_logo();
+
+	if (!env_get("splashimage")) {
+		log_err("Environment variable splashimage not found!\n");
+		return -EINVAL;
 	}
 
-	ret = dm_i2c_read(dev, 0xd, buf, 2);
-	if(!ret)
-		*soc = *(u16*)buf;
+	env_loadsplash = env_get("loadsplash");
+	if (env_loadsplash == NULL) {
+		log_err("Environment variable loadsplash not found!\n");
+		return -EINVAL;
+	}
 
-	return ret;
+	if (run_command_list(env_loadsplash, -1, 0)) {
+		log_err("Failed to run loadsplash %s\n\n", env_loadsplash);
+		return -ENOSYS;
+	}
+	return 0;
 }
+#endif
 
 int boot_state_init(void)
 {
@@ -221,7 +228,7 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 			break;
 		case RESET:
 		case ONKEY:
-			get_battery_voltage((int *)&state.battery_mV);
+			fuelgauge_get_battery_voltage((int *)&state.battery_mV);
 			printf("Battery voltage mV=%d... ",state.battery_mV);
 			if(state.battery_mV < LOW_BATTERY_mV){
 				printf("LOW\n");
@@ -233,6 +240,7 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 			break;
 		default:
 			printf("Invalid boot event: INVALID_EVENT \n");
+			fuelgauge_sleep();
 			power_off();
 			break;
 		}
@@ -249,18 +257,28 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	switch(state.boot_state)
 	{
 	case NORMAL_BOOT:
+#if defined(CONFIG_TARGET_MX7ULP_EC401W)
 		leds_boot();
+#endif
 		break;
 	case NO_BATTERY:
 		printf("Battery missing\n");
 	case LOW_BATTERY:
-		leds_critical(); // low batt
+#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+		set_boot_logo();
+		splash_display();
+#elif defined(CONFIG_TARGET_MX7ULP_EC401W)
+		leds_critical();
+#endif
 		udelay(2000000);
 		power_off();
 		break;
 	case USB_CHARGE:
 		printf("Camera: charge state \n");
-		// Show led batt state here
+#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+		set_boot_logo();
+		splash_display();
+#endif
 		run_command("chargeapp",0);
 		break;
 	default:
@@ -278,5 +296,4 @@ U_BOOT_CMD(
 	"2 - Low battery state		-> power off camera\n"
 	"3 - No battery			-> power off camera\n"
 	"4 - Charge battery		-> boot camera into charge state\n"
-)
-
+);

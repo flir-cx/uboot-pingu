@@ -97,6 +97,26 @@ int fuelgauge_get_state_of_charge(int *soc)
 	return ret;
 }
 
+int fuelgauge_get_battery_voltage(int *voltage)
+{
+	struct udevice *dev;
+	u8 buf[4];
+	int ret;
+
+	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	if (ret) {
+		printf("Cannot find fuelgauge LC709203: %d\n", ret);
+		return ret;
+	}
+
+	ret = dm_i2c_read(dev, 0x9, buf, 2);
+	if(!ret)
+		*voltage = *(u16*)buf;
+
+	return ret;
+}
+
+
 int fuelgauge_sleep(void)
 {
 	// Only lc709203f should be put to sleep, lc709204f should stay in operational mode

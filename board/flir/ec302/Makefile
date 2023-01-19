@@ -7,4 +7,3 @@
 #
 
 obj-y  += ec302.o
-obj-y  += bootstate.o

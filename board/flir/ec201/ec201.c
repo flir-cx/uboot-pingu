@@ -19,8 +19,8 @@
 #include <mxsfb.h>
 #include <i2c.h>
 #include <version.h>
-#include "bootstate.h"
 
+#include "../common/bootstate.h"
 #include "../common/lc709203.h"
 #include "../common/usbdcd.h"
 #include "../common/pf1550.h"
