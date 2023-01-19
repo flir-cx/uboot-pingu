@@ -8,7 +8,7 @@
 #include <linux/delay.h>
 
 #if defined(CONFIG_TARGET_MX7ULP_EC401W)
-#include "../ec401w/leds.h"
+#include "led_utils.h"
 #elif defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
 #include "display_utils.h"
 #endif

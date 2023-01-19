@@ -20,14 +20,14 @@
 #include <i2c.h>
 #include <command.h>
 #include <linux/delay.h>
-#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC201)
+#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
 #include <splash.h>
 #endif
 
 #include "lc709203.h"
 #include "pf1550.h"
 #if defined(CONFIG_TARGET_MX7ULP_EC401W)
-#include "../ec401w/leds.h"
+#include "led_utils.h"
 #endif
 
 DECLARE_GLOBAL_DATA_PTR;

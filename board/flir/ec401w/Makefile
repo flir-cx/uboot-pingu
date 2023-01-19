@@ -7,4 +7,3 @@
 #
 
 obj-y  += ec401w.o
-obj-y  += leds.o

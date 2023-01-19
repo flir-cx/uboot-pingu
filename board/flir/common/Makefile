@@ -19,3 +19,4 @@ obj-y  += chargeapp.o
 obj-y  += display_utils.o
 obj-y  += cmd_recoverytrigger.o
 obj-y  += bootstate.o
+# obj-y  += led_utils.o

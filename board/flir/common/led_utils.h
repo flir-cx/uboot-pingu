@@ -1,5 +1,5 @@
-#ifndef _LEDS_H
-#define _LEDS_H
+#ifndef _LED_UTILS_H
+#define _LED_UTILS_H
 
 #define CHARGING     1
 #define NOT_CHARGING 0
