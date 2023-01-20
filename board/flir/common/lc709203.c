@@ -78,7 +78,7 @@ static int fuelguage_get_type(void)
 	return *(u16 *)buf == 0x301;
 }
 
-int fuelgauge_get_state_of_charge(int *soc)
+int fuelgauge_get_state_of_charge(u16 *soc)
 {
 	struct udevice *dev;
 	u8 buf[4];
@@ -92,12 +92,12 @@ int fuelgauge_get_state_of_charge(int *soc)
 
 	ret = dm_i2c_read(dev, 0xd, buf, 2);
 	if(!ret)
-		*soc = *(u16*)buf;
+		*soc = (buf[1] << 8) | buf[0];
 
 	return ret;
 }
 
-int fuelgauge_get_battery_voltage(int *voltage)
+int fuelgauge_get_battery_voltage(u16 *voltage)
 {
 	struct udevice *dev;
 	u8 buf[4];
@@ -111,7 +111,7 @@ int fuelgauge_get_battery_voltage(int *voltage)
 
 	ret = dm_i2c_read(dev, 0x9, buf, 2);
 	if(!ret)
-		*voltage = *(u16*)buf;
+		*voltage = (buf[1] << 8) | buf[0];
 
 	return ret;
 }

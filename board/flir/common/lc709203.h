@@ -26,8 +26,8 @@
 
 int fuelgauge_init(void);
 
-int fuelgauge_get_state_of_charge(int *soc);
-int fuelgauge_get_battery_voltage(int *voltage);
+int fuelgauge_get_state_of_charge(u16 *soc);
+int fuelgauge_get_battery_voltage(u16 *voltage);
 int fuelgauge_sleep(void);
 int fuelgauge_operational(void);
 

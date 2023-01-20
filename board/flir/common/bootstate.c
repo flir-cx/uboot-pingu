@@ -228,8 +228,8 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 			break;
 		case RESET:
 		case ONKEY:
-			fuelgauge_get_battery_voltage((int *)&state.battery_mV);
-			printf("Battery voltage mV=%d... ",state.battery_mV);
+			fuelgauge_get_battery_voltage(&state.battery_mV);
+			printf("Battery voltage mV=%d... ", state.battery_mV);
 			if(state.battery_mV < LOW_BATTERY_mV){
 				printf("LOW\n");
 				state.boot_state = LOW_BATTERY;

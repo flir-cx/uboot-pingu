@@ -43,11 +43,12 @@ static void test_charge_levels(void)
 
 static void update_charge(void)
 {
-	int soc = 0;
-	static int soc_last = -1;
+	u16 soc = 0;
+	static u16 soc_last = 0xFFFF;
 
-	/* Get battery state of charge */
-	fuelgauge_get_state_of_charge(&soc);
+	if (fuelgauge_get_state_of_charge(&soc))
+		return;
+
 	if (soc == soc_last)
 		return;
 
