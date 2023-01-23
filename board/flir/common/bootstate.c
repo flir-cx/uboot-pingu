@@ -1,18 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2019 FLIR Systems.
- *
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License as
- * published by the Free Software Foundation; either version 2 of
- * the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * Copyright (C) 2023 FLIR Systems.
  */
-
 #include <common.h>
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
@@ -20,20 +9,19 @@
 #include <i2c.h>
 #include <command.h>
 #include <linux/delay.h>
-#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
 #include <splash.h>
 #endif
 
 #include "lc709203.h"
 #include "pf1550.h"
-#if defined(CONFIG_TARGET_MX7ULP_EC401W)
+#if CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W)
 #include "led_utils.h"
 #endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
-enum WAKE_EVENTS
-{
+enum WAKE_EVENTS {
 	USB_CABLE = 0,
 	VBUS_POWER,
 	ONKEY,
@@ -42,8 +30,7 @@ enum WAKE_EVENTS
 	INVALID_EVENT,
 };
 
-enum BOOT_STATES
-{
+enum BOOT_STATES {
 	INVALID_STATE = 0,
 	NORMAL_BOOT = 1,
 	LOW_BATTERY = 2,
@@ -57,15 +44,15 @@ static struct boot_state
 	u8 wake_event;
 	u8 boot_state;
 	u8 force_boot_state;
-	u16 battery_mV;
+	u16 battery_mv;
 	bool battery;
 	bool usb_cable;
 
-}state = {
+} state = {
 	.wake_event = ONKEY,
 	.boot_state = NORMAL_BOOT,
 	.force_boot_state = 0,
-	.battery_mV = 4000,
+	.battery_mv = 4000,
 	.usb_cable = false,
 	.battery = false,
 };
@@ -86,10 +73,8 @@ static u8 get_force_boot_state(struct udevice *dev)
 	dm_i2c_write(dev, FORCE_BOOT_STATE, &buf, 1);
 
 	printf("Force Boot State 0x%x... ", force_boot_state);
-	if(force_boot_state > INVALID_STATE && force_boot_state < NUM_BOOT_STATES){
-
-		switch(force_boot_state)
-		{
+	if (force_boot_state > INVALID_STATE && force_boot_state < NUM_BOOT_STATES) {
+		switch (force_boot_state) {
 		case NORMAL_BOOT:
 			printf("%s\n", "NORMAL_BOOT");
 			break;
@@ -106,7 +91,7 @@ static u8 get_force_boot_state(struct udevice *dev)
 			printf("%s\n", "UNKNOWN");
 			break;
 		}
-	}else{
+	} else {
 		printf("%s\n", "NONE");
 		force_boot_state = INVALID_STATE;
 	}
@@ -121,26 +106,25 @@ static u8 get_wake_event(struct udevice *dev)
 	//We use this as the default event
 	wake_event = RESET;
 
-	/* Check if a usb cable inserted interrupt has occured. */
+	/* Check if a usb cable inserted interrupt has occurred. */
 	dm_i2c_read(dev, PF1550_CHARG_REG_CHG_INT, &chg_int, 1);
 	dm_i2c_write(dev, PF1550_CHARG_REG_CHG_INT, &chg_int, 1);
 
 	printf("USB cable inserted interrupt (CHG_INT 0x%x)... ", chg_int);
-	if(chg_int & CHARG_IRQ_VBUSI ){
+	if (chg_int & CHARG_IRQ_VBUSI) {
 		printf("YES\n");
 		wake_event = USB_CABLE;
-	}else{
+	} else {
 		printf("NO\n");
 	}
 
 	return wake_event;
 }
 
-#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
 static void set_boot_logo(void)
 {
-	switch(state.boot_state)
-	{
+	switch (state.boot_state) {
 	case NO_BATTERY:
 	case LOW_BATTERY:
 		env_set("bootlogo", "no_battery.bmp.gz");
@@ -165,14 +149,14 @@ int splash_screen_prepare(void)
 	}
 
 	env_loadsplash = env_get("loadsplash");
-	if (env_loadsplash == NULL) {
+	if (!env_loadsplash) {
 		log_err("Environment variable loadsplash not found!\n");
 		return -EINVAL;
 	}
 
 	if (run_command_list(env_loadsplash, -1, 0)) {
 		log_err("Failed to run loadsplash %s\n\n", env_loadsplash);
-		return -ENOSYS;
+		return -ENOENT;
 	}
 	return 0;
 }
@@ -191,7 +175,7 @@ int boot_state_init(void)
 	}
 
 	state.force_boot_state = get_force_boot_state(dev);
-	if(state.force_boot_state != INVALID_STATE)
+	if (state.force_boot_state != INVALID_STATE)
 		return 0;
 
 	state.wake_event = get_wake_event(dev);
@@ -200,16 +184,16 @@ int boot_state_init(void)
 	printf("pwrctrl3=0x%x\n", pwrctrl3);
 
 	/* Check if the usb cable is inserted at all. This checks if
-	the cable was already inserted at the time of boot. In this
-	case cable inserted interrupt would NOT have been
-	received. */
+	 * the cable was already inserted at the time of boot. In this
+	 * case cable inserted interrupt would NOT have been received.
+	 */
 	dm_i2c_read(dev, PF1550_CHARG_REG_CHG_INT_OK, &chg_int_ok, 1);
 
 	printf("USB cable connected (CHG_INT_OK 0x%x)... ", chg_int_ok);
-	if(chg_int_ok & PF1550_CHG_INT_OK_VBUS_OK ){
+	if (chg_int_ok & PF1550_CHG_INT_OK_VBUS_OK) {
 		printf("YES\n");
 		state.usb_cable = true;
-	}else{
+	} else {
 		printf("NO\n");
 	}
 
@@ -218,28 +202,27 @@ int boot_state_init(void)
 
 static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-	if(state.force_boot_state != INVALID_STATE){
+	if (state.force_boot_state != INVALID_STATE) {
 		state.boot_state = state.force_boot_state;
-	}else{
-		switch(state.wake_event)
-		{
+	} else {
+		switch (state.wake_event) {
 		case USB_CABLE:
 			state.boot_state = USB_CHARGE;
 			break;
 		case RESET:
 		case ONKEY:
-			fuelgauge_get_battery_voltage(&state.battery_mV);
-			printf("Battery voltage mV=%d... ", state.battery_mV);
-			if(state.battery_mV < LOW_BATTERY_mV){
+			fuelgauge_get_battery_voltage(&state.battery_mv);
+			printf("Battery voltage mV=%d... ", state.battery_mv);
+			if (state.battery_mv < LOW_BATTERY_mV) {
 				printf("LOW\n");
 				state.boot_state = LOW_BATTERY;
-			}else{
+			} else {
 				printf("OK\n");
 				state.boot_state = NORMAL_BOOT;
 			}
 			break;
 		default:
-			printf("Invalid boot event: INVALID_EVENT \n");
+			printf("Invalid boot event: INVALID_EVENT\n");
 			fuelgauge_sleep();
 			power_off();
 			break;
@@ -247,39 +230,38 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	}
 
 	/* State specified from u-boot prompt has priority over
-	   previously set boot_state. */
-	if(argc == 2)
-	{
+	 * previously set boot_state.
+	 */
+	if (argc == 2) {
 		state.boot_state = simple_strtoul(argv[1], NULL, 16);
-		printf("Custom boot state=%d \n",state.boot_state);
+		printf("Custom boot state=%d\n", state.boot_state);
 	}
 
-	switch(state.boot_state)
-	{
+	switch (state.boot_state) {
 	case NORMAL_BOOT:
-#if defined(CONFIG_TARGET_MX7ULP_EC401W)
+#if CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W)
 		leds_boot();
 #endif
 		break;
 	case NO_BATTERY:
 		printf("Battery missing\n");
 	case LOW_BATTERY:
-#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
 		set_boot_logo();
 		splash_display();
-#elif defined(CONFIG_TARGET_MX7ULP_EC401W)
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 		leds_critical();
 #endif
-		udelay(2000000);
+		mdelay(2000);
 		power_off();
 		break;
 	case USB_CHARGE:
-		printf("Camera: charge state \n");
-#if defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
+		printf("Camera: charge state\n");
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
 		set_boot_logo();
 		splash_display();
 #endif
-		run_command("chargeapp",0);
+		run_command("chargeapp", 0);
 		break;
 	default:
 		printf("Invalid boot state\n");
@@ -288,12 +270,11 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	return 0;
 }
 
-U_BOOT_CMD(
-	bootstate,	2,	0,	do_boot_state,
-	"Process boot state, might power off camera",
-	" {state} \n"
-	"1 - Normal state		-> boot camera into run state\n"
-	"2 - Low battery state		-> power off camera\n"
-	"3 - No battery			-> power off camera\n"
-	"4 - Charge battery		-> boot camera into charge state\n"
+U_BOOT_CMD(bootstate, 2, 0, do_boot_state,
+	   "Process boot state, might power off camera",
+	   " {state}\n"
+	   "1 - Normal state		-> boot camera into run state\n"
+	   "2 - Low battery state	-> power off camera\n"
+	   "3 - No battery		-> power off camera\n"
+	   "4 - Charge battery		-> boot camera into charge state\n"
 );

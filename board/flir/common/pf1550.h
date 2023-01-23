@@ -18,7 +18,6 @@
 #ifndef __LINUX_MFD_PF1550_H
 #define __LINUX_MFD_PF1550_H
 
-
 enum pf1550_pmic_reg {
 	/* PMIC regulator part */
 	PF1550_PMIC_REG_DEVICE_ID		= 0x00,
@@ -163,14 +162,14 @@ enum pf1550_pmic_reg {
 #define PF1550_CHARG_REG_THM_REG_CNFG_REGTEMP_MASK	(0x3 << 2)
 
 #define PF1550_PMIC_REG_PWRCTRL0_TGRESET_MASK		(0x3 << 6)
-#define PF1550_PMIC_REG_PWRCTRL0_TGRESET_4S 		(0x0 << 6)
-#define PF1550_PMIC_REG_PWRCTRL0_TGRESET_8S 		(0x1 << 6)
+#define PF1550_PMIC_REG_PWRCTRL0_TGRESET_4S		(0x0 << 6)
+#define PF1550_PMIC_REG_PWRCTRL0_TGRESET_8S		(0x1 << 6)
 #define PF1550_PMIC_REG_PWRCTRL0_TGRESET_12S		(0x2 << 6)
 #define PF1550_PMIC_REG_PWRCTRL0_TGRESET_16S		(0x3 << 6)
 
 #define PF1550_CHARG_REG_CHG_OPER_CHG_OPER_MASK 0x3
 
-enum pf1550_chg_oper{
+enum pf1550_chg_oper {
 	CHARGER_OFF_LINEAR_OFF = 0,
 	CHARGER_OFF_LINEAR_ON  = 1,
 	CHARGER_ON_LINEAR_ON   = 2
@@ -245,8 +244,6 @@ enum pf1550_regulators {
 	PF1550_LDO3,
 };
 
-
-
 enum pf1550_ilim {
 	_10ma = 0,
 	_15ma = 1,
@@ -271,7 +268,6 @@ enum pf1550_ilim {
 	_1500ma = 20,
 };
 
-
 void init_pf1550_pmic(void);
 
 void pf1550_thm_ok_toogle_charging(void);
@@ -280,7 +276,7 @@ void set_charging_current(int mA);
 
 int pf1550_write_reg(int reg, u8 val);
 
-int pf1550_read_reg(int reg, u8* val);
+int pf1550_read_reg(int reg, u8 *val);
 
 int get_usb_cable_state(void);
 
@@ -291,8 +287,5 @@ void pmic_goto_core_off(bool enable);
 void power_off(void);
 
 void reboot(void);
-
-
-
 
 #endif /* __LINUX_MFD_PF1550_H */

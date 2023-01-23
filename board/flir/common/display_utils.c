@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2023 FLIR Systems.
+ */
 #include <dm.h>
 #include <video.h>
 #include <video_console.h>
@@ -6,16 +10,16 @@
 #include <asm/arch/iomux.h>
 #include <asm/gpio.h>
 
-#define DISPLAY_ENABLE			IMX_GPIO_NR(3, 6)
+#define DISPLAY_ENABLE		IMX_GPIO_NR(3, 6)
 
-#define DISPLAY_COLOR_GREEN 	0x3dbe54
-#define DISPLAY_COLOR_YELLOW 	0xfff959
-#define DISPLAY_COLOR_RED 		0xe93b3b
+#define DISPLAY_COLOR_GREEN	0x3dbe54
+#define DISPLAY_COLOR_YELLOW	0xfff959
+#define DISPLAY_COLOR_RED	0xe93b3b
 
-#define DISPLAY_TIMEOUT 20
+#define DISPLAY_TIMEOUT		20
 
 bool display_enabled = true;
-uint64_t  display_timer;
+u64  display_timer;
 
 void display_set_text_color(void)
 {
@@ -32,14 +36,12 @@ void display_set_text_color(void)
 	/* foreground color */
 	vid_priv->fg_col_idx &= ~7;
 	vid_priv->fg_col_idx |= 15;
-	vid_priv->colour_fg = vid_console_color(
-			vid_priv, vid_priv->fg_col_idx);
+	vid_priv->colour_fg = vid_console_color(vid_priv, vid_priv->fg_col_idx);
 
 	/* background color, also mask the bold bit */
 	vid_priv->bg_col_idx &= ~0xf;
 	vid_priv->bg_col_idx |= 0;
-	vid_priv->colour_bg = vid_console_color(
-			vid_priv, vid_priv->bg_col_idx);
+	vid_priv->colour_bg = vid_console_color(vid_priv, vid_priv->bg_col_idx);
 }
 
 void display_print_string(char *s)
@@ -97,9 +99,9 @@ void display_draw_box(int x_start, int y_start, int width, int height, int color
 
 	char *dst = framebuffer + (x_start * bpp) + (y_start * stride);
 
-	while(height--) {
-		for(int w = 0; w < width; w++) {
-			*(u32*)dst = color;
+	while (height--) {
+		for (int w = 0; w < width; w++) {
+			*(u32 *)dst = color;
 			dst += bpp;
 		}
 		dst += skip;
@@ -112,12 +114,12 @@ void display_update_charge(int level)
 {
 	int color = DISPLAY_COLOR_GREEN;
 
-	if(level < 20)
+	if (level < 20)
 		color = DISPLAY_COLOR_RED;
 	else if (level < 60)
 		color = DISPLAY_COLOR_YELLOW;
 
-	display_draw_box(276, 217, level, 45, color, (void*) (gd->fb_base));
+	display_draw_box(276, 217, level, 45, color, (void *)(gd->fb_base));
 
 	display_print_charge_level(level);
 }
@@ -136,7 +138,7 @@ void display_on(void)
 
 void display_off(void)
 {
-	if(!display_enabled)
+	if (!display_enabled)
 		return;
 	gpio_direction_output(DISPLAY_ENABLE, 0);
 	display_enabled = false;
@@ -149,8 +151,8 @@ bool display_is_on(void)
 
 void display_check_timer(void)
 {
-	uint64_t etime = display_timer + CONFIG_SYS_HZ_CLOCK * DISPLAY_TIMEOUT;
+	u64 etime = display_timer + CONFIG_SYS_HZ_CLOCK * DISPLAY_TIMEOUT;
 
-	if(get_ticks() > etime)
+	if (get_ticks() > etime)
 		display_off();
 }

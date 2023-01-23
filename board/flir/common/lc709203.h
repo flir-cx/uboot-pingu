@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2023 FLIR Systems.
+ */
 #ifndef _LC709203_
 #define _LC709203_
 
@@ -17,9 +21,9 @@
 #define FUELGAUGE_SLEEP_MODE 0x2
 
 #define LC709204_APA 0x0b
-#define LC709204_ChgTermCurr 0x1c
-#define LC709204_Empty_Volt 0x1d
-#define LC709204_ITE_Offset 0x1e
+#define LC709204_CHG_TERM_CURR 0x1c
+#define LC709204_EMPTY_VOLT 0x1d
+#define LC709204_ITE_OFFSET 0x1e
 
 #define LC709203F 1
 #define LC709204F 0

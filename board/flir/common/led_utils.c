@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2023 FLIR Systems.
+ */
 #include <common.h>
 #include <asm/io.h>
 #include <dm.h>
@@ -10,7 +14,8 @@
 #define CHG_LEVEL_LOW 35
 #define CHG_LEVEL_CRITICAL 10
 
-void leds_battery_solid(int soc) {
+void leds_battery_solid(int soc)
+{
 	run_command("led r off", 0);
 
 	if (soc >= CHG_LEVEL_HIGH)
@@ -21,7 +26,8 @@ void leds_battery_solid(int soc) {
 		run_command("led p 5 1", 0);
 }
 
-void leds_charge(int soc) {
+void leds_charge(int soc)
+{
 	run_command("led r off", 0);
 
 	if (soc >= CHG_LEVEL_FULL)
@@ -47,7 +53,6 @@ void leds_off(void)
 	// Fade all
 	run_command("led r off", 0);
 	run_command("led p 2 500", 0);
-	return;
 }
 
 void leds_all_blink_slow(void)

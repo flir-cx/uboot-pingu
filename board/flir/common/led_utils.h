@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2023 FLIR Systems.
+ */
 #ifndef _LED_UTILS_H
 #define _LED_UTILS_H
 

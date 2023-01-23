@@ -1,11 +1,7 @@
+// SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright 2018 FLIR
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
+ * Copyright (C) 2023 FLIR Systems.
  */
-
 #include <common.h>
 #include <asm/io.h>
 #include <i2c.h>
@@ -20,60 +16,61 @@ static iomux_cfg_t const pmic_wdog_pad[] = {
 	MX7ULP_PAD_PTA14__PTA14 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
-
 int pf1550_write_reg(int reg, u8 val)
 {
 	struct udevice *dev;
 	int ret = i2c_get_chip_for_busnum(5, 0x8, 1, &dev);
+
 	if (ret) {
 		printf("Can not find pmic: %d\n", ret);
 		return ret;
 	}
+
 	return dm_i2c_write(dev, reg, &val, 1);
 }
 
-
-int pf1550_read_reg(int reg, u8* val)
+int pf1550_read_reg(int reg, u8 *val)
 {
 	struct udevice *dev;
 	int ret = i2c_get_chip_for_busnum(5, 0x8, 1, &dev);
+
 	if (ret) {
 		printf("Can not find pmic: %d\n", ret);
 		return ret;
 	}
+
 	return dm_i2c_read(dev, reg, val, 1);
 }
 
-
 int get_usb_cable_state(void)
 {
-	u8 chg_int_ok=0;
-	pf1550_read_reg(PF1550_CHARG_REG_VBUS_SNS ,&chg_int_ok);
+	u8 chg_int_ok = 0;
 
-	if(chg_int_ok & PF1550_VBUS_VALID )
+	pf1550_read_reg(PF1550_CHARG_REG_VBUS_SNS, &chg_int_ok);
+
+	if (chg_int_ok & PF1550_VBUS_VALID)
 		return 1;
 
 	return 0;
 }
 
-
 int get_onoff_key(void)
 {
-	u8 onkey_int=0;
-	pf1550_read_reg(PF1550_PMIC_REG_ONKEY_INT_STAT0 ,&onkey_int);
+	u8 onkey_int = 0;
+
+	pf1550_read_reg(PF1550_PMIC_REG_ONKEY_INT_STAT0, &onkey_int);
 	pf1550_write_reg(PF1550_PMIC_REG_ONKEY_INT_STAT0, onkey_int);
 
-#ifdef CONFIG_TARGET_MX7ULP_EC401W
-	if(onkey_int & ONKEY_IRQ_1SI)
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
+	if (onkey_int & ONKEY_IRQ_1SI)
 		return 1;
-#elif defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
-	if(onkey_int & ONKEY_IRQ_PUSHI)
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+	if (onkey_int & ONKEY_IRQ_PUSHI)
 		return 1;
 #endif
 
 	return 0;
 }
-
 
 void pmic_goto_core_off(bool enable)
 {
@@ -81,7 +78,6 @@ void pmic_goto_core_off(bool enable)
 	//set go to core off mode
 	pf1550_write_reg(PF1550_PMIC_REG_PWRCTRL3, buf);
 }
-
 
 void power_off(void)
 {
@@ -91,8 +87,7 @@ void power_off(void)
 	//set watchdog signal low
 	gpio_direction_output(PMIC_WDOG_GPIO, 0);
 
-	while(1)
-	{
+	while (1) {
 	}
 }
 
@@ -104,13 +99,9 @@ void reboot(void)
 	//set watchdog signal low
 	gpio_direction_output(PMIC_WDOG_GPIO, 0);
 
-	while(1)
-	{
+	while (1) {
 	}
 }
-
-
-
 
 void init_pf1550_pmic(void)
 {
@@ -128,10 +119,12 @@ void init_pf1550_pmic(void)
 
 	//set time to press off button before triggering a PMIC reset
 	pf1550_read_reg(PF1550_PMIC_REG_PWRCTRL0, &curr_pwr_ctrl0);
-#ifdef CONFIG_TARGET_MX7ULP_EC401W
-	new_pwr_ctrl0 = (curr_pwr_ctrl0 & ~PF1550_PMIC_REG_PWRCTRL0_TGRESET_MASK) | PF1550_PMIC_REG_PWRCTRL0_TGRESET_16S;
-#elif defined(CONFIG_TARGET_MX7ULP_EC201) || defined(CONFIG_TARGET_MX7ULP_EC302)
-	new_pwr_ctrl0 = (curr_pwr_ctrl0 & ~PF1550_PMIC_REG_PWRCTRL0_TGRESET_MASK) | PF1550_PMIC_REG_PWRCTRL0_TGRESET_4S;
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
+	new_pwr_ctrl0 = (curr_pwr_ctrl0 & ~PF1550_PMIC_REG_PWRCTRL0_TGRESET_MASK)
+			 | PF1550_PMIC_REG_PWRCTRL0_TGRESET_16S;
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+	new_pwr_ctrl0 = (curr_pwr_ctrl0 & ~PF1550_PMIC_REG_PWRCTRL0_TGRESET_MASK)
+			 | PF1550_PMIC_REG_PWRCTRL0_TGRESET_4S;
 #endif
 	pf1550_write_reg(PF1550_PMIC_REG_PWRCTRL0, new_pwr_ctrl0);
 
@@ -139,11 +132,10 @@ void init_pf1550_pmic(void)
 	gpio_request(PMIC_WDOG_GPIO, "pmic_wdog");
 }
 
-
 void pf1550_thm_ok_toogle_charging(void)
 {
 	u8 chg_int_ok;
-	static u8 chg_oper = 0;
+	static u8 chg_oper;
 	u8 chg_oper_reg;
 	u8 thm_ok;
 	u8 vbus_ok;
@@ -158,16 +150,13 @@ void pf1550_thm_ok_toogle_charging(void)
 	vbus_ok >>= PF1550_CHG_INT_OK_VBUS_OK_SHIFT;
 	thm_ok >>= PF1550_CHG_INT_OK_THM_OK_SHIFT;
 
-	if (thm_ok && vbus_ok)
-	{
+	if (thm_ok && vbus_ok) {
 		/* Inside THM range and VBUS is OK, enable charging. */
 		if (chg_oper != CHARGER_ON_LINEAR_ON) {
 			printf("Enable charging (THM_OK: %d, VBUS_OK: %d).\n", thm_ok, vbus_ok);
 			chg_oper = CHARGER_ON_LINEAR_ON;
 		}
-	}
-	else
-	{
+	} else {
 		/* Outside of THM range or VBUS is not OK, disable charging. */
 		if (chg_oper != CHARGER_OFF_LINEAR_ON) {
 			printf("Disable charging (THM_OK: %d, VBUS_OK: %d).\n", thm_ok, vbus_ok);
@@ -180,25 +169,23 @@ void pf1550_thm_ok_toogle_charging(void)
 	if (res)
 		return;
 
-	if ((chg_oper_reg & PF1550_CHARG_REG_CHG_OPER_CHG_OPER_MASK) != chg_oper)
-	{
+	if ((chg_oper_reg & PF1550_CHARG_REG_CHG_OPER_CHG_OPER_MASK) != chg_oper) {
 		chg_oper_reg = (chg_oper_reg & ~PF1550_CHARG_REG_CHG_OPER_CHG_OPER_MASK) | chg_oper;
 		pf1550_write_reg(PF1550_CHARG_REG_CHG_OPER, chg_oper_reg);
 	}
 }
 
-
 void set_charging_current(int mA)
 {
 	u8 ilim = _10ma << VBUS_LIN_ILIM_SHIFT;
 
-	if(mA >= 1500)
+	if (mA >= 1500)
 		ilim = _1500ma << VBUS_LIN_ILIM_SHIFT;
-	else if(mA >= 1000)
+	else if (mA >= 1000)
 		ilim = _1000ma << VBUS_LIN_ILIM_SHIFT;
-	else if(mA >= 500)
+	else if (mA >= 500)
 		ilim = _500ma  << VBUS_LIN_ILIM_SHIFT;
-	else if(mA >= 100)
+	else if (mA >= 100)
 		ilim = _100ma << VBUS_LIN_ILIM_SHIFT;
 	else
 		ilim = _10ma << VBUS_LIN_ILIM_SHIFT;
@@ -208,4 +195,3 @@ void set_charging_current(int mA)
 	// turn on charging if within allowed thermal range
 	pf1550_thm_ok_toogle_charging();
 }
-
