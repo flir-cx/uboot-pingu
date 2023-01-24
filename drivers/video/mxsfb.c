@@ -216,6 +216,13 @@ static int mxs_remove_common(phys_addr_t reg_base, u32 fb)
 	struct mxs_lcdif_regs *regs = (struct mxs_lcdif_regs *)(reg_base);
 	int timeout = 1000000;
 
+	/* Skip power down of LCD to keep splash image
+	 * during booting of kernel.
+	 */
+	if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) ||
+	    CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+		return 0;
+
 	if (CONFIG_IS_ENABLED(IMX_MODULE_FUSE)) {
 		if (check_module_fused(MODULE_LCDIF))
 			return -ENODEV;
