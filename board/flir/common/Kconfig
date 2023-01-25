@@ -125,6 +125,24 @@ config FLIR_USBCHARGE
 	help
 	  Command 'chargeState' for controlling the USB charger state
 
+config FLIR_COMMAND_SHOWCHARGE
+	bool "Charge visualizer (chargeapp)"
+	depends on FLIR_COMMANDS
+	depends on FLIR_USBCHARGE
+	depends on FLIR_PLATFORM_EC101
+	default n
+	help
+	  Command 'chargeapp', in a version that does not manage charging.
+	  Charger status and charge level is examined.
+
+config FLIR_CHARGEAPP
+	bool "Chargeapp"
+	depends on FLIR_COMMANDS
+	depends on !FLIR_PLATFORM_EC101
+	default n
+	help
+	  Command 'chargeapp', for charging in u-boot.
+
 config FLIR_SYS_EEPROM
 	bool "EEPROM MAC access (mac)"
 	depends on FLIR_COMMANDS
@@ -160,13 +178,6 @@ config FLIR_SET_MAC
 	default n
 	help
 	  Command 'setmac', for setting the mac address.
-
-config FLIR_CHARGEAPP
-	bool "Chargeapp"
-	depends on FLIR_COMMANDS
-	default n
-	help
-	  Command 'chargeapp', for charging in u-boot.
 
 config FLIR_RECOVERY_TRIGGER
 	bool "Recovery trigger"

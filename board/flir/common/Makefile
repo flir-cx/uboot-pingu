@@ -1,6 +1,7 @@
 obj-$(CONFIG_FLIR_SYS_EEPROM)	+= sys_eeprom.o
-obj-$(CONFIG_FLIR_USBCHARGE)	+= usbcharge.o
 obj-$(CONFIG_FLIR_EEPROM)	+= eeprom.o
+obj-$(CONFIG_FLIR_USBCHARGE)	+= usbcharge.o
+obj-$(CONFIG_FLIR_COMMAND_SHOWCHARGE)	+= showcharge.o
 obj-$(CONFIG_FLIR_COMMAND_LOADFPGA)	+= cmd_loadfpga.o
 obj-$(CONFIG_FLIR_COMMAND_CHECKCHARGER)	+= cmd_checkcharger.o
 obj-$(CONFIG_FLIR_COMMAND_KBD)	+= cmd_kbd.o

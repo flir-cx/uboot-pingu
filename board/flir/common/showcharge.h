@@ -1,0 +1,27 @@
+
+/*
+ * Copyright (C) 2023 FLIR Systems.
+ *
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of
+ * the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+#ifndef __SHOWCHARGE_H
+#define __SHOWCHARGE_H
+
+void power_off(bool comparator_enable);
+void get_pmic_regs(unsigned char *event_a, unsigned char *status_a);
+int ctrlc(void);
+int video_clear(struct udevice *dev);
+void backlight_on(bool on);
+int do_chargeapp(bool from_autoboot);
+
+#endif	/* __SHOWCHARGE_H */

@@ -121,8 +121,7 @@ iomux_v3_cfg_t const ecspi4_pads[] = {
 };
 
 //default hw support
-static struct hw_support hardware =
-{
+static struct hw_support hardware = {
 	.mipi_mux =	false,
 	.display = true,
 	.usb_charge = IS_ENABLED(CONFIG_FLIR_USBCHARGE),
@@ -140,7 +139,14 @@ int splash_screen_prepare(void)
 {
 	char *env_loadsplash;
 
+	// IF_DEFINED(CONFIG_FLIR_USBCHARGE) >>>> NOT POPSSIBLE <<<<,
+	// this is a compile time issue and not a run time one!!
+#ifdef CONFIG_FLIR_USBCHARGE
 	set_boot_logo();
+#else
+	log_info("Cannot set boot logo!\n");
+	log_info("This u-boot was not built with CONFIG_FLIR_USBCHARGE=y!\n");
+#endif
 
 	if (!env_get("splashimage")) {
 		log_err("Environment variable splashimage not found!\n");
@@ -207,7 +213,7 @@ static int detect_truly(struct display_info_t const *dev)
 	return 0;
 }
 
-static void enable_backlight(struct display_info_t const *dev)
+void backlight_on(bool on)
 {
 	struct udevice *pwm_dev;
 	int ret;
@@ -225,7 +231,12 @@ static void enable_backlight(struct display_info_t const *dev)
 		return;
 	}
 
-	pwm_set_enable(pwm_dev, 0, 1);
+	pwm_set_enable(pwm_dev, 0, on);
+}
+
+static void enable_backlight(struct display_info_t const *dev)
+{
+	backlight_on(true);
 }
 
 #ifdef CONFIG_ENV_IS_IN_MMC
@@ -928,7 +939,6 @@ static void setup_mipi_mux_i2c()
 	}
 }
 
-
 int board_early_init_f(void)
 {
 	arch_cpu_init();
@@ -1005,8 +1015,13 @@ int board_init(void)
 	if (ret < 0) {
 		printf("IO Board either missing or is not functioning!!\n");
 	} else {
-		if (hardware.usb_charge)
-			usb_charge_setup();
+		// IF_DEFINED(CONFIG_FLIR_USBCHARGE) >>>> NOT POPSSIBLE <<<<,
+		// this is a compile time issue and not a run time one!!
+#ifdef CONFIG_FLIR_USBCHARGE 
+		usb_charge_setup();
+#else
+		log_info("This u-boot was not built with CONFIG_FLIR_USBCHARGE=y!\n");
+#endif
 	}
 
 #if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
