@@ -154,36 +154,47 @@ static int poll_key(char k)
 static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	char *chp = secret;
+	bool has_console = false;
 
 	//MSD_LOAD button overrides security check
 	if (flir_get_safe_boot())
 		return 0;
 
-	if (init_stdio())
+	if (init_stdio()) {
 		printf("Stdio error, proceed without visual feedback\n");
-	else
-		compute_stdio_dimensions();
+	} else {
+		int ret = compute_stdio_dimensions();
 
-	set_cursor_pos(1, 1);
-	print_display(CLR_LINE ":");
+		if (ret == 0)
+			has_console = true;
+	}
+
+	if (has_console) {
+		set_cursor_pos(1, 1);
+		print_display(CLR_LINE ":");
+	}
 
 	while (*chp) {
-		int result = poll_key(*chp);
+		int keypressed = poll_key(*chp);
 
-		if (result > 0) {
-			print_display(".");
-		} else if (result < 0) {
-			print_display(" *kbd error* ");
+		if (keypressed < 0) {
+			if (has_console)
+				print_display(" *kbd error* ");
 			printf("Key polling failed\n");
 			break;
-		} else {
+		}
+
+		if (keypressed == 0) {
 			printf("Timeout reading kbd secret\n");
 			break;
 		}
+
+		if (has_console)
+			print_display(".");
 		chp++;
 	}
 
-	if (*chp)
+	if (has_console && *chp)
 		print_display("boot");
 	else
 		print_recovery_banner();
