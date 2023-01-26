@@ -52,11 +52,18 @@ enum {
 } display_state = DISPLAY_ON;
 ulong  display_timer;
 
-int columns;
-uint32_t last_battery_level;
-int start_line, left_margin, width, height;
-bool color_test;
-uint16_t cmd_line_color;
+enum chargeapp_arg {
+	MODE_AUTOBOOT = 0,
+	MODE_FB_TEST,
+	MODE_COLOR_TEST
+};
+
+static enum chargeapp_arg chargeapp_mode;
+static int columns;
+static u32 last_battery_level;
+static int start_line, left_margin, width, height;
+static bool color_test;
+static u16 cmd_line_color;
 
 static void print_display(char *s)
 {
@@ -236,27 +243,12 @@ static int charge_progress(struct udevice *dev, uint16_t *old_color_code)
 	return 0;
 }
 
-int do_chargeapp(bool from_autoboot)
+static int do_chargeapp(void)
 {
-	uint16_t exit = 0;
+	u16 exit = 0;
 	struct udevice *dev;
-	uint16_t old_color_code = 0;
-	int ret;
-
-	if (from_autoboot) {
-		// Set default values
-		if (get_gauge_state())
-			last_battery_level = FAKE_BATTERY_LEVEL;
-		else
-			last_battery_level = get_battery_level();
-		color_test = false;
-		columns = 0;
-		start_line = 200;
-		left_margin = 240;
-		width = 150;
-		height = 86;
-		cmd_line_color = 0x2F2D;
-	}
+	u16 old_color_code = 0;
+	int ret = 0;
 
 	old_color_code = get_color((last_battery_level > 0 ? last_battery_level : 1));
 
@@ -275,11 +267,10 @@ int do_chargeapp(bool from_autoboot)
 
 	turn_on_display();
 
-
 	// The main loop ...
 	while (!exit) {
-		int32_t soc = 0;
-		uint8_t event_a, status_a;
+		int soc = 0;
+		u8 event_a, status_a;
 
 		get_pmic_regs(&event_a, &status_a);
 		if (get_gauge_state())
@@ -289,18 +280,15 @@ int do_chargeapp(bool from_autoboot)
 
 		if (soc < 0) {
 			log_err("chargeapp: No battery!!\n");
-			exit = 1;
 			goto cam_power_off;
 		}
 
-		if (from_autoboot) {
+		if (chargeapp_mode == MODE_AUTOBOOT) {
 			// Normal mode
 			// Show the battery status only for a short time and
 			// then continue with boot of Linux in USB charge mode.
-			if (get_timer(display_timer) >= DISPLAY_ON_TIME) {
+			if (get_timer(display_timer) >= DISPLAY_ON_TIME)
 				exit = 1;
-				return 0;
-			}
 		} else {
 			// Test mode
 			if (display_state == DISPLAY_ON) {
@@ -314,12 +302,12 @@ int do_chargeapp(bool from_autoboot)
 
 			if (soc != last_battery_level) {
 				last_battery_level = soc;
-				log_info("chargeapp: last_battery_level '%d%%'\n", last_battery_level);
+				log_info("chargeapp: last_battery_level '%d%%'\n",
+					 last_battery_level);
 				if (display_state == DISPLAY_ON) {
 					ret = charge_progress(dev, &old_color_code);
-					if (ret) {
+					if (ret)
 						return ret;
-					}
 				}
 			}
 
@@ -356,21 +344,22 @@ int do_chargeapp(bool from_autoboot)
 		}
 	}
 
-	return 0;
+	return ret;
 
 cam_power_off:
 	video_clear(dev);
 	ret = video_clear(dev);
-	if (ret)
-		return ret;
-	turn_off_display();
-	power_off(true);
-	return 0;
+	if (!ret) {
+		turn_off_display();
+		power_off(true);
+	}
+	return ret;
 }
 
 static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-	uint16_t old_color_code = 0;
+	int ret = -1;
+	u16 old_color_code = 0;
 
 	// Set default values
 	color_test = false;
@@ -386,51 +375,54 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 	else
 		last_battery_level = get_battery_level();
 
-	// Handle commands
-	if (argc == 2) {
-		int cmd = simple_strtoul(argv[1], NULL, 10);
-		if (cmd == 0) {
-			do_chargeapp(true);
-			return 0;
-		} else if (cmd != 1) {
-			return -1;
-		}
-	} else if (argc == 3) {
-		int cmd = simple_strtoul(argv[1], NULL, 10);
-		if (cmd == 2) {
-			color_test = true;
-			cmd_line_color = (uint16_t) simple_strtoul(argv[2], NULL, 16);
-		} else
-			return -1;
+	if (argc >= 2)
+		chargeapp_mode = simple_strtoul(argv[1], NULL, 10);
+	else
+		chargeapp_mode = MODE_AUTOBOOT;
+
+	// Ignore extra arguments, n.b.
+	switch (chargeapp_mode) {
+	case MODE_AUTOBOOT:
+		do_chargeapp();
+		return 0;
+
+	case MODE_FB_TEST:
+		if (argc < 6)
+			break;
+		start_line  = (u16)simple_strtoul(argv[2], NULL, 10);
+		if (start_line < 0 || start_line > 200)
+			break;
+		left_margin = (u16)simple_strtoul(argv[3], NULL, 10);
+		if (left_margin < 0 || left_margin > 300)
+			break;
+		width = (u16)simple_strtoul(argv[4], NULL, 10);
+		if (width < 10 || width > 300)
+			break;
+		height = (u16)simple_strtoul(argv[5], NULL, 10);
+		if (height < 40 || height > 200)
+			break;
+		ret = 0;
+		break;
+
+	case MODE_COLOR_TEST:
+		if (argc < 3)
+			break;
+		color_test = true;
+		cmd_line_color = (uint16_t) simple_strtoul(argv[2], NULL, 16);
 		old_color_code = cmd_line_color;
-	} else if (argc == 6) {
-		int cmd = simple_strtoul(argv[1], NULL, 10);
-		if (cmd == 1) {
-			start_line  = (uint16_t) simple_strtoul(argv[2], NULL, 10);
-			if (start_line < 0 || start_line > 200)
-				return -1;
-			left_margin = (uint16_t) simple_strtoul(argv[3], NULL, 10);
-			if (left_margin < 0 || left_margin > 300)
-				return -1;
-			width = (uint16_t) simple_strtoul(argv[4], NULL, 10);
-			if (width < 10 || width > 300)
-				return -1;
-			height = (uint16_t) simple_strtoul(argv[5], NULL, 10);
-			if (height < 40 || height > 200)
-				return -1;
-		} else
-			return -1;
-	} else
-		return -1;
+		ret = 0;
+		break;
+	}
 
-	log_info("chargeapp: start_line '%d', left_margin '%d', width '%d', height '%d'\n",
-		start_line, left_margin, width, height);
-	log_info("chargeapp: last_battery_level '%d%%'\n", last_battery_level);
+	if (!ret) {
+		log_info("chargeapp: start_line '%d', left_margin '%d', width '%d', height '%d'\n",
+			 start_line, left_margin, width, height);
+		log_info("chargeapp: last_battery_level '%d%%'\n", last_battery_level);
+		if (do_chargeapp())
+			log_err("do_chargeapp not successful!\n");
+	}
 
-	if (do_chargeapp(false))
-		log_err("do_chargeapp not successful!\n");
-
-	return 0;
+	return ret;
 }
 
 U_BOOT_CMD(

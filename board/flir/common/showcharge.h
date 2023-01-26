@@ -22,6 +22,5 @@ void get_pmic_regs(unsigned char *event_a, unsigned char *status_a);
 int ctrlc(void);
 int video_clear(struct udevice *dev);
 void backlight_on(bool on);
-int do_chargeapp(bool from_autoboot);
 
 #endif	/* __SHOWCHARGE_H */

@@ -34,7 +34,6 @@
 #include "da9063.h"
 #include "da9063_regs.h"
 #include "usbcharge.h"
-#include "showcharge.h"
 
 extern struct spi_slave *slave;
 u32 get_imx_reset_cause(void);
@@ -317,7 +316,7 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		if (env_set("charge_state", charge_state_cmd))
 			log_err("Was not able to set the env var 'charge_state'!");
 #ifdef CONFIG_FLIR_COMMAND_SHOWCHARGE
-		do_chargeapp(true);
+		run_command("chargeapp 0", 0);
 #else
 		log_info("This u-boot was not built with CONFIG_FLIR_COMMAND_SHOWCHARGE=y!\n");
 #endif
