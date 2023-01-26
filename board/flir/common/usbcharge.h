@@ -5,7 +5,7 @@ int usb_charge_setup(void);
 void set_boot_logo(void);
 void get_pmic_regs(unsigned char *event_a, unsigned char *status_a);
 bool get_gauge_state(void);
-int get_battery_level(bool do_print);
+int get_battery_level(void);
 
 enum BOOT_STATES {
 	NORMAL_BOOT = 0,

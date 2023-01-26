@@ -248,7 +248,7 @@ int do_chargeapp(bool from_autoboot)
 		if (get_gauge_state())
 			last_battery_level = FAKE_BATTERY_LEVEL;
 		else
-			last_battery_level = get_battery_level(false);
+			last_battery_level = get_battery_level();
 		color_test = false;
 		columns = 0;
 		start_line = 200;
@@ -285,7 +285,7 @@ int do_chargeapp(bool from_autoboot)
 		if (get_gauge_state())
 			soc = FAKE_BATTERY_LEVEL;
 		else
-			soc = get_battery_level(false);
+			soc = get_battery_level();
 
 		if (soc < 0) {
 			log_err("chargeapp: No battery!!\n");
@@ -384,7 +384,7 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 	if (get_gauge_state())
 		last_battery_level = FAKE_BATTERY_LEVEL;
 	else
-		last_battery_level = get_battery_level(false);
+		last_battery_level = get_battery_level();
 
 	// Handle commands
 	if (argc == 2) {

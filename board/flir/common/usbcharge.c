@@ -146,23 +146,21 @@ int get_boot_reason(void)
 	return boot_reason;
 }
 
-int get_battery_level(bool do_print)
+/*
+ * Read fuel gauge cell and set state.battery_level
+ * Return charge level, or <0 on error
+ */
+int get_battery_level(void)
 {
 	int ret;
-
 #if !CONFIG_IS_ENABLED(DM_I2C)
-	unsigned char battery_level;
+
 	i2c_set_bus_num(3);
-
-	ret = i2c_read(BQ27542_I2C_ADDR, BQ27542_REG_STATE_OF_CHARGE, 1, &battery_level, 1);
-	if (ret < 0) {
-		debug("Battery: missing \n");
-		return ret;
-	}
-	log_info("Battery: charge level %d%% \n", battery_level);
-	state.battery_level = battery_level;
-
-	return battery_level;
+	ret = i2c_read(BQ27542_I2C_ADDR, BQ27542_REG_STATE_OF_CHARGE, 1, &state.battery_level, 1);
+	if (ret < 0)
+		debug("Battery: missing\n");
+	else
+		ret = ((int)state.battery_level) & 0x000000ff;
 
 #else // CONFIG_IS_ENABLED(DM_I2C)
 	struct udevice *bus, *dev;
@@ -175,21 +173,20 @@ int get_battery_level(bool do_print)
 	}
 
 	ret = dm_i2c_probe(bus, BQ27542_I2C_ADDR, 0, &dev);
-	if (ret == 0) {
-		ret = dm_i2c_read(dev, BQ27542_REG_STATE_OF_CHARGE, &state.battery_level, 1);
-		if (ret == 0) {
-			if (do_print)
-				log_info("Battery: charge level %d%%\n", state.battery_level);
-			return (((int) (state.battery_level)) & 0x000000ff);
-		} else {
-			debug("Battery: dm_i2c_read() error! Battery gauge missing or charge level is 0%%. Returning %d\n", ret);
-			return ret;
-		}
-	} else {
-		debug("Battery: dm_i2c_probe() error! Battery gauge missing or charge level is 0%%. Returning %d\n", ret);
+	if (ret != 0) {
+		debug("Battery: dm_i2c_probe() Battery gauge missing? Returning %d\n", ret);
 		return ret;
 	}
+
+	ret = dm_i2c_read(dev, BQ27542_REG_STATE_OF_CHARGE, &state.battery_level, 1);
+	if (ret == 0)
+		ret = ((int)state.battery_level) & 0x000000ff;
+	else
+		debug("Battery: dm_i2c_read() Read error. Returning %d\n", ret);
+
 #endif // !CONFIG_IS_ENABLED(DM_I2C)
+
+	return ret;
 }
 
 void set_boot_logo(void)
@@ -218,10 +215,13 @@ bool get_gauge_state(void)
 int usb_charge_setup(void)
 {
 
-	int battery_level = get_battery_level(true);
+	int battery_level = get_battery_level();
 	int boot_reason = get_boot_reason();
+
 	state.boot_state = NORMAL_BOOT;
 	gauge_missing = false;
+	if (battery_level >= 0)
+		log_info("Battery: charge level %d%% \n", battery_level);
 
 	//for cameras without a fuelgauge, we decide if we have a battery by looking at comparator level
 	if (battery_level < 0 && state.battery) {
@@ -240,7 +240,7 @@ int usb_charge_setup(void)
 			else {
 				if (!gauge_missing) {
 					state.boot_state = USB_CHARGE;
-					if (get_battery_level(false) == 100) {
+					if (get_battery_level() == 100) {
 						log_info("bootreason: Battery full charged.\n");
 						power_off(true);
 						return -1;
@@ -262,7 +262,7 @@ int usb_charge_setup(void)
 		if (battery_level >= 0) {
 			if (!gauge_missing) {
 				state.boot_state = USB_CHARGE;
-				if (get_battery_level(false) == 100) {
+				if (get_battery_level() == 100) {
 					log_info("bootreason: Battery full charged.\n");
 					power_off(true);
 					return -1;
@@ -316,8 +316,6 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		log_info("Camera: charge state \n");
 		if (env_set("charge_state", charge_state_cmd))
 			log_err("Was not able to set the env var 'charge_state'!");
-		// IF_DEFINED(CONFIG_FLIR_COMMAND_SHOWCHARGE) >>>> NOT POPSSIBLE <<<<,
-		// this is a compile time issue and not a run time one!!
 #ifdef CONFIG_FLIR_COMMAND_SHOWCHARGE
 		do_chargeapp(true);
 #else
