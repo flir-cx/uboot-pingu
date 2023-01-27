@@ -9,6 +9,4 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
 	default "ec401w"
 
-source "board/flir/common/Kconfig"
-
 endif
