@@ -54,6 +54,7 @@
 		compatible = "himax,hx8394";
 		reset-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
 		backlight = <&backlight>;
+		flip-display;
 		status = "okay";
 
 		port {

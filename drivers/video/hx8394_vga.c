@@ -102,6 +102,7 @@ struct hx8394_panel_priv {
 	struct udevice *reg;
 	struct udevice *backlight;
 	struct gpio_desc reset;
+	bool flip_display;
 };
 
 static const struct display_timing default_timing = {
@@ -266,12 +267,28 @@ static struct reg_value lcd_setup[] = {
 	}
 };
 
+static struct reg_value flip_display_cmd = {
+	.command = MIPI_DSI_DCS_SHORT_WRITE_PARAM,
+	.delay = 0,
+	.buf_size = 2,
+	.buf = {0x36, 0x03} /* Rotate display */
+};
+
 static void hx8394_init_sequence(struct udevice *dev)
 {
 	struct mipi_dsi_panel_plat *plat = dev_get_plat(dev);
 	struct mipi_dsi_device *device = plat->device;
+	struct hx8394_panel_priv *priv = dev_get_priv(dev);
 	int err;
 	int i;
+
+	if (priv->flip_display) {
+		err = mipi_dsi_dcs_write_buffer(device, flip_display_cmd.buf, flip_display_cmd.buf_size);
+		if (err < 0)
+			dev_err(dev, "MIPI DSI DCS write buffer failed: %d\n", err);
+
+		mdelay(flip_display_cmd.delay);
+	}
 
 	for (i = 0; i < ARRAY_SIZE(lcd_setup); i++) {
 		err = mipi_dsi_dcs_write_buffer(device, lcd_setup[i].buf, lcd_setup[i].buf_size);
@@ -360,6 +377,8 @@ static int hx8394_panel_of_to_plat(struct udevice *dev)
 		dev_err(dev, "Cannot get backlight: ret=%d\n", ret);
 		return ret;
 	}
+
+	priv->flip_display = dev_read_bool(dev, "flip-display");
 
 	return 0;
 }
