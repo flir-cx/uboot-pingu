@@ -2,7 +2,7 @@ menu FLIR
 
 choice
 	prompt "Camera Platform"
-	default FLIR_PLATFORM_EC101
+	default NOFLIR
 
 config FLIR_PLATFORM_EOCO
 	bool "EOCO"
@@ -24,6 +24,16 @@ config FLIR_PLATFORM_EC401W
 	bool "EC401W"
 	help
 	  Cameras based on the EC401W board
+
+config FLIR_PLATFORM_EC201
+	bool "EC201"
+	help
+	  Cameras based on the EC201 board
+
+config FLIR_PLATFORM_EC302
+	bool "EC302"
+	help
+	  Cameras based on the EC302 board
 
 config NOFLIR
 	bool "Not FLIR"
