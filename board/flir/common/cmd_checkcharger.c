@@ -138,7 +138,7 @@ static int do_check_charger(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 
 
 
-#ifdef CONFIG_FLIR_NEW_COMMAND_STYLE
+#ifdef CONFIG_FLIR_OLD_COMMAND_STYLE
 U_BOOT_CMD(
 	   checkCharger, 1, 0, do_check_charger,
 	   "",
