@@ -188,7 +188,7 @@ static void setup_spi(void)
 
 int board_spi_cs_gpio(unsigned bus, unsigned cs)
 {
-	if (bus == 1) {
+	if (bus == 0) {
 		if(cs == 0) {
 			return IMX_GPIO_NR(5, 28); //SPI1_CS0_n
 		} else if(cs == 1) {
