@@ -30,6 +30,7 @@
 #include <linux/delay.h>
 #include <spi.h>
 #include <log.h>
+#include <splash.h>
 #include <dm/uclass.h>
 #include "da9063.h"
 #include "da9063_regs.h"
@@ -45,22 +46,40 @@ enum WAKE_EVENTS {
 	RTC_TICK,
 	RESET,
 	ONKEY_LONG_PRESS,
+	BATT_POWER,
 	INVALID_EVENT,
+};
+
+const char *wake_event_names[] = {
+	"USB_CABLE",
+	"VBUS_POWER",
+	"ONKEY",
+	"RTC_TICK",
+	"RESET",
+	"ONKEY_LONG_PRESS",
+	"BATT_POWER",
+	"INVALID_EVENT"
+};
+
+const char *boot_state_names[] = {
+	"NORMAL_BOOT",
+	"LOW_BATTERY",
+	"NO_BATTERY",
+	"USB_CHARGE"
 };
 
 static struct boot_state
 {
-	int boot_reason;
-	int boot_state;
+	unsigned int boot_reason;
+	unsigned int boot_state;
 	unsigned char battery_level;
 	bool battery;
 	bool usb_cable;
+	bool gauge_missing;
 
 } state = {
 	.boot_state = NORMAL_BOOT,
 };
-
-static bool gauge_missing;
 
 //do not boot camera if battery level is below
 #define LOW_BATTERY_LEVEL 3
@@ -68,6 +87,22 @@ static bool gauge_missing;
 #define charge_state_cmd "fad.power_state=3 systemd.unit=charge.target"
 #define BQ27542_I2C_ADDR 0x55
 #define BQ27542_REG_STATE_OF_CHARGE 0x2C
+
+static void print_boot_event(void)
+{
+	if (state.boot_reason < ARRAY_SIZE(wake_event_names))
+		log_info("Boot event: %s\n", wake_event_names[state.boot_reason]);
+	else
+		log_info("Boot event: undefined (code %d)\n", state.boot_reason);
+}
+
+static void print_boot_state(void)
+{
+	if (state.boot_state < ARRAY_SIZE(boot_state_names))
+		log_info("Boot state: %s\n", boot_state_names[state.boot_state]);
+	else
+		log_info("Boot state: undefined (code %d)\n", state.boot_state);
+}
 
 void power_off(bool comparator_enable)
 {
@@ -123,7 +158,7 @@ int get_boot_reason(void)
 	//On key
 	else if (event_a & DA9063_E_NONKEY)
 		boot_reason = ONKEY;
-	//Usb cable
+	//Usb cable insertion when battery already attached
 	else if (event_b & DA9063_E_WAKE)
 		boot_reason = USB_CABLE;
 	//Battery insertion and Usb cable already attached
@@ -135,6 +170,9 @@ int get_boot_reason(void)
 	//Rtc tick
 	else if (event_a & DA9063_E_TICK)
 		boot_reason = RTC_TICK;
+	// Only battery insertion
+	else if (event_a & DA9063_E_SEQ_RDY)
+		boot_reason = BATT_POWER;
 
 	spi_release_bus(slave);
 
@@ -201,52 +239,50 @@ void set_boot_logo(void)
 		break;
 
 	case NORMAL_BOOT:
+		env_set("bootlogo", "bootlogo.bmp.gz");
 		break;
-
 	}
 }
 
 bool get_gauge_state(void)
 {
-	return gauge_missing;
+	return state.gauge_missing;
 }
 
 int usb_charge_setup(void)
 {
-
 	int battery_level = get_battery_level();
 	int boot_reason = get_boot_reason();
 
+	print_boot_event();
 	state.boot_state = NORMAL_BOOT;
-	gauge_missing = false;
-	if (battery_level >= 0)
-		log_info("Battery: charge level %d%% \n", battery_level);
+	state.gauge_missing = false;
 
-	//for cameras without a fuelgauge, we decide if we have a battery by looking at comparator level
+	// For cameras without a fuelgauge (probably test equipment),
+	// we decide if we have a battery by looking at comparator level
 	if (battery_level < 0 && state.battery) {
 		battery_level = FAKE_BATTERY_LEVEL;
-		log_info("Battery: fuel gauge missing, fakeing a battery, %d%%\n", battery_level);
-		gauge_missing = true;
+		log_info("Battery: fuel gauge missing, fakeing a battery\n");
+		state.gauge_missing = true;
 	}
+
+	if (battery_level >= 0)
+		log_info("Battery: charge level %d%%\n", battery_level);
 
 	switch (boot_reason) {
 	case USB_CABLE:
 		if (battery_level < 0) {
 			state.boot_state = NO_BATTERY;
-		} else {
-			if (battery_level < LOW_BATTERY_LEVEL)
-				state.boot_state = LOW_BATTERY;
-			else {
-				if (!gauge_missing) {
-					state.boot_state = USB_CHARGE;
-					if (get_battery_level() == 100) {
-						log_info("bootreason: Battery full charged.\n");
-						power_off(true);
-						return -1;
-					}
-				}
+		} else if (battery_level < LOW_BATTERY_LEVEL) {
+			state.boot_state = LOW_BATTERY;
+		} else if (!state.gauge_missing) {
+			state.boot_state = USB_CHARGE;
+			if (get_battery_level() == 100) {
+				log_info("Battery: Fully charged\n");
+				power_off(true);
+				return -1;
 			}
-		}
+		} // else normal boot
 		break;
 
 	case RESET:
@@ -255,32 +291,30 @@ int usb_charge_setup(void)
 			state.boot_state = NO_BATTERY;
 		else if (battery_level < LOW_BATTERY_LEVEL)
 			state.boot_state = LOW_BATTERY;
+		// else normal boot
 		break;
 
 	case VBUS_POWER:
-		if (battery_level >= 0) {
-			if (!gauge_missing) {
-				state.boot_state = USB_CHARGE;
-				if (get_battery_level() == 100) {
-					log_info("bootreason: Battery full charged.\n");
-					power_off(true);
-					return -1;
-				}
+		if (battery_level >= 0 && !state.gauge_missing) {
+			state.boot_state = USB_CHARGE;
+			if (get_battery_level() == 100) {
+				log_info("Battery: Fully charged\n");
+				power_off(true);
+				return -1;
 			}
-			break;
 		}
-		log_err("Invalid boot event: VBUS_POWER \n");
+		// Invalid boot event: VBUS_POWER
+		if (!state.battery)
+			log_info("Battery: Missing\n");
 		power_off(true);
+		break;
+
 	case ONKEY_LONG_PRESS:
-		log_info("Boot event: ONKEY_LONG_PRESS \n");
-		power_off(false);
-		break;
 	case INVALID_EVENT:
-		log_err("Invalid boot event: INVALID_EVENT \n");
-		power_off(false);
-		break;
+	case BATT_POWER:
 	case RTC_TICK:
-		log_err("Invalid boot event: RTC_TICK \n");
+		// Uninteresting or invalid event:
+		// Power off and stop listening to comparator
 		power_off(false);
 		break;
 	}
@@ -290,12 +324,10 @@ int usb_charge_setup(void)
 
 static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-
-	if (argc == 2) {
+	if (argc == 2)
 		state.boot_state = simple_strtoul(argv[1], NULL, 16);
-		printf("Custom boot state=%d \n", state.boot_state);
-	}
-	log_info("bootreason: Boot state = %d \n", state.boot_state);
+
+	print_boot_state();
 
 	switch (state.boot_state) {
 	case NORMAL_BOOT:
@@ -312,11 +344,16 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		break;
 
 	case USB_CHARGE:
-		log_info("Camera: charge state \n");
 		if (env_set("charge_state", charge_state_cmd))
 			log_err("Was not able to set the env var 'charge_state'!");
 #ifdef CONFIG_FLIR_COMMAND_SHOWCHARGE
 		run_command("chargeapp 0", 0);
+		if (!env_get("charge_state")) {
+			state.boot_state = NORMAL_BOOT;
+			splash_screen_prepare();
+			splash_display();
+			log_info("New boot state: NORMAL_BOOT\n");
+		}
 #else
 		log_info("This u-boot was not built with CONFIG_FLIR_COMMAND_SHOWCHARGE=y!\n");
 #endif

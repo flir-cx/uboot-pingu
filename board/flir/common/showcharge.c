@@ -43,7 +43,7 @@
 #define COLOR_RED_BPP32		0x00e93b3b
 
 #define DISPLAY_ON_TIME_TEST	40000
-#define DISPLAY_ON_TIME		4000
+#define DISPLAY_ON_TIME		2000
 
 //Enums
 enum {
@@ -279,7 +279,7 @@ static int do_chargeapp(void)
 			soc = get_battery_level();
 
 		if (soc < 0) {
-			log_err("chargeapp: No battery!!\n");
+			log_err("chargeapp: No battery\n");
 			goto cam_power_off;
 		}
 
@@ -289,6 +289,12 @@ static int do_chargeapp(void)
 			// then continue with boot of Linux in USB charge mode.
 			if (get_timer(display_timer) >= DISPLAY_ON_TIME)
 				exit = 1;
+			// Check power key
+			if (status_a & DA9063_NONKEY) {
+				if (env_set("charge_state", ""))
+					log_err("Failed to clear env 'charge_state'");
+				exit = 1;
+			}
 		} else {
 			// Test mode
 			if (display_state == DISPLAY_ON) {
