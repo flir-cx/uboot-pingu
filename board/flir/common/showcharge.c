@@ -162,8 +162,8 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 			for (yy = 0; yy < height; yy++) {
 				ppix = priv->fb + (640 * 2) * (start_line + yy) + (left_margin * 2);
 				if (yy == 0 || yy == 1 || yy == 2 ||
-					yy == (height - 3) || yy == (height - 2) ||
-					yy == (height - 1)) {
+				    yy == (height - 3) || yy == (height - 2) ||
+				    yy == (height - 1)) {
 					for (xx = 0; xx < width; xx++) {
 						*ppix++ = COLOR_WHITE_BPP16;
 						if (ppix == end)
@@ -176,11 +176,11 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 					ppix[width - 3] = COLOR_WHITE_BPP16;
 					ppix[width - 2] = COLOR_WHITE_BPP16;
 					ppix[width - 1] = COLOR_WHITE_BPP16;
-					if (yy > (height/2 - 17) && yy < (height/2 + 17)) {
+					if (yy > (height / 2 - 17) && yy < (height / 2 + 17)) {
 						int ii;
+
 						for (ii = 0; ii < 10; ii++)
 							ppix[width + ii] = COLOR_WHITE_BPP16;
-
 					}
 				}
 			}
@@ -198,7 +198,8 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 				fuel_width -= 6;
 
 			for (yy = 0; yy < (height - 6); yy++) {
-				ppix = priv->fb + (640*2)*(start_line + 3 + yy) + ((left_margin + 3) * 2);
+				ppix = priv->fb + (640 * 2) * (start_line + 3 + yy) +
+					((left_margin + 3) * 2);
 				for (xx = 0; xx < (fuel_width); xx++) {
 					*ppix++ = color_code;
 					if (ppix == end)
@@ -231,11 +232,11 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 
 static int charge_progress(struct udevice *dev, uint16_t *old_color_code)
 {
-	uint16_t new_color_code = get_color(last_battery_level);
+	u16 new_color_code = get_color(last_battery_level);
 
 	if (new_color_code != *old_color_code) {
 		log_info("new_color_code = 0x%04X, *old_color_code = 0x%04X\n",
-			new_color_code, *old_color_code);
+			 new_color_code, *old_color_code);
 		*old_color_code = new_color_code;
 	}
 	if (draw_box(dev, new_color_code))
@@ -320,7 +321,7 @@ static int do_chargeapp(void)
 			if (event_a & DA9063_E_NONKEY) {
 				if (display_state == DISPLAY_ON) {
 					run_command_list("chargeState 3; run mmcbootflir", -1, 0);
-					return 0;
+					exit = 1;
 				} else {
 					turn_on_display();
 					old_color_code = get_color(last_battery_level);
@@ -414,7 +415,7 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 		if (argc < 3)
 			break;
 		color_test = true;
-		cmd_line_color = (uint16_t) simple_strtoul(argv[2], NULL, 16);
+		cmd_line_color = (u16)simple_strtoul(argv[2], NULL, 16);
 		old_color_code = cmd_line_color;
 		ret = 0;
 		break;
@@ -431,11 +432,10 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 	return ret;
 }
 
-U_BOOT_CMD(
-    chargeapp,	6,	0,	do_chargeapp_cmd,
-	"Battery image handling when USB charge. (might switch off the camera)",
-	"cmd  /{[line, left_margin, width, height]}\n"
-	"\t   0 -> Aimed only for autoboot.\n"
-	"\t   1 {[<line: 0-200> <Left_margin: 0-300> <width: 10-300> <height: 40-200>]} -> Frame buffer test\n"
-	"\t   2 {[<color: 0xXXXX]} -> Color test, default dimensions.\n"
-);
+U_BOOT_CMD(chargeapp, 6, 0, do_chargeapp_cmd,
+	   "Battery image handling when USB charge. (might switch off the camera)",
+	   "cmd  /{[line, left_margin, width, height]}\n"
+	   "\t   0 -> Aimed only for autoboot.\n"
+	   "\t   1 {[<line: 0-200> <Left_margin: 0-300> <width: 10-300> <height: 40-200>]} -> Frame buffer test\n"
+	   "\t   2 {[<color: 0xXXXX]} -> Color test, default dimensions.\n"
+	);

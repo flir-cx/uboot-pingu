@@ -25,6 +25,7 @@
 #include <asm/arch/mx6-pins.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/mach-imx/mxc_i2c.h>
+#include <asm/arch-imx/cpu.h>
 #include <env.h>
 #include <i2c.h>
 #include <linux/delay.h>
@@ -37,7 +38,6 @@
 #include "usbcharge.h"
 
 extern struct spi_slave *slave;
-u32 get_imx_reset_cause(void);
 
 enum WAKE_EVENTS {
 	USB_CABLE = 0,
@@ -116,8 +116,8 @@ void power_off(bool comparator_enable)
 	pmic_write_bitfield(DA9063_REG_IRQ_MASK_A, DA9063_M_TICK, DA9063_M_TICK);
 	pmic_write_bitfield(DA9063_REG_CONTROL_A, DA9063_SYSTEM_EN, 0);
 
-	while (1) {
-	}
+	while (1)
+		;
 }
 
 void get_pmic_regs(unsigned char *event_a, unsigned char *status_a)
@@ -131,9 +131,9 @@ void get_pmic_regs(unsigned char *event_a, unsigned char *status_a)
 
 int get_boot_reason(void)
 {
-
 	unsigned char event_a, event_b, fault_log, status_a;
 	int boot_reason = INVALID_EVENT;
+
 	spi_claim_bus(slave);
 
 	pmic_read_reg(DA9063_REG_STATUS_A, &status_a);
@@ -147,13 +147,14 @@ int get_boot_reason(void)
 	pmic_read_reg(DA9063_REG_EVENT_B, &event_b);
 	pmic_write_reg(DA9063_REG_EVENT_B, event_b);
 	log_info("DA9063: event_a = 0x%x , event_b = 0x%x status_a = 0x%x fault_log = 0x%x\n",
-		event_a, event_b, status_a, fault_log);
+		 event_a, event_b, status_a, fault_log);
 
 	//Long press on-key button
 	if (fault_log & DA9063_KEY_RESET)
 		boot_reason = ONKEY_LONG_PRESS;
 	//Reset event
-	else if ((fault_log & (DA9063_NSHUTDOWN | DA9063_TWD_ERROR)) || (get_imx_reset_cause() & 0x10))
+	else if ((fault_log & (DA9063_NSHUTDOWN | DA9063_TWD_ERROR)) ||
+		 (get_imx_reset_cause() & 0x10))
 		boot_reason = RESET;
 	//On key
 	else if (event_a & DA9063_E_NONKEY)
@@ -360,21 +361,19 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		break;
 
 	default:
-		log_err("Invalid boot state \n");
+		log_err("Invalid boot state\n");
 		break;
 	}
 
 	return 0;
-
 }
 
-U_BOOT_CMD(
-    chargeState,	2,	0,	do_boot_state,
-    "Process charge state, might power off camera",
-	" {state} \n"
-	"0 - Normal state		-> boot camera into run state\n"
-	"1 - Low battery state		-> power off camera\n"
-	"2 - No battery			-> power off camera\n"
-	"3 - Charge battery		-> boot camera into charge state\n"
-);
+U_BOOT_CMD(chargeState, 2, 0, do_boot_state,
+	   "Process charge state, might power off camera",
+	   " {state}\n"
+	   "0 - Normal state		-> boot camera into run state\n"
+	   "1 - Low battery state		-> power off camera\n"
+	   "2 - No battery			-> power off camera\n"
+	   "3 - Charge battery		-> boot camera into charge state\n"
+	);
 
