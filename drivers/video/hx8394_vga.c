@@ -106,15 +106,15 @@ struct hx8394_panel_priv {
 };
 
 static const struct display_timing default_timing = {
-	.pixelclock.typ		= 46894000,
+	.pixelclock.typ		= 21325000,
 	.vactive.typ		= 480,
 	.hactive.typ		= 640,
-	.vfront_porch.typ	= 0,
-	.vback_porch.typ	= 0,
-	.vsync_len.typ		= 20,
-	.hfront_porch.typ	= 26,
 	.hback_porch.typ	= 15,
-	.hsync_len.typ		= 2,
+	.hfront_porch.typ	= 26,
+	.vfront_porch.typ	= 9,
+	.vback_porch.typ	= 16,
+	.hsync_len.typ		= 20,
+	.vsync_len.typ		= 2,
 };
 
 struct reg_value {
