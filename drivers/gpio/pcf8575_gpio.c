@@ -102,6 +102,31 @@ static int pcf8575_direction_output(struct udevice *dev,
 	return ret;
 }
 
+static int pcf8575_is_output(struct udevice *dev, int offset)
+{
+	// Until we know better, handle all pins as outputs for this device
+	// On this device, an input is a pin driven high, that we read...
+	return 0; /* 0: output; 1: input */
+};
+
+static int pcf8575_get_function(struct udevice *dev, uint offset)
+{
+	int ret = pcf8575_is_output(dev, offset);
+
+	switch (ret) {
+	case 0:
+		ret = GPIOF_OUTPUT;
+		break;
+	case 1:
+		ret = GPIOF_INPUT;
+		break;
+	default:
+		ret = GPIOF_UNKNOWN;
+		break;
+	}
+	return ret;
+}
+
 static int pcf8575_get_value(struct udevice *dev, unsigned int offset)
 {
 	int             value;
@@ -157,6 +182,7 @@ static const struct dm_gpio_ops pcf8575_gpio_ops = {
 	.direction_output	= pcf8575_direction_output,
 	.get_value		= pcf8575_get_value,
 	.set_value		= pcf8575_set_value,
+	.get_function		= pcf8575_get_function,
 };
 
 static const struct udevice_id pcf8575_gpio_ids[] = {
