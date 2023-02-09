@@ -535,8 +535,6 @@ static int lp5562_led_program_pattern(struct udevice *dev, int program, int para
 	u16 wait_time;
 	int ret;
 
-	printf("program pattern %d %d\n", program, param);
-
 	switch (program)
 	{
 		case PATTERN_BOOT:
@@ -568,6 +566,7 @@ static int lp5562_led_program_pattern(struct udevice *dev, int program, int para
 	if(ret)
 	{
 		printf("failed to program engine 3: %d", ret);
+		goto done;
 	}
 	ret = lp5562_led_program_engine(parent_dev, program2, opcode, 2);
 	if(ret)

@@ -219,7 +219,7 @@ int check_button_sequence(void)
 	if (gpio_get_value(PWR_GPIO) == TRIG_OFF)
 		goto out_fail;
 
-	printf("Button sequence 1\n");
+	printf("LED sequence 1\n");
 	leds_all_blink_slow();
 	/* If trigger is released we enter recovery sequence */
 	if (trigger_wait_until(TRIG_OFF, SEQ_SLOW_FDEFAULT_MS) == OK) {
@@ -229,12 +229,12 @@ int check_button_sequence(void)
 		return OK;
 	}
 
-	printf("Button sequence 2\n");
+	printf("LED sequence 2\n");
 	leds_all_blink_fast();
 	if (trigger_wait_until(TRIG_OFF, SEQ_FAST_FDEFAULT_MS) == OK)
 		goto out_fail;
 
-	printf("Button sequence 3\n");
+	printf("LED sequence 3\n");
 	leds_battery_solid(100);
 	/* If trigger is released while leds are on we do a factory reset */
 	if (trigger_wait_until(TRIG_OFF, SEQ_END_MS) == FAIL)
