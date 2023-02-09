@@ -146,9 +146,9 @@ static int pcf8575_gpio_probe(struct udevice  *dev)
 {
 	struct gpio_dev_priv *uc_priv = dev_get_uclass_priv(dev);
 
+	i2c_set_chip_offset_len(dev, 0); //chip does not contain any registers!
 	debug("%s GPIO controller with %d gpios probed\n",
 	      uc_priv->bank_name, uc_priv->gpio_count);
-
 	return 0;
 }
 
