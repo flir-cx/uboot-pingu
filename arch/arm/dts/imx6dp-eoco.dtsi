@@ -555,6 +555,48 @@
 		pagesize = <16>;
 	};
 
+	eodc_24c02: eodc_24c02@52 {
+		compatible = "atmel,24c02";
+		reg = <0x52>;
+		pagesize = <16>;
+	};
+
+	eodp_24c02: eodp_24c02@56 {
+		compatible = "atmel,24c02";
+		reg = <0x56>;
+		pagesize = <16>;
+	};
+
+	eopc_24c02: eopc_24c02@55 {
+		compatible = "atmel,24c02";
+		reg = <0x55>;
+		pagesize = <16>;
+	};
+
+	eohp_24c02: eohp_24c02@54 {
+		compatible = "atmel,24c02";
+		reg = <0x54>;
+		pagesize = <16>;
+	};
+
+	eohp_joystick_pcf8574: eohp_joystick_pcf8574@39 {
+		compatible = "ti,pcf8574";
+		reg = <0x39>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names = "TJ_B_READ", "TJ_H_READ", "TJ_G_REAR", "TJ_A_REAR",
+			"TJ_F_READ", "TJ_C_READ", "TJ_D_READ", "TJ_E_REAR";
+	};
+
+	eohp_dir_pcf8574: eohp_dir_pcf8574@3a {
+		compatible = "ti,pcf8574";
+		reg = <0x3a>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names = "TJ_PUSH_TOP", "FJ_A_TOP", "B3 TOP", "FJ PUSH TOP",
+			"LED R TOP", "B2 TOP", "FJ E TOP", "B1 TOP";
+	};
+
 };
 &i2c2 {
 	clock-frequency = <100000>;
