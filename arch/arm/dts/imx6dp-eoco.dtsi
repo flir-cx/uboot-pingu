@@ -11,6 +11,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/regulator/dlg,da9063-regulator.h>
+#include <dt-bindings/input/input.h>
 /*This file represents ec101-d and later*/
 
 / {
@@ -26,6 +27,51 @@
 		mmc3 = &usdhc3;
 
 		ethernet0 = &fec;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+		//pinctrl-names = "default";
+		//pinctrl-0 = <&pinctrl_default>;
+
+		key-press {
+			  label = "press";
+			  gpios = <&eohp_dir_pcf8574 0 GPIO_ACTIVE_LOW>;
+		};
+		key-southwest {
+			  label = "SW";
+			  gpios = <&eohp_joystick_pcf8574 0 GPIO_ACTIVE_LOW>;
+		};
+		key-northwest {
+			  label = "NW";
+			  gpios = <&eohp_joystick_pcf8574 1 GPIO_ACTIVE_LOW>;
+		};
+		key-norht {
+			  label = "N";
+			  gpios = <&eohp_joystick_pcf8574 2 GPIO_ACTIVE_LOW>;
+		};
+		key-west {
+			label = "W";
+			gpios = <&eohp_joystick_pcf8574 3 GPIO_ACTIVE_LOW>;
+		};
+
+		key-northeast {
+			label = "NE";
+			gpios = <&eohp_joystick_pcf8574 4 GPIO_ACTIVE_LOW>;
+		};
+
+		key-south {
+			label = "S";
+			gpios = <&eohp_joystick_pcf8574 5 GPIO_ACTIVE_LOW>;
+		};
+		key-southeast {
+			label = "SE";
+			gpios = <&eohp_joystick_pcf8574 6 GPIO_ACTIVE_LOW>;
+		};
+		key-east {
+			label = "E";
+			gpios = <&eohp_joystick_pcf8574 7 GPIO_ACTIVE_LOW>;
+		};
 	};
 
 	memory {
