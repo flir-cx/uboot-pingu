@@ -128,6 +128,13 @@ void init_pf1550_pmic(void)
 #endif
 	pf1550_write_reg(PF1550_PMIC_REG_PWRCTRL0, new_pwr_ctrl0);
 
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+	//enable charger and set charging voltage to 3.1V
+	pf1550_write_reg(PF1550_PMIC_REG_COINCELL_CONTROL, 0x1D);
+	//set default value to VSNVS register
+	pf1550_write_reg(PF1550_PMIC_REG_VSNVS_CTRL, 0x00);
+#endif
+
 	mx7ulp_iomux_setup_multiple_pads(pmic_wdog_pad, ARRAY_SIZE(pmic_wdog_pad));
 	gpio_request(PMIC_WDOG_GPIO, "pmic_wdog");
 }
