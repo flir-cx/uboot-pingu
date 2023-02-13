@@ -165,9 +165,9 @@ int fuelgauge_init(void)
 	/* Thermistor mode: fuelgauge measures the attached resistor */
 	fuelgauge_thermistor_mode();
 
-	// param should be 1 for lc709203f and 0 for lc709203f
+	/* Check if we have LC709203 or LC709204 */
 	type = fuelguage_get_type();
-	printf("found %s\n", type ? "LC709203" : "LC709204");
+	printf("found %s\n", (type == LC709203F) ? "LC709203" : "LC709204");
 
 	/* Check if battery profile already is selected
 	 * Every write to this register will recalibrate the fuelgauge,
@@ -183,15 +183,17 @@ int fuelgauge_init(void)
 		/* Setup as LC709204 */
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 		fuelgauge_write_reg(LC709204_APA, 0x29, 0x29);
-#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201))
 		fuelgauge_write_reg(LC709204_APA, 0x2d, 0x2d);
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+		fuelgauge_write_reg(LC709204_APA, 0x40, 0x40);
 #endif
 		/* Set CHG_TERM_CURR (taper current in 0.01C), 0.03C => 54mA with 1800mA battery */
-		fuelgauge_write_reg(LC709204_CHG_TERM_CURR, 0x03, 0);
+		fuelgauge_write_reg(LC709204_CHG_TERM_CURR, 0x03, 0x00);
 		/* Empty Cell Voltage. 0 will disable ITE offset update. */
-		fuelgauge_write_reg(LC709204_EMPTY_VOLT, 0x00, 0);
+		fuelgauge_write_reg(LC709204_EMPTY_VOLT, 0x00, 0x00);
 		/* Set ITE Offset, will scale RSOC to reach 0% when 3.2V */
-		fuelgauge_write_reg(LC709204_ITE_OFFSET, 0x15, 0);
+		fuelgauge_write_reg(LC709204_ITE_OFFSET, 0x15, 0x00);
 	}
 
 	return 0;
