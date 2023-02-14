@@ -1080,6 +1080,28 @@ int board_late_init(void)
 		env_set("board_rev", "MX6DL");
 #endif
 
+	run_command("mw.l 20e0154 5 1", 0); //set pinmux for GPIO5.0 to gpio pin
+
+	// cooler is temporally disabled by setting the variable 'cooler' to off (any value)
+	// cooler is reeanbled by pressing the joystick button during reset cycle (power on)
+	// i.e.
+	//   - joystick button pressed during uboot start
+	//     - and cooler variable is set to any value
+	//       - clear cooler variable
+	//       - save environment
+	//  Thus, during forthcoming boots, the cooler will be enabled
+
+	if (run_command("button press", 0) == 0) {
+		if (env_get("cooler")) {
+			env_set("cooler", "");
+			env_save();
+		}
+	}
+
+	if (env_get("cooler")) {
+		run_command("gpio set GPIO5_0", 0);
+	}
+
 #ifdef CONFIG_ENV_IS_IN_MMC
 	board_late_mmc_env_init();
 #endif
