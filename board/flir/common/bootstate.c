@@ -162,6 +162,34 @@ int splash_screen_prepare(void)
 }
 #endif
 
+static void set_boot_state(void)
+{
+	printf("Setting boot state!\n");
+
+	switch (state.wake_event) {
+	case USB_CABLE:
+		state.boot_state = USB_CHARGE;
+		break;
+	case RESET:
+	case ONKEY:
+		fuelgauge_get_battery_voltage(&state.battery_mv);
+		printf("Battery voltage mV=%d... ", state.battery_mv);
+		if (state.battery_mv < LOW_BATTERY_mV) {
+			printf("LOW\n");
+			state.boot_state = LOW_BATTERY;
+		} else {
+			printf("OK\n");
+			state.boot_state = NORMAL_BOOT;
+		}
+		break;
+	default:
+		printf("Invalid boot event: INVALID_EVENT\n");
+		fuelgauge_sleep();
+		power_off();
+		break;
+	}
+}
+
 int boot_state_init(void)
 {
 	struct udevice *dev;
@@ -175,10 +203,14 @@ int boot_state_init(void)
 	}
 
 	state.force_boot_state = get_force_boot_state(dev);
-	if (state.force_boot_state != INVALID_STATE)
+	if (state.force_boot_state != INVALID_STATE) {
+		printf("Setting forced boot state!\n");
+		state.boot_state = state.force_boot_state;
 		return 0;
+	}
 
 	state.wake_event = get_wake_event(dev);
+	set_boot_state();
 
 	dm_i2c_read(dev, PF1550_PMIC_REG_PWRCTRL3, &pwrctrl3, 1);
 	printf("pwrctrl3=0x%x\n", pwrctrl3);
@@ -202,33 +234,6 @@ int boot_state_init(void)
 
 static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-	if (state.force_boot_state != INVALID_STATE) {
-		state.boot_state = state.force_boot_state;
-	} else {
-		switch (state.wake_event) {
-		case USB_CABLE:
-			state.boot_state = USB_CHARGE;
-			break;
-		case RESET:
-		case ONKEY:
-			fuelgauge_get_battery_voltage(&state.battery_mv);
-			printf("Battery voltage mV=%d... ", state.battery_mv);
-			if (state.battery_mv < LOW_BATTERY_mV) {
-				printf("LOW\n");
-				state.boot_state = LOW_BATTERY;
-			} else {
-				printf("OK\n");
-				state.boot_state = NORMAL_BOOT;
-			}
-			break;
-		default:
-			printf("Invalid boot event: INVALID_EVENT\n");
-			fuelgauge_sleep();
-			power_off();
-			break;
-		}
-	}
-
 	/* State specified from u-boot prompt has priority over
 	 * previously set boot_state.
 	 */
@@ -246,10 +251,7 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	case NO_BATTERY:
 		printf("Battery missing\n");
 	case LOW_BATTERY:
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
-		set_boot_logo();
-		splash_display();
-#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 		leds_critical();
 #endif
 		mdelay(2000);
@@ -257,10 +259,6 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		break;
 	case USB_CHARGE:
 		printf("Camera: charge state\n");
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
-		set_boot_logo();
-		splash_display();
-#endif
 		run_command("chargeapp", 0);
 		break;
 	default:
