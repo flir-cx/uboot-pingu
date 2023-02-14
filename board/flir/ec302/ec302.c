@@ -119,6 +119,11 @@ int board_late_init(void)
 #if defined(CONFIG_OF_BOARD_SETUP)
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
+	int temp[2];
+
+	temp[0] = cpu_to_fdt32(gd->fb_base);
+	temp[1] = cpu_to_fdt32(640 * 480 * 3); /* MIPI_DSI_FMT_RGB888 is 3 bytes per pixel */
+	do_fixup_by_path(blob, "lcdif", "bootlogo", temp, sizeof(temp), 0);
 	do_fixup_by_path_string(blob, "/chosen", "u-boot,version", U_BOOT_VERSION_STRING);
 
 	return 0;
