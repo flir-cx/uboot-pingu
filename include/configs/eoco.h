@@ -17,6 +17,16 @@
 	"fuse prog -y 0 6 0x00000010; fuse prog -y 0 5 0x00205860; "
 #include "flir_mx6_common.h"
 
+#if CONFIG_FLIR_MFG == 0 /* Normal boot */
+#undef CONFIG_BOOTCOMMAND
+#define CONFIG_BOOTCOMMAND \
+	"if recoverykey; then run recoveryboot;" \
+	"else run mmcbootflir;" \
+	"fi;" \
+	"echo Fallback to recovery boot!....;" \
+	"run recoveryboot;"
+#endif
+
 #define CONFIG_IMX6_LDO_BYPASS
 
 /* FUELGAUGE BQ40Z50 */
