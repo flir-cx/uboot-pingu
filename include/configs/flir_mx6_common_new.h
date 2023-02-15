@@ -1,22 +1,17 @@
 /* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2012 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
+ * Copyright 2023 FLIR
  *
- * Configuration settings for the Freescale i.MX6Q SabreSD board.
+ * Configuration settings for FLIR MX6 targets.
  */
 
-#ifndef __MX6EC701_CONFIG_H
-#define __MX6EC701_CONFIG_H
-
-//Moving common parts of this file to new include file.... Please cleanup this file...
-#include "flir_mx6_common_new.h"
+#ifndef __FLIR_MX6_COMMON_CONFIG_NEW_H
+#define __FLIR_MX6_COMMON_CONFIG_NEW_H
 
 #ifdef CONFIG_SPL
 #include "imx6_spl.h"
 #endif
-
-#define CONFIG_BOARD_DESCRIPTION	"FLIR ec701 board"
 
 #define CONFIG_MACH_TYPE	3980
 #define CONFIG_MXC_UART_BASE	UART1_BASE
@@ -30,11 +25,6 @@
 #elif defined(CONFIG_MX6S)
 #define PHYS_SDRAM_SIZE		(512u * 1024 * 1024)
 #endif
-
-#define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6dl-evco.dtb\0"
-#define CONFIG_EMMC_FUSE_CMD \
-	"fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; "
-#include "flir_mx6_common.h"
 
 /* Falcon Mode */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"args"
@@ -68,15 +58,6 @@
 #endif
 #endif
 
-/*Spi*/
-#define CONFIG_SYS_USE_SPINOR
-// CONFIG_SF_DEFAULT_CS = IMX_GPIO_NR(5, 28) = 156
-
-/* DA9063 PMIC */
-#define DA9063_RW                   0x1 /* Host indicate reading acces via RW=1 */
-#define DA9063_SPI_CS               0 // Used to be IMX_GPIO_NR(3, 20), n.b.
-#define DA9063_SPI_BUS              3
-
 /* USB Configs */
 #ifdef CONFIG_CMD_USB
 #define CONFIG_EHCI_HCD_INIT_AFTER_RESET
@@ -103,4 +84,9 @@
 	#define CONFIG_WAVEFORM_BUF_SIZE		0x400000
 #endif /* CONFIG_SPLASH_SCREEN && CONFIG_MXC_EPDC */
 
-#endif                         /* __MX6EC701_CONFIG_H */
+/* DA9063 PMIC */
+#define DA9063_RW                   0x1 /* Host indicate reading acces via RW=1 */
+#define DA9063_SPI_CS               0 // Used to be IMX_GPIO_NR(3, 20), n.b.
+#define DA9063_SPI_BUS              3
+
+#endif
