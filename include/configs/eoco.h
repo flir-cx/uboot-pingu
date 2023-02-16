@@ -6,8 +6,8 @@
  * Configuration settings for the Freescale i.MX6Q SabreSD board.
  */
 
-#ifndef __MX6EOCO_CONFIG_H
-#define __MX6EOCO_CONFIG_H
+#ifndef __EOCO_CONFIG_H
+#define __EOCO_CONFIG_H
 
 #include "flir_mx6_common_new.h"
 
@@ -25,4 +25,4 @@
 #define BQ40Z50_REG_STATE_OF_CHARGE 0x0d
 #define BQ40Z50_BATT_CRITICAL_LEVEL 0x0
 
-#endif                         /* __MX6EC101_CONFIG_H */
+#endif                         /* __EOCO_CONFIG_H */
