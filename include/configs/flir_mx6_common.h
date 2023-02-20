@@ -109,7 +109,8 @@
 #error "CONFIG_FLIR_MFG is not set to a valid value!"
 #endif /* CONFIG_FLIR_MFG */
 
-#define CONFIG_EXTRA_ENV_COMMANDS \
+#if CONFIG_FLIR_MFG == 0 /* Normal boot */
+#define CONFIG_EXTRA_ENV_COMMANDS		\
 	"update-fdt=" \
 			  "if ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} /boot/update-fdt.uscr; then " \
 					"source ${tempaddr}; " \
@@ -131,7 +132,6 @@
 			"setenv fdt_file ${fdt_file_default};" \
 		"fi\0" \
 	"loadsplash=run select_boot; ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} /boot/${bootlogo};cp.w ${tempaddr} ${splashimage} ${filesize}\0" \
-	"hw_start=checkCharger; loadFPGA t\0" \
 	"mmcargs=setenv bootargs console=${console},${baudrate} ${smp} " \
 		"${rootfs} rootwait rw ethaddr=${ethaddr} " \
 		"wlanaddr=${wlanaddr} btaddr=${btaddr} ${bootargs_once} " \
@@ -182,6 +182,37 @@
 		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr};\0" \
 	"" /* EOL */
 
+#elif CONFIG_FLIR_MFG == 1 /* fuse and setup the partitions then recboot */
+#define CONFIG_EXTRA_ENV_COMMANDS \
+	"partition_mmc_flir=mmc rescan; " \
+		"if mmc dev ${mmcdev} 0; then " \
+			"gpt write mmc ${mmcdev} ${parts_flir}; " \
+			"mmc rescan; " \
+		"else " \
+			"if mmc dev ${mmcdev}; then " \
+				"gpt write mmc ${mmcdev} ${parts_flir}; " \
+				"mmc rescan; " \
+			"else; " \
+			"fi; " \
+		"fi; \0" \
+	"recargs=setenv bootargs console=${console},${baudrate} " \
+		"root=/dev/ram0 ethaddr=${ethaddr}\0"\
+	"recboot=echo Booting preloaded recovery...; " \
+		"run recargs; " \
+		"run hw_start;" \
+		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
+	"" /* EOL */
+#elif CONFIG_FLIR_MFG == 2 /* recboot */
+#define CONFIG_EXTRA_ENV_COMMANDS \
+	"recargs=setenv bootargs console=${console},${baudrate} " \
+		"root=/dev/ram0 ethaddr=${ethaddr}\0"\
+	"recboot=echo Booting preloaded recovery...; " \
+		"run recargs; " \
+		"run hw_start;" \
+		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
+	"" /* EOL */
+#endif
+
 #define CONFIG_EXTRA_ENV_VARIABLES \
 	"uimage=uImage\0" \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
@@ -219,6 +250,7 @@
 	CONFIG_EXTRA_ENV_COMMANDS \
 	CONFIG_EXTRA_ENV_VARIABLES \
 	RANDOM_UUIDS \
+	"hw_start=checkCharger; loadFPGA t\0" \
 	""	/* end line */
 
 #define CONFIG_ARP_TIMEOUT 200UL
