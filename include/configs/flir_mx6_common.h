@@ -110,9 +110,6 @@
 #endif /* CONFIG_FLIR_MFG */
 
 #define CONFIG_EXTRA_ENV_COMMANDS \
-	"loadscript=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${script}\0" \
-	"loadscript4=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} " \
-		"boot/${script}\0" \
 	"update-fdt=" \
 			  "if ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} /boot/update-fdt.uscr; then " \
 					"source ${tempaddr}; " \
@@ -145,68 +142,12 @@
 	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"loadfdt4=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} " \
 		"boot/${fdt_file}\0" \
-	"mmcboot=echo Booting from mmc ...; " \
-		"run mmcargs; " \
-		"if run loaduimage; then " \
-			"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-				"if run loadfdt; then " \
-					"bootm ${loadaddr} - ${fdt_addr}; " \
-				"else " \
-					"if test ${boot_fdt} = try; then " \
-						"bootm; " \
-					"else " \
-						"echo WARN: Cannot load the DT; " \
-					"fi; " \
-				"fi; " \
-			"else " \
-				"bootm; " \
-			"fi;" \
-		"else " \
-			"echo ERR: Cannot load the kernel; " \
-		"fi;\0" \
-	"netargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/nfs " \
-		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp " \
-		"${extra_bootargs} ${charge_state}\0" \
-	"netboot=echo Booting from net ...; " \
-		"run hw_start; " \
-		"run netargs; " \
-		"if test ${ip_dyn} = yes; then " \
-			"setenv get_cmd dhcp; " \
-		"else " \
-			"setenv get_cmd tftp; " \
-		"fi; " \
-		"${get_cmd} ${uimage}; " \
-		"if test ${boot_fdt} = yes || test ${boot_fdt} = try; then " \
-			"if ${get_cmd} ${fdt_addr} ${fdt_file_default}; then " \
-				"bootm ${loadaddr} - ${fdt_addr}; " \
-			"else " \
-				"if test ${boot_fdt} = try; then " \
-					"bootm; " \
-				"else " \
-					"echo WARN: Cannot load the DT; " \
-				"fi; " \
-			"fi; " \
-		"else " \
-			"bootm; " \
-		"fi;\0" \
 	"recargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/ram0 ethaddr=${ethaddr}\0"\
-	"recboot=echo Booting preloaded recovery...; " \
+		"root=/dev/ram0 ethaddr=${ethaddr}\0" \
+	"recboot=echo Booting preloaded recovery...; "\
 		"run recargs; " \
 		"run hw_start;" \
 		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
-	"partition_mmc_flir=mmc rescan; " \
-		"if mmc dev ${mmcdev} 0; then " \
-			"gpt write mmc ${mmcdev} ${parts_flir}; " \
-			"mmc rescan; " \
-		"else " \
-			"if mmc dev ${mmcdev}; then " \
-				"gpt write mmc ${mmcdev} ${parts_flir}; " \
-				"mmc rescan; " \
-			"else; " \
-			"fi; " \
-		"fi; \0" \
 	"setup_boot=bootargs_once=init=/sbin/preinit; " \
 		"run select_boot;\0" \
 	"select_boot=" \
@@ -239,29 +180,9 @@
 		"setenv mmcpart 1; " \
 		"run loadfdt; run loadinitrd; run loaduimage; " \
 		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr};\0" \
-	"bootargs_mmc_linux=setenv bootargs console=${console},${baudrate} " \
-		"${bootargs_linux} root=${mmcroot} rootwait rw " \
-		"${bootargs_once} ${extra_bootargs}\0" \
-	"bootargs_tftp_linux=setenv bootargs console=${console},${baudrate} " \
-		"${bootargs_linux} root=/dev/nfs " \
-		"ip=dhcp nfsroot=${serverip}:${rootpath},v3,tcp " \
-		"${bootargs_once} ${extra_bootargs}\0" \
-	"bootargs_nfs_linux=run bootargs_tftp_linux\0" \
-	"partition_mmc_linux=mmc rescan;" \
-		"if mmc dev ${mmcdev} 0; then " \
-			"gpt write mmc ${mmcdev} ${parts_linux};" \
-			"mmc rescan;" \
-		"else " \
-			"if mmc dev ${mmcdev};then " \
-				"gpt write mmc ${mmcdev} ${parts_linux};" \
-				"mmc rescan;" \
-			"else;" \
-			"fi;" \
-		"fi;\0" \
 	"" /* EOL */
 
 #define CONFIG_EXTRA_ENV_VARIABLES \
-	"script=boot.scr\0" \
 	"uimage=uImage\0" \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
 	CONFIG_FLIR_DEFAULT_DTB      \
@@ -275,14 +196,12 @@
 	"initrd_addr=0x19000000\0" \
 	"initrd_file=uRamdisk.img\0" \
 	"boot_fdt=try\0" \
-	"ip_dyn=yes\0" \
 	"console=" CONSOLE_DEV "\0" \
 	"fdt_high=0xffffffff\0" \
 	"initrd_high=0xffffffff\0" \
 	"mmcpart=1\0" \
 	"extra_bootargs=quiet\0" \
 	"system_active=system1\0" \
-	"mmcroot=PARTUUID=1c606ef5-f1ac-43b9-9bb5-d5c578580b6b\0" \
 	"parts_flir=\"uuid_disk=${uuid_disk};" \
 		"start=2MiB,name=recovery,size=40MiB,uuid=${part1_uuid};" \
 		"name=rootfs1,size=504MiB,uuid=${part2_uuid};" \
@@ -291,15 +210,8 @@
 		"name=apps,size=512MiB,uuid=${part5_uuid};" \
 		"name=data,size=512MiB,uuid=${part6_uuid};" \
 		"name=spare,size=-,uuid=${part7_uuid};\" \0" \
-	"parts_linux=\"uuid_disk=${uuid_disk};" \
-		"start=2MiB," \
-		"name=linux,size=64MiB,uuid=${part1_uuid};" \
-		"name=linux2,size=64MiB,uuid=${part2_uuid};" \
-		"name=rootfs,size=1GiB,uuid=${part3_uuid};" \
-		"name=rootfs2,size=1GiB,uuid=${part4_uuid};" \
-		"name=userfs,size=-,uuid=${part5_uuid};" \
-		"\" \0" \
 	"mmcdev=0\0" \
+	"bootdelay=0\0" \
 	"" /* EOL */
 
 #define CONFIG_EXTRA_ENV_SETTINGS	\
