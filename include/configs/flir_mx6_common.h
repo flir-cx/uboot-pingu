@@ -13,7 +13,6 @@
 #include "mx6_common.h"
 #include "imx_env.h"
 #include "flir_mfgmode.h"
-#include "flir_mx6_common_new.h"
 
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN (16 * SZ_1M)

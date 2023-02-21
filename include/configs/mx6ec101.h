@@ -9,6 +9,8 @@
 #ifndef __MX6EC101_CONFIG_H
 #define __MX6EC101_CONFIG_H
 
+#include "flir_mx6_common_new.h"
+
 #define CONFIG_BOARD_DESCRIPTION	"FLIR ec101 board"
 
 #define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6dl-evco.dtb\0"
