@@ -203,14 +203,117 @@ int board_spi_cs_gpio(unsigned bus, unsigned cs)
 	return -1;
 }
 
-static int detect_orise(struct display_info_t const *dev)
+/**
+ * @brief Detects Orise panel by probing the touch located on bus 3,
+ *	  address 0x38. To probe the touch it first needs to be enabled.
+ *
+ * @param dev N/A
+ * @return int 0 if found
+ */
+static int do_detect_orise(void)
 {
-	return 1;
+	struct udevice *bus2, *bus3, *pwrdev, *touchdev;
+	int ret;
+	unsigned int val;
+
+	/* First enable the touch, O7 of PCA9534BS on bus 2 address 0x23, reg 3 */
+	ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21a8000", &bus2);
+	if (ret) {
+		log_err("%s: probe pwr expander, failed on bus 2\n", __func__);
+		return ret;
+	}
+	ret = dm_i2c_probe(bus2, 0x23, DM_I2C_CHIP_RD_ADDRESS |
+				  DM_I2C_CHIP_WR_ADDRESS, &pwrdev);
+	if (ret) {
+		log_err("%s: probe pwr expander, failed on device %d\n",
+			__func__, 0x23);
+		return ret;
+	}
+
+	ret = dm_i2c_reg_read(pwrdev, 3);
+	if (ret < 0)
+		return ret;
+	val = ret;
+	val &= 0x7F;
+	ret = dm_i2c_reg_write(pwrdev, 3, val);
+
+	/* Wait 200 ms, from data sheet, for touch controller to start up. */
+	mdelay(200);
+
+	/* Try to probe the actual touch device, bus 3 addr 0x38 */
+	ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &bus3);
+	if (ret) {
+		log_info("%s: Orise display probed, not found on bus 3\n", __func__);
+		goto touch_enable_restore;
+	}
+
+	ret = dm_i2c_probe(bus3, 0x38, DM_I2C_CHIP_RD_ADDRESS |
+				  DM_I2C_CHIP_WR_ADDRESS, &touchdev);
+
+touch_enable_restore:
+	/* Turn off the touch again by setting enable to input on pwr expander */
+	val |= 0x80;
+	dm_i2c_reg_write(pwrdev, 3, val);
+
+	return ret;
 }
 
+/**
+ * @brief Detects Orise panel by probing the touch located
+ *	  on bus 3, address 0x38
+ *
+ * @param dev N/A
+ * @return int 0 if not found
+ */
+static int detect_orise(struct display_info_t const *dev)
+{
+	static int cache_ret = -ENOTCONN;
+
+	if (cache_ret == -ENOTCONN)
+		cache_ret = do_detect_orise();
+
+	return (cache_ret == 0);
+}
+
+/**
+ * @brief Detects Truly panel by probing the touch located
+ *	  on bus 3, address 0x70
+ *
+ * @param dev N/A
+ * @return int 0 if found
+ */
+static int do_detect_truly(void)
+{
+	struct udevice *bus, *touchdevice;
+	int ret;
+
+	/* Try to probe the actual touch device, bus 3 addr 0x70 */
+	ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &bus);
+	if (ret) {
+		log_info("%s: Truly display probed, not found on bus %d\n",
+			 __func__, 3);
+		return ret;
+	}
+
+	return dm_i2c_probe(bus, 0x70, DM_I2C_CHIP_RD_ADDRESS |
+				DM_I2C_CHIP_WR_ADDRESS, &touchdevice);
+}
+
+/**
+ * @brief Detects Truly panel by probing the touch located
+ *	  on bus 3, address 0x70
+ *
+ * @param dev N/A
+ * @return int 0 if not found
+ */
 static int detect_truly(struct display_info_t const *dev)
 {
-	return 0;
+	static int cache_ret = -ENOTCONN;
+
+	if (cache_ret == -ENOTCONN)
+		cache_ret = do_detect_truly();
+
+	return (cache_ret == 0);
 }
 
 void backlight_on(bool on)
@@ -941,12 +1044,10 @@ static void setup_mipi_mux_i2c()
 
 int board_early_init_f(void)
 {
-	arch_cpu_init();
-        board_setup_timer();
-        setup_iomux_uart();
+	board_setup_timer();
+	setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
-	setup_mipi_mux_i2c();
 #endif
 
 	return 0;
@@ -967,7 +1068,7 @@ int checkboard(void)
 
 int board_init(void)
 {
-        int ret = 0;
+	int ret = 0;
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
@@ -1035,6 +1136,28 @@ int board_init(void)
 #ifdef CONFIG_FEC_MXC
 	setup_fec();
 #endif
+
+	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		struct mipi_dsi_ops ops;
+		int panel_found = 1;
+
+		if (detect_truly(NULL)) {
+			ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
+			ops.lcd_setup = mipid_st7703_lcd_setup;
+			log_info("Found Truly display\n");
+		} else if (detect_orise(NULL)) {
+			ops.get_lcd_videomode = mipid_otm1287a_get_lcd_videomode;
+			ops.lcd_setup = mipid_otm1287a_lcd_setup;
+			log_info("Found ORISE display\n");
+		} else {
+			panel_found = 0;
+		}
+
+		if (panel_found) {
+			setup_mipi_mux_i2c();
+			mxc_mipi_dsi_enable(&ops);
+		}
+	}
 
 	return 0;
 }
@@ -1417,22 +1540,6 @@ static const struct boot_mode board_boot_modes[] = {
 int board_late_init(void)
 {
 
-#if defined(CONFIG_VIDEO_IPUV3)
-	if (hardware.display)
-	{
-		struct mipi_dsi_ops ops;
-
-		if (detect_orise(NULL)) {
-			ops.get_lcd_videomode = mipid_otm1287a_get_lcd_videomode;
-			ops.lcd_setup = mipid_otm1287a_lcd_setup;
-		}
-		if (detect_truly(NULL)) {
-			ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
-			ops.lcd_setup = mipid_st7703_lcd_setup;
-		}
-		mxc_mipi_dsi_enable(&ops);
-	}
-#endif
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
@@ -1478,15 +1585,21 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	do_fixup_by_path_string(blob, "/u-boot", "reset-cause", get_last_reset_cause());
 	*/
 
-#if defined(CONFIG_VIDEO_IPUV3)
-    int temp[2];
-    temp[0] = cpu_to_fdt32(gd->fb_base);
-    temp[1] = cpu_to_fdt32(640*480*2);
-    do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
-#endif
+	if (detect_truly(NULL)) {
+		do_fixup_by_path(blob, "/fb@0", "mode_str", "TRULY-VGA", 10, 0);
+		do_fixup_by_path(blob, "/soc/bus@2100000/mipi@21e0000", "lcd_panel",
+				 "TRULY-VGA", 10, 0);
+	}
+	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		int temp[2];
+
+		temp[0] = cpu_to_fdt32(gd->fb_base);
+		temp[1] = cpu_to_fdt32(640 * 480 * 2);
+		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
+	}
 
 #if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
-    patch_fdt_eeprom(blob);
+	patch_fdt_eeprom(blob);
 #endif
 	return 0;
 }
