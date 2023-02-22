@@ -11,6 +11,13 @@
 
 #include "flir_mx6_common_new.h"
 
+#define CONFIG_EXTRA_ENV_VARIABLES_SYSTEM  \
+	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
+	CONFIG_FLIR_DEFAULT_DTB \
+	"console=" CONSOLE_DEV "\0" \
+	"hw_start=checkCharger; loadFPGA t\0" \
+	"" /* EOL */
+
 #define CONFIG_BOARD_DESCRIPTION	"FLIR ec101 board"
 
 #define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6dl-evco.dtb\0"

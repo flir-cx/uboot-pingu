@@ -212,8 +212,6 @@
 
 #define CONFIG_EXTRA_ENV_VARIABLES \
 	"uimage=uImage\0" \
-	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
-	CONFIG_FLIR_DEFAULT_DTB      \
 	"select_fdt_script=select-fdt.uscr\0" \
 	"bootlogo=bootlogo.bmp.gz\0" \
 	"splashimage=0x17000002\0" \
@@ -222,7 +220,6 @@
 	"initrd_addr=0x19000000\0" \
 	"initrd_file=uRamdisk.img\0" \
 	"boot_fdt=try\0" \
-	"console=" CONSOLE_DEV "\0" \
 	"fdt_high=0xffffffff\0" \
 	"initrd_high=0xffffffff\0" \
 	"mmcpart=1\0" \
@@ -240,12 +237,12 @@
 	"bootdelay=0\0" \
 	"" /* EOL */
 
-#define CONFIG_EXTRA_ENV_SETTINGS	\
+#define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_DEFAULT_NETWORK_SETTINGS \
 	CONFIG_EXTRA_ENV_COMMANDS \
 	CONFIG_EXTRA_ENV_VARIABLES \
+	CONFIG_EXTRA_ENV_VARIABLES_SYSTEM \
 	RANDOM_UUIDS \
-	"hw_start=checkCharger; loadFPGA t\0" \
 	""	/* end line */
 
 #define CONFIG_ARP_TIMEOUT 200UL
