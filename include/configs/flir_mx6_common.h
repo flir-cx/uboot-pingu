@@ -174,7 +174,6 @@
 		"fi;\0" \
 	"recoveryboot=echo Booting from mmc recovery;" \
 		"run selectrecfdtfile; run recargs; " \
-		"run hw_start;" \
 		"setenv bootargs_linux ${bootargs}; " \
 		"setenv mmcpart 1; " \
 		"run loadfdt; run loadinitrd; run loaduimage; " \
@@ -198,7 +197,6 @@
 		"root=/dev/ram0 ethaddr=${ethaddr}\0"\
 	"recboot=echo Booting preloaded recovery...; " \
 		"run recargs; " \
-		"run hw_start;" \
 		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
 	"" /* EOL */
 #elif CONFIG_FLIR_MFG == 2 /* recboot */
@@ -218,9 +216,7 @@
 	CONFIG_FLIR_DEFAULT_DTB      \
 	"select_fdt_script=select-fdt.uscr\0" \
 	"bootlogo=bootlogo.bmp.gz\0" \
-	"splashfile=/boot/bootlogo.bmp.gz\0" \
 	"splashimage=0x17000002\0" \
-	"splashsource=mmc_fs\0" \
 	"tempaddr=0x16000000\0" \
 	"fdt_addr=0x18000000\0" \
 	"initrd_addr=0x19000000\0" \
