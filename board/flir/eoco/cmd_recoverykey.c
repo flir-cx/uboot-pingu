@@ -76,8 +76,23 @@ static int do_recoverykey(struct cmd_tbl *cmdtp, int flag, int argc, char * cons
 		snprintf(tmpstr, sizeof(tmpstr), "button %c", button_sequence[i]);
 		ret = poll_key(tmpstr, i ? 3000 : 100);
 		if (ret == 0) {
-			if (has_console)
-				print_display("*** ");
+			if (has_console) {
+				switch (i) {
+				case 0:
+					print_display(":");
+					break;
+				case 1:
+					print_display(".");
+					break;
+				case 2:
+					print_display("Booting recovery");
+					break;
+				default:
+					// this case "should" never happen...
+					print_display("error case!");
+					break;
+				}
+			}
 			cnt++;
 			mdelay(100);
 		} else {
