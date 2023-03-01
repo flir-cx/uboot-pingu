@@ -10,7 +10,7 @@
 #define __MX6EC701_CONFIG_H
 
 //Moving common parts of this file to new include file.... Please cleanup this file...
-#include "flir_mx6_common_new.h"
+#include "flir_mx6_common_pre.h"
 
 #ifdef CONFIG_SPL
 #include "imx6_spl.h"
@@ -34,7 +34,7 @@
 #define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6dl-evco.dtb\0"
 #define CONFIG_EMMC_FUSE_CMD \
 	"fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; "
-#include "flir_mx6_common.h"
+#include "flir_mx6_common_post.h"
 
 /* Falcon Mode */
 #define CONFIG_SPL_FS_LOAD_ARGS_NAME	"args"

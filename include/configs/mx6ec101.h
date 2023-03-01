@@ -9,7 +9,7 @@
 #ifndef __MX6EC101_CONFIG_H
 #define __MX6EC101_CONFIG_H
 
-#include "flir_mx6_common_new.h"
+#include "flir_mx6_common_pre.h"
 
 #define CONFIG_EXTRA_ENV_VARIABLES_SYSTEM  \
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
@@ -23,7 +23,7 @@
 #define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6dl-evco.dtb\0"
 #define CONFIG_EMMC_FUSE_CMD \
 	"fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; "
-#include "flir_mx6_common.h"
+#include "flir_mx6_common_post.h"
 
 
 /*Spi*/

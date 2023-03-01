@@ -9,7 +9,7 @@
 #ifndef __EOCO_CONFIG_H
 #define __EOCO_CONFIG_H
 
-#include "flir_mx6_common_new.h"
+#include "flir_mx6_common_pre.h"
 
 #define CONFIG_FLIR_DEFAULT_DTB "fdt_file_default=imx6qp-eoco.dtb\0"
 #define CONFIG_EMMC_FUSE_CMD "fuse prog -y 0 6 0x00000010; fuse prog -y 0 5 0x00205860;"
@@ -21,7 +21,7 @@
 	"hw_start=loadFPGA t\0" \
 	"" /* EOL */
 
-#include "flir_mx6_common.h"
+#include "flir_mx6_common_post.h"
 
 #if CONFIG_FLIR_MFG == 0 /* Normal boot */
 #undef CONFIG_BOOTCOMMAND

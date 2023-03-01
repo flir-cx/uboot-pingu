@@ -6,8 +6,8 @@
  * Configuration settings for FLIR MX6 targets.
  */
 
-#ifndef __FLIR_MX6_COMMON_CONFIG_NEW_H
-#define __FLIR_MX6_COMMON_CONFIG_NEW_H
+#ifndef __FLIR_MX6_COMMON_CONFIG_PRE_H
+#define __FLIR_MX6_COMMON_CONFIG_PRE_H
 
 #ifdef CONFIG_SPL
 #include "imx6_spl.h"
