@@ -1009,8 +1009,20 @@ void set_backlight_off()
 }
 #endif
 
+static int platform_viewfinder_disable()
+{
+	/* On early boards the viewfinder starts with full backlight
+	 * This code is to be able to turn off the viewfinder early.
+	 */
+	const int VFM_PWR_EN = IMX_GPIO_NR(4, 20);
+	gpio_request(VFM_PWR_EN, "VFM_PWR_EN");
+	gpio_direction_output(VFM_PWR_EN, state);
+}
+
 int board_init(void)
 {
+	platform_viewfinder_disable();
+
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
