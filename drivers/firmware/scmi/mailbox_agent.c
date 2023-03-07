@@ -41,7 +41,7 @@ static int scmi_mbox_process_msg(struct udevice *dev, struct scmi_msg *msg)
 		return ret;
 
 	/* Give shm addr to mbox in case it is meaningful */
-	ret = mbox_send(&chan->mbox, chan->smt.buf);
+	ret = mbox_send(&chan->mbox, chan->smt.buf, 1000);
 	if (ret) {
 		dev_err(dev, "Message send failed: %d\n", ret);
 		goto out;

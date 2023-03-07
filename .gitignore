@@ -89,6 +89,8 @@ GRTAGS
 GSYMS
 GTAGS
 
+# Python virtual env
+/venv
 *.orig
 *~
 \#*#

@@ -24,7 +24,7 @@ int sandbox_mbox_test_send(struct udevice *dev, uint32_t msg)
 {
 	struct sandbox_mbox_test *sbmt = dev_get_priv(dev);
 
-	return mbox_send(&sbmt->chan, &msg);
+	return mbox_send(&sbmt->chan, &msg, 1000);
 }
 
 int sandbox_mbox_test_recv(struct udevice *dev, uint32_t *msg)
