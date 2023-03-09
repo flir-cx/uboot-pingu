@@ -77,6 +77,12 @@ config UT_TIME
 	  problems. But if you are having problems with udelay() and the like,
 	  this is a good place to start.
 
+config UT_FLIR
+	bool "Unit tests for flir functions"
+	depends on UNIT_TEST
+	help
+	  Enables the 'ut flir' command which tests flir .
+
 config UT_UNICODE
 	bool "Unit tests for Unicode functions"
 	depends on UNIT_TEST

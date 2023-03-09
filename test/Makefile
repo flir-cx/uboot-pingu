@@ -16,6 +16,7 @@ obj-$(CONFIG_$(SPL_)CMDLINE) += str_ut.o
 obj-$(CONFIG_UT_TIME) += time_ut.o
 obj-y += ut.o
 
+obj-y += flir/
 ifeq ($(CONFIG_SPL_BUILD),)
 obj-$(CONFIG_UNIT_TEST) += lib/
 obj-y += log/
