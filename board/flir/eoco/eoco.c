@@ -1016,7 +1016,7 @@ static int platform_viewfinder_disable()
 	 */
 	const int VFM_PWR_EN = IMX_GPIO_NR(4, 20);
 	gpio_request(VFM_PWR_EN, "VFM_PWR_EN");
-	gpio_direction_output(VFM_PWR_EN, state);
+	gpio_direction_output(VFM_PWR_EN, false);
 }
 
 int board_init(void)
