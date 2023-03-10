@@ -11,6 +11,7 @@
 #include <linux/delay.h>
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
 #include <splash.h>
+#include "display_utils.h"
 #endif
 
 #include "lc709203.h"
@@ -133,6 +134,7 @@ static void set_boot_logo(void)
 		env_set("bootlogo", "battery_logo.bmp.gz");
 		break;
 	case NORMAL_BOOT:
+		env_set("bootlogo", "bootlogo.bmp.gz");
 		break;
 	}
 }
@@ -260,6 +262,11 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	case USB_CHARGE:
 		printf("Camera: charge state\n");
 		run_command("chargeapp", 0);
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+		state.boot_state = NORMAL_BOOT;
+		splash_screen_prepare();
+		splash_display();
+#endif
 		break;
 	default:
 		printf("Invalid boot state\n");
