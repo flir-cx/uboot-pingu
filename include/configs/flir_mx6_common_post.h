@@ -145,7 +145,6 @@
 		"root=/dev/ram0 ethaddr=${ethaddr}\0" \
 	"recboot=echo Booting preloaded recovery...; "\
 		"run recargs; " \
-		"run hw_start;" \
 		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
 	"setup_boot=bootargs_once=init=/sbin/preinit; " \
 		"run select_boot;\0" \
@@ -205,7 +204,6 @@
 		"root=/dev/ram0 ethaddr=${ethaddr}\0"\
 	"recboot=echo Booting preloaded recovery...; " \
 		"run recargs; " \
-		"run hw_start;" \
 		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
 	"" /* EOL */
 #endif
