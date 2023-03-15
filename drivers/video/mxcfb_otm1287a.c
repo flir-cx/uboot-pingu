@@ -166,7 +166,7 @@ static int otm1287a_write_cmd(struct mipi_dsi_info *mipi_dsi, const u32 cmd)
 {
 	int err = mipi_dsi_pkt_write(mipi_dsi, MIPI_DSI_DCS_SHORT_WRITE,
 		&cmd, 0);
-        udelay(1);
+	mdelay(1);
 
 	return err;
 }
@@ -174,9 +174,9 @@ static int otm1287a_write_cmd(struct mipi_dsi_info *mipi_dsi, const u32 cmd)
 int mipid_otm1287a_lcd_setup(struct mipi_dsi_info *mipi_dsi)
 {
 	int i;
-	udelay(50);
+
 	otm1287a_write_cmd(mipi_dsi,OTM1287A_CMD_SWRESET);
-	udelay(20);
+	mdelay(20);
 
 	for(i=0;i<ARRAY_SIZE(lcd_setup);i++)
 	{
