@@ -35,6 +35,11 @@ config FLIR_PLATFORM_EC302
 	help
 	  Cameras based on the EC302 board
 
+config FLIR_PLATFORM_EC501
+	bool "EC501"
+	help
+	  Cameras based on the EC501 board
+
 config NOFLIR
 	bool "Not FLIR"
 	help
