@@ -113,7 +113,7 @@
 /* MFG version from separate (easily patchable) file */
 #include "flir_mfgmode.h"
 
-#if CONFIG_MFG == 1
+#if CONFIG_FLIR_MFG == 1
 /* MFG preloaded recovery boot for board production */
 
 #ifdef CONFIG_ENV_IS_IN_MMC
@@ -127,7 +127,7 @@
 	"fuse prog -y 2 7 8000; " \
 	"run partition_mmc_flir; run recboot"
 
-#elif CONFIG_MFG == 2
+#elif CONFIG_FLIR_MFG == 2
 /* preloaded recovery boot */
 
 #ifdef CONFIG_ENV_IS_IN_MMC
@@ -139,7 +139,7 @@
 #define CONFIG_BOOTCOMMAND \
         "run recboot"
 
-#else /* CONFIG_MFG */
+#else /* CONFIG_FLIR_MFG */
 
 /* #define CONFIG_SYS_MMC_ENV_DEV		0		/1* emmc0 *1/ */
 /* #define CONFIG_ENV_SIZE			SZ_16K */
@@ -157,7 +157,7 @@
 	"echo Fallback to recovery boot!....;" \
 	"run recoveryboot;"
 
-#endif /* CONFIG_MFG */
+#endif /* CONFIG_FLIR_MFG */
 
 
 /* protected environment variables (besides ethaddr and serial#) */
