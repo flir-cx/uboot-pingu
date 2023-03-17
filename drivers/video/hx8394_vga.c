@@ -103,6 +103,7 @@ struct hx8394_panel_priv {
 	struct udevice *backlight;
 	struct gpio_desc reset;
 	bool flip_display;
+	bool keep_display_up;
 };
 
 static const struct display_timing default_timing = {
@@ -380,6 +381,8 @@ static int hx8394_panel_of_to_plat(struct udevice *dev)
 
 	priv->flip_display = dev_read_bool(dev, "flip-display");
 
+	priv->keep_display_up = dev_read_bool(dev, "keep-display-up");
+
 	return 0;
 }
 
@@ -416,7 +419,8 @@ static int hx8394_panel_disable(struct udevice *dev)
 {
 	struct hx8394_panel_priv *priv = dev_get_priv(dev);
 
-	dm_gpio_set_value(&priv->reset, true);
+	if (!priv->keep_display_up)
+		dm_gpio_set_value(&priv->reset, true);
 
 	return 0;
 }

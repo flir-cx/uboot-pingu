@@ -77,6 +77,8 @@ struct mipi_dsi_northwest_info {
 	 uint32_t max_data_lanes;
 	 uint32_t max_data_rate;
 	 uint32_t pll_ref;
+
+	 bool keep_mipi_dsi_up;
 };
 
 struct pll_divider {
@@ -1028,7 +1030,9 @@ static int mipi_dsi_northwest_disable(struct udevice *dev)
 {
 	struct mipi_dsi_northwest_info *mipi_dsi = dev_get_priv(dev);
 
-	mipi_dsi_shutdown(mipi_dsi);
+	if (!mipi_dsi->keep_mipi_dsi_up)
+		mipi_dsi_shutdown(mipi_dsi);
+
 	return 0;
 }
 
@@ -1040,6 +1044,10 @@ struct dsi_host_ops mipi_dsi_northwest_ops = {
 
 static int mipi_dsi_northwest_probe(struct udevice *dev)
 {
+	struct mipi_dsi_northwest_info *dsi = dev_get_priv(dev);
+
+	dsi->keep_mipi_dsi_up = dev_read_bool(dev, "keep-mipi-dsi-up");
+
 	return 0;
 }
 

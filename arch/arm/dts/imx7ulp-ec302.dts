@@ -47,6 +47,7 @@
 
 	dsi_host: dsi-host {
 		compatible = "northwest,mipi-dsi";
+		keep-mipi-dsi-up;
 		status = "okay";
 	};
 
@@ -55,6 +56,7 @@
 		reset-gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
 		backlight = <&backlight>;
 		flip-display;
+		keep-display-up;
 		status = "okay";
 
 		port {
