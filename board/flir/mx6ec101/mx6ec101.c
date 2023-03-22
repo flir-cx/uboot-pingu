@@ -106,6 +106,10 @@ static void setup_mipi_mux_i2c(void);
 #define KEY_VOL_UP	IMX_GPIO_NR(1, 4)
 
 #define LEIF_PCA9534_ADDRESS (0x4a >> 1)
+#define LEIF_TP_EN_PIN (4)
+#define EVIO_PCA9534_ADDRESS (0x46 >> 1)
+#define EVIO_TP_EN_PIN (7)
+
 #define PWM1 0
 
 iomux_v3_cfg_t const uart1_pads[] = {
@@ -122,7 +126,7 @@ iomux_v3_cfg_t const ecspi4_pads[] = {
 
 //default hw support
 static struct hw_support hardware = {
-	.mipi_mux =	false,
+	.mipi_mux = false,
 	.display = true,
 	.usb_charge = IS_ENABLED(CONFIG_FLIR_USBCHARGE),
 	.name = "Unknown Camera"
@@ -204,13 +208,37 @@ int board_spi_cs_gpio(unsigned bus, unsigned cs)
 }
 
 /**
+ * @brief Get the touchpad expander i2c addr
+ *
+ * @return u8
+ */
+static u8 get_tp_expander_addr(void)
+{
+	if (hardware.mipi_mux) // Lennox Camera
+		return LEIF_PCA9534_ADDRESS;
+	return EVIO_PCA9534_ADDRESS;
+}
+
+/**
+ * @brief Get the touchpad enable mask on the io expander
+ *
+ * @return u8
+ */
+static u8 get_tp_expander_mask(void)
+{
+	if (hardware.mipi_mux) // Lennox Camera
+		return (1 << LEIF_TP_EN_PIN);
+	return (1 << EVIO_TP_EN_PIN);
+}
+
+/**
  * @brief Detects Orise panel by probing the touch located on bus 3,
  *	  address 0x38. To probe the touch it first needs to be enabled.
  *
  * @param dev N/A
  * @return int 0 if found
  */
-static int do_detect_orise(void)
+static int do_detect_orise(u8 expander_addr, u8 expander_mask)
 {
 	struct udevice *bus2, *bus3, *pwrdev, *touchdev;
 	int ret;
@@ -222,11 +250,12 @@ static int do_detect_orise(void)
 		log_err("%s: probe pwr expander, failed on bus 2\n", __func__);
 		return ret;
 	}
-	ret = dm_i2c_probe(bus2, 0x23, DM_I2C_CHIP_RD_ADDRESS |
+
+	ret = dm_i2c_probe(bus2, expander_addr, DM_I2C_CHIP_RD_ADDRESS |
 				  DM_I2C_CHIP_WR_ADDRESS, &pwrdev);
 	if (ret) {
 		log_err("%s: probe pwr expander, failed on device %d\n",
-			__func__, 0x23);
+			__func__, expander_addr);
 		return ret;
 	}
 
@@ -234,7 +263,7 @@ static int do_detect_orise(void)
 	if (ret < 0)
 		return ret;
 	val = ret;
-	val &= 0x7F;
+	val &= ~expander_mask;
 	ret = dm_i2c_reg_write(pwrdev, 3, val);
 
 	/* Wait 200 ms, from data sheet, for touch controller to start up. */
@@ -269,8 +298,12 @@ static int detect_orise(struct display_info_t const *dev)
 {
 	static int cache_ret = -ENOTCONN;
 
-	if (cache_ret == -ENOTCONN)
-		cache_ret = do_detect_orise();
+	if (cache_ret == -ENOTCONN) {
+		u8 expander_addr = get_tp_expander_addr();
+		u8 expander_mask = get_tp_expander_mask();
+
+		cache_ret = do_detect_orise(expander_addr, expander_mask);
+	}
 
 	return (cache_ret == 0);
 }
@@ -1150,6 +1183,7 @@ int board_init(void)
 			ops.lcd_setup = mipid_otm1287a_lcd_setup;
 			log_info("Found ORISE display\n");
 		} else {
+			log_err("No panel detected, video will probably fail!\n");
 			panel_found = 0;
 		}
 
