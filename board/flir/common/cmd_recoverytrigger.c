@@ -35,18 +35,29 @@ DECLARE_GLOBAL_DATA_PTR;
 #define OK 0
 #define FAIL 1
 
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+
+
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201))
 #define TRIG_GPIO   IMX_GPIO_NR(3, 12)
 #define BTN_GPIO_PAD_CTRL	(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP)
 static iomux_cfg_t const btn_trig_pad[] = {
 	MX7ULP_PAD_PTC12__PTC12 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
 };
+#define GPIO_PER_CLK PER_CLK_PCTLC
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#define TRIG_GPIO   IMX_GPIO_NR(6, 0)
+#define BTN_GPIO_PAD_CTRL	(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP)
+static iomux_cfg_t const btn_trig_pad[] = {
+	MX7ULP_PAD_PTF0__PTF0 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
+};
+#define GPIO_PER_CLK PER_CLK_PCTLF
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 #define PWR_GPIO   IMX_GPIO_NR(3, 13)
 #define BTN_GPIO_PAD_CTRL	(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP)
 static iomux_cfg_t const btn_pwr_pad[] = {
 	MX7ULP_PAD_PTC13__PTC13 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
 };
+#define GPIO_PER_CLK PER_CLK_PCTLC
 
 /* Total time has to be less than 16 seconds,
  * since hw reset kicks in.
@@ -280,7 +291,7 @@ int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char *const ar
 
 	printf("Check recovery\n");
 
-	pcc_clock_enable(PER_CLK_PCTLC, true);
+	pcc_clock_enable(GPIO_PER_CLK, true);
 
 	if (!button_pressed())
 		return FAIL;

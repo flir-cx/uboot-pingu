@@ -10,11 +10,18 @@
 #include <asm/gpio.h>
 #include "pf1550.h"
 
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 #define PMIC_WDOG_GPIO	IMX_GPIO_NR(1, 14)
-
 static iomux_cfg_t const pmic_wdog_pad[] = {
 	MX7ULP_PAD_PTA14__PTA14 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#define PMIC_WDOG_GPIO	IMX_GPIO_NR(3, 0)
+static iomux_cfg_t const pmic_wdog_pad[] = {
+	MX7ULP_PAD_PTC0__PTC0 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+#endif
+
 
 int pf1550_write_reg(int reg, u8 val)
 {
