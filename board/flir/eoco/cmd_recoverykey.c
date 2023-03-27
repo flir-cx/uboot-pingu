@@ -79,6 +79,7 @@ static int do_recoverykey(struct cmd_tbl *cmdtp, int flag, int argc, char * cons
 			if (has_console) {
 				switch (i) {
 				case 0:
+					run_command("printboardinfo", 0);
 					print_display(":");
 					break;
 				case 1:
