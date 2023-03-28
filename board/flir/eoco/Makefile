@@ -8,3 +8,4 @@ obj-y  := platform.o eoco.o
 
 obj-y  += cmd_recoverykey.o
 obj-y  += cmd_printboardinfo.o
+obj-y  += cmd_kbdsecret.o
