@@ -146,18 +146,52 @@ int fuelgauge_battery_profile(int param)
 				   param ? BATTERY_PROFILE_ONE : BATTERY_PROFILE_ZERO, 0);
 }
 
+/* All registers will be zeroed when battery is
+ * removed. So we can check for new battery insertions
+ * by reading any register and checking if it is zero. */
+static int check_battery_insertion(void)
+{
+	struct udevice *dev;
+	u8 buf;
+	int ret;
+
+	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	if (ret) {
+		printf("Cannot find fuelgauge LC709203: %d\n", ret);
+		return 0;
+	}
+
+	ret = dm_i2c_read(dev, LC709204_APA, &buf, 1);
+	if (ret) {
+		printf("Failed to read fuelgauge register\n");
+		return 0;
+	}
+
+	if (buf)
+		return 0;
+
+	printf("Battery inserted!\n");
+	return 1;
+}
+
 int fuelgauge_init(void)
 {
 	struct udevice *dev;
 	u8 buf[4];
 	int ret;
 	int type;
+	int battery_inserted;
 
 	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;
 	}
+
+	/* We can detect a battery insertion by reading a fuelgauge
+	 * register. When a battery is detached, all registers are
+	 * zeroed. */
+	battery_inserted = check_battery_insertion();
 
 	/* Power on fuelgauge from standby */
 	fuelgauge_operational();
@@ -196,5 +230,5 @@ int fuelgauge_init(void)
 		fuelgauge_write_reg(LC709204_ITE_OFFSET, 0x15, 0x00);
 	}
 
-	return 0;
+	return battery_inserted;
 }
