@@ -1620,9 +1620,19 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	*/
 
 	if (detect_truly(NULL)) {
+		/* Point to truly display instead of orise */
 		do_fixup_by_path(blob, "/fb@0", "mode_str", "TRULY-VGA", 10, 0);
 		do_fixup_by_path(blob, "/soc/bus@2100000/mipi@21e0000", "lcd_panel",
 				 "TRULY-VGA", 10, 0);
+
+		/* Set the status of the touch of the truly display to ok, */
+		/* it should be disabled by default from the device tree. */
+		do_fixup_by_path(blob, "/soc/bus@2100000/i2c@21f8000/tsc@70", "status",
+				 "okay", 5, 0);
+		/* Set the status of the orise touch to disabled, it should */
+		/* be enabled by default from th edevice tree */
+		do_fixup_by_path(blob, "/soc/bus@2100000/i2c@21f8000/edt_ft5336@38", "status",
+				 "disabled", 9, 0);
 	}
 	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
 		int temp[2];
