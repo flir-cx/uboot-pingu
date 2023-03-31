@@ -82,7 +82,7 @@ int board_early_init_f(void)
 
 int board_init(void)
 {
-	int battery_inserted;
+	bool battery_inserted;
 
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
@@ -91,9 +91,15 @@ int board_init(void)
 	setup_usb();
 #endif
 	init_pf1550_pmic();
-	battery_inserted = fuelgauge_init();
+
+	/* We can detect a battery insertion by reading a fuelgauge
+	 * register. When a battery is detached, all registers are
+	 * zeroed. */
+	battery_inserted = fuelgauge_check_battery_insertion();
+	fuelgauge_init();
 	if (battery_inserted)
 		power_off();
+
 	usb_charge_detect();
 	boot_state_init();
 
