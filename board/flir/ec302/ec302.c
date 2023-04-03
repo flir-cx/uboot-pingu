@@ -97,7 +97,7 @@ int board_init(void)
 	 * zeroed. */
 	battery_inserted = fuelgauge_check_battery_insertion();
 	fuelgauge_init();
-	if (battery_inserted)
+	if (battery_inserted && !CONFIG_FLIR_MFG)
 		power_off();
 
 	usb_charge_detect();
