@@ -11,10 +11,23 @@
 #include <i2c.h>
 #include <asm/arch/pcc.h>
 
+/*
+ * We are creating a weak definition so that default implementation of
+ * i2c_get_chip_for_busnum can be overwritten. The function has been patched
+ * so that it probes i2c chips before doing a read. This is not compatible with
+ * some chips due to the chips being in reset mode, not fully powered or because
+ * another CPU is used for handling the i2c stack.
+ */
+__weak int i2c_get_chip_for_busnum_flir(int busnum, int chip_addr, uint offset_len,
+			    struct udevice **devp())
+{
+	return i2c_get_chip_for_busnum(busnum, chip_addr, offset_len, devp);
+}
+
 int get_board_serial(uint8_t *buf)
 {
 	struct udevice *dev;
-	int ret = i2c_get_chip_for_busnum(6, 0x57, 1, &dev); //get eprom
+	int ret = i2c_get_chip_for_busnum_flir(6, 0x57, 1, &dev); //get eprom
 
 	if (ret) {
 		printf("Can not find eeprom: %d\n", ret);

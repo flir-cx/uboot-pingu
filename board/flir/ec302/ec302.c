@@ -73,6 +73,36 @@ int usb_charge_detect(void)
 	return 0;
 }
 
+/*
+ * Overwrite default implementation of i2c_get_chip_for_busnum.
+ * Our eeprom doesn't handle probing of the chip well. This is probably
+ * due to the chip not being powered fully when the command is issued.
+ * If we continuously poll the probing function, the chip starts responding
+ * after some time. Usually after 0.5-3 seconds, but removing the probing
+ * from i2c_get_chip_for_busnum makes the chip respond on first command.
+ */
+int i2c_get_chip_for_busnum_flir(int busnum, int chip_addr, uint offset_len,
+			    struct udevice **devp())
+{
+	struct udevice *bus;
+	int ret;
+
+	ret = uclass_get_device_by_seq(UCLASS_I2C, busnum, &bus);
+	if (ret) {
+		printf("Cannot find I2C bus %d\n", busnum);
+		return ret;
+	}
+
+	ret = i2c_get_chip(bus, chip_addr, offset_len, devp);
+	if (ret) {
+		printf("Cannot find I2C chip %02x on bus %d\n", chip_addr,
+		      busnum);
+		return ret;
+	}
+
+	return 0;
+}
+
 int board_early_init_f(void)
 {
 	setup_iomux_uart();
