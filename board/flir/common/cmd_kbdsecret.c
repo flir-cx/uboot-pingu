@@ -38,7 +38,10 @@ static inline void print_display(char *s)
 static int init_stdio(void)
 {
 	sdev = stdio_get_by_name("vidconsole");
-	cond_log_return(!sdev, -ENODEV, "Cannot find 'vidconsole'\n");
+	if (!sdev) {
+		printf("Cannot find 'vidconsole'\n");
+		return -ENODEV;
+	}
 	return 0;
 }
 
@@ -49,7 +52,10 @@ static int compute_stdio_dimensions(void)
 
 	// 'vidconsole' will always have id 0, n.b., see stdio.c
 	ret = uclass_get_device_by_seq(UCLASS_VIDEO, 0, &udev);
-	return_on_status(ret, "Did not find a console video device\n");
+	if (ret != 0) {
+		printf("Did not find a console video device\n");
+		return ret;
+	}
 
 	sdim.rows = video_get_ysize(udev) / VIDEO_FONT_HEIGHT;
 	sdim.cols = video_get_xsize(udev) / VIDEO_FONT_WIDTH;
@@ -61,8 +67,10 @@ static int set_cursor_pos(unsigned int row, unsigned int col)
 {
 	char buf[16];
 
-	cond_log_return(row >= sdim.rows || col >= sdim.cols, -EINVAL,
-			"Illegal cursor position (%u, %u)\n", row, col);
+	if (row >= sdim.rows || col >= sdim.cols) {
+		printf("Illegal cursor position (%u, %u)\n", row, col);
+		return -EINVAL;
+	}
 	snprintf(buf, sizeof(buf), "%s%u;%uH", CSI, row, col);
 	print_display(buf);
 
@@ -128,8 +136,10 @@ static int poll_key(char k)
 
 	while (--timeout) {
 		numpressed = read_keys(&keybuf);
-		cond_log_return(numpressed < 0, numpressed,
-				"Failed to read keyboard\n");
+		if (numpressed < 0) {
+			printf("Failed to read keyboard\n");
+			return numpressed;
+		}
 
 		if (!key_down && numpressed && strrchr(keybuf, k))
 			key_down = 1;

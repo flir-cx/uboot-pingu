@@ -61,7 +61,10 @@ static int init_kbd_devices(void)
 		return 0;
 
 	ret = uclass_get_device_by_seq(UCLASS_I2C, KEYBOARD_IO_EXP_BUS_NUM, &bus);
-	return_on_status(ret, "No i2c bus 2 found\n");
+	if (ret != 0) {
+		printf("No i2c bus 2 found\n");
+		return ret;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
 		int addr = (buttons[i].gpnum >> 8);
@@ -70,9 +73,15 @@ static int init_kbd_devices(void)
 			continue;
 
 		ret = i2c_get_chip(bus, addr, PCA9534_ADDR_LEN, &dev);
-		return_on_status(ret, "chip 0x%02x not found\n", addr);
+		if (ret != 0) {
+			printf("chip 0x%02x not found\n", addr);
+			return ret;
+		}
 		ret = i2c_set_chip_offset_len(dev, PCA9534_OFFSET_LEN);
-		return_on_status(ret, "set offset_len on 0x%02x failed\n", addr);
+		if (ret != 0) {
+			printf("set offset_len on 0x%02x failed\n", addr);
+			return ret;
+		}
 		buttons[i].dev = dev;
 	}
 	kbd_is_initialized = 1;
@@ -95,15 +104,20 @@ int read_keys(char **buf)
 
 	memset(kbuf, 0, sizeof(kbuf));
 	*buf = kbuf;
-	return_on_status(ret, "Failed to init kbd dev\n");
+	if (ret != 0) {
+		printf("Failed to init kbd dev\n");
+		return ret;
+	}
 	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
 		if (!buttons[i].get_key)
 			continue;
 		ret = buttons[i].get_key(buttons[i].gpnum);
 		if (ret == 0)
 			kbuf[numpressed++] = buttons[i].ident;
-		cond_log_return(ret < 0, ret,
-				"get_key failed for key '%c'\n", buttons[i].ident);
+		if (ret < 0) {
+			printf("get_key failed for key '%c'\n", buttons[i].ident);
+			return ret;
+		}
 	}
 
 	return numpressed;
@@ -131,7 +145,10 @@ static int get_gpio_ioexpander(unsigned int combnr)
 		if (buttons[i].gpnum == combnr && buttons[i].dev)
 			ret = dm_i2c_read(buttons[i].dev, PCA9534_INPUT_PORT, buf, data_len);
 
-	return_on_status(ret, "read failed, status %d\n", ret);
+	if (ret != 0) {
+		printf("read failed, status %d\n", ret);
+		return ret;
+	}
 
 	return buf[0] & (1 << nr);
 }

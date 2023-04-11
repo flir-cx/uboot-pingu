@@ -2,7 +2,6 @@
 #include <i2c.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
-#include "cmd_kbd.h"
 #include "eeprom.h"
 
 #if ! CONFIG_IS_ENABLED(DM_I2C)
@@ -46,12 +45,16 @@ static int eeprom_read_data(struct eeprom *eeprom, unsigned int offset,
 
 	ret = i2c_get_chip_for_busnum(eeprom->i2c_bus, (eeprom->i2c_address >> 1),
 				      I2C_OFFS_LEN, &dev);
-	return_on_status(ret, "EEPROM chip not found\n\n");
+	if (ret != 0) {
+		printf("EEPROM chip not found\n\n");
+		return ret;
+	}
 
 	ret = dm_i2c_read(dev, offset, data, length);
-	return_on_status(ret, "Failed to read EEPROM\n");
+	if (ret != 0)
+		printf("Failed to read EEPROM\n");
 
-	return 0;
+	return ret;
 }
 
 /*
@@ -67,7 +70,10 @@ int eeprom_read_rev(struct eeprom *eeprom)
 	struct article_ver data;
 	int ret = eeprom_read_data(eeprom, eeprom->i2c_offset, (u8 *)&data, sizeof(data));
 
-	return_on_status(ret, "Read article info from EEPROM failed\n");
+	if (ret != 0) {
+		printf("Read article info from EEPROM failed\n");
+		return ret;
+	}
 	eeprom->article_number = simple_strtoul(&data.article[1], NULL, 10);
 	eeprom->article_revision = simple_strtoul(data.revision, NULL, 10);
 	eeprom->article_serial = simple_strtoul(data.serial, NULL, 10);
@@ -88,7 +94,10 @@ int eeprom_read_product(struct eeprom *eeprom)
 	struct product_ver data;
 	int ret = eeprom_read_data(eeprom, PRODUCT_DATA_OFFSET, (u8 *)&data, sizeof(data));
 
-	return_on_status(ret, "Read product info from EEPROM failed\n");
+	if (ret != 0) {
+		printf("Read product info from EEPROM failed\n");
+		return ret;
+	}
 	eeprom->product_number = simple_strtoul(data.article, NULL, 10);
 	eeprom->product_revision = simple_strtoul(data.revision, NULL, 10);
 	eeprom->product_serial = simple_strtoul(data.serial, NULL, 10);

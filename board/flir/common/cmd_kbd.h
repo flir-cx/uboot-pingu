@@ -28,15 +28,4 @@ int read_keys(char **buf);
 #define RECOVERY_KEY  "R"
 #define SW_LOAD       "S"
 
-#define cond_log_return(_cond, _ret, _fmt, args...)	\
-({							\
-	int _rval = (_ret);				\
-	if (_cond) {					\
-		printf(_fmt, ##args);			\
-		return _rval;				\
-	}						\
-})
-
-#define return_on_status(_ret, _fmt...) cond_log_return(_ret, _ret, ##_fmt)
-
 #endif
