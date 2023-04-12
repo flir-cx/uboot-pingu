@@ -6,6 +6,7 @@
 
 #include "imx6dl.dtsi"
 #include "imx6dl-ec101.dtsi"
+#include "imx6dl-evio.dtsi"
 
 / {
 	model = "FLIR i.MX6 Solo evco Board";

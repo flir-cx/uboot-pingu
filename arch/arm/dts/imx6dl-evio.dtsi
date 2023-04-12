@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Copyright 2023 FLIR Systems.
+ *
+ * The code contained herein is licensed under the GNU General Public
+ * License. You may obtain a copy of the GNU General Public License
+ * Version 2 or later at the following locations:
+ *
+ * http://www.opensource.org/licenses/gpl-license.html
+ * http://www.gnu.org/copyleft/gpl.html
+ */
+
+/ {
+	erla-keyboard {
+		compatible = "gpio-keys";
+
+		keyboard_right {
+			label = "R";
+			gpios = <&evio_pca9534_0x40 0 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_left {
+			label = "L";
+			gpios = <&evio_pca9534_0x40 1 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_up {
+			label = "U";
+			gpios = <&evio_pca9534_0x40 2 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_down {
+			label = "D";
+			gpios = <&evio_pca9534_0x40 5 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_middle {
+			label = "M"; // A.k.a. "press"
+			gpios = <&evio_pca9534_0x40 6 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_back {
+			label = "B";
+			gpios = <&evio_pca9534_0x40 4 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_archive {
+			label = "A";
+			gpios = <&evio_pca9534_0x40 7 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
+
+&i2c3 {
+	evio_pca9534_0x40: evio_pca9534_0x40@20 {
+		compatible = "nxp,pca9534";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names = "IO0_Right", "IO1_Left", "IO2_Up", "", "IO4_Back",
+		"IO5_Down", "IO6_Mid", "IO7_Arkiv";
+	};
+};
