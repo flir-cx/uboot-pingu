@@ -1,156 +1,48 @@
 // SPDX-License-Identifier: GPL-2.0+
-#include <common.h>
 #include <command.h>
 #include <env.h>
-#include <asm/gpio.h>
-#include <i2c.h>
+#include <button.h>
 #include <dm/uclass.h>
+#include <dm/platdata.h>
+#include <dm/device-internal.h>
+#include <dm/uclass-internal.h>
 #include <dm/device.h>
 #include "cmd_kbd.h"
 
-#if ! CONFIG_IS_ENABLED(DM_I2C)
-#error "Must configure DM_I2C to use GPIO expander"
+#if !CONFIG_IS_ENABLED(BUTTON_GPIO)
+#error "Must configure BUTTON_GPIO"
 #endif
 
-static int get_gpio_ioexpander(unsigned int nr);
-
-struct button_key {
-	char const      *name;
-	int             (*get_key)(unsigned int nr);
-	unsigned int    gpnum;
-	char            ident;
-	struct udevice  *dev;
-};
-
-#define KEYBOARD_IO_EXP_I2C_ADDR        0x20
-#define KEYBOARD_BEIA_IO_EXP_I2C_ADDR   0x21
-#define KEYBOARD_IO_EXP_BUS_NUM         2
-#define PCA9534_INPUT_PORT              0x0
-#define PCA9534_ADDR_LEN                1
-#define PCA9534_OFFSET_LEN              1
-
-#define EVIOBUSMSK (KEYBOARD_IO_EXP_I2C_ADDR << 8)
-#define BEIABUSMSK (KEYBOARD_BEIA_IO_EXP_I2C_ADDR << 8)
-
-static struct button_key buttons[] = {
-  //	{"sw_load",	gpio_get_value, IMX_GPIO_NR(7, 11),	'S', NULL },
-	{"right",	get_gpio_ioexpander, EVIOBUSMSK | 0,	'R', NULL },
-	{"left",	get_gpio_ioexpander, EVIOBUSMSK | 1,	'L', NULL },
-	{"up",		get_gpio_ioexpander, EVIOBUSMSK | 2,	'U', NULL },
-	{"back",	get_gpio_ioexpander, EVIOBUSMSK | 4,	'B', NULL },
-	{"down",	get_gpio_ioexpander, EVIOBUSMSK | 5,	'D', NULL },
-	{"middle",	get_gpio_ioexpander, EVIOBUSMSK | 6,	'M', NULL },
-	{"sw_load",	get_gpio_ioexpander, BEIABUSMSK | 0,    'S', NULL },
-};
-
-static int kbd_is_initialized;
-static char kbuf[ARRAY_SIZE(buttons) + 1];
-
-/*
- * Find and initialize all possible i2c gpio expanders.
- * Update the buttons array with valid devices.
- */
-static int init_kbd_devices(void)
-{
-	int ret;
-	int i;
-	struct udevice *bus;
-	struct udevice *dev;
-
-	if (kbd_is_initialized)
-		return 0;
-
-	ret = uclass_get_device_by_seq(UCLASS_I2C, KEYBOARD_IO_EXP_BUS_NUM, &bus);
-	if (ret != 0) {
-		printf("No i2c bus 2 found\n");
-		return ret;
-	}
-
-	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
-		int addr = (buttons[i].gpnum >> 8);
-
-		if (buttons[i].get_key != get_gpio_ioexpander)
-			continue;
-
-		ret = i2c_get_chip(bus, addr, PCA9534_ADDR_LEN, &dev);
-		if (ret != 0) {
-			printf("chip 0x%02x not found\n", addr);
-			return ret;
-		}
-		ret = i2c_set_chip_offset_len(dev, PCA9534_OFFSET_LEN);
-		if (ret != 0) {
-			printf("set offset_len on 0x%02x failed\n", addr);
-			return ret;
-		}
-		buttons[i].dev = dev;
-	}
-	kbd_is_initialized = 1;
-
-	return 0;
-}
+static char kbuf[32];
 
 /*
  * generate a null-terminated string containing the buttons pressed
  * returns number of keys pressed, or a negative error
+ *
+ * Limited to single-char button labels.
  *
  * Return: Number of keys pressed, or <0 on error
  *         Registered keys are stored in the kbuf
  */
 int read_keys(char **buf)
 {
-	int numpressed = 0;
-	int i;
-	int ret = init_kbd_devices();
+	struct udevice *dev;
+	int pos;
 
 	memset(kbuf, 0, sizeof(kbuf));
 	*buf = kbuf;
-	if (ret != 0) {
-		printf("Failed to init kbd dev\n");
-		return ret;
+
+	uclass_find_first_device(UCLASS_BUTTON, &dev);
+	while (dev && (pos < sizeof(kbuf) - 1)) {
+		struct button_uc_plat *plat = dev_get_uclass_plat(dev);
+
+		if (plat->label && !device_probe(dev) && device_active(dev) &&
+		    button_get_state(dev) == BUTTON_ON)
+			kbuf[pos++] = plat->label[0];
+
+		uclass_find_next_device(&dev);
 	}
-	for (i = 0; i < ARRAY_SIZE(buttons); i++) {
-		if (!buttons[i].get_key)
-			continue;
-		ret = buttons[i].get_key(buttons[i].gpnum);
-		if (ret == 0)
-			kbuf[numpressed++] = buttons[i].ident;
-		if (ret < 0) {
-			printf("get_key failed for key '%c'\n", buttons[i].ident);
-			return ret;
-		}
-	}
-
-	return numpressed;
-}
-
-/*
- * Check if button with given combnr is pressed.
- *
- * combnr is (addr << 8 + nr)
- * Function prototype needs to be compatible with gpio_get_value()
- *
- * Return: 0 when the requested button was pressed
- *         >0 when no button is pressed
- *         <0 when HW read failed
- */
-static int get_gpio_ioexpander(unsigned int combnr)
-{
-	const int data_len = 1;
-	unsigned int nr = combnr & 0xff;
-	u8 buf[2] = {0xff, 0xff};
-	int i;
-	int ret = 0;
-
-	for (i = 0; i < ARRAY_SIZE(buttons); i++)
-		if (buttons[i].gpnum == combnr && buttons[i].dev)
-			ret = dm_i2c_read(buttons[i].dev, PCA9534_INPUT_PORT, buf, data_len);
-
-	if (ret != 0) {
-		printf("read failed, status %d\n", ret);
-		return ret;
-	}
-
-	return buf[0] & (1 << nr);
+	return pos;
 }
 
 static int do_kbd(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
@@ -163,15 +55,13 @@ static int do_kbd(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[]
 }
 
 #ifdef CONFIG_FLIR_OLD_COMMAND_STYLE
-U_BOOT_CMD(
-	kbd, 1, 1, do_kbd,
-	"Tests for keypresses, sets 'keybd' environment variable",
-	"Returns 0 (true) to shell if key is pressed."
+U_BOOT_CMD(kbd, 1, 1, do_kbd,
+	   "Tests for keypresses, sets 'keybd' environment variable",
+	   "Returns 0 (true) to shell if key is pressed."
 );
 #endif
 
-U_BOOT_CMD(
-	flir_kbd, 1, 1, do_kbd,
-	"Tests for keypresses, sets 'keybd' environment variable",
-	"Returns 0 (true) to shell if key is pressed."
+U_BOOT_CMD(flir_kbd, 1, 1, do_kbd,
+	   "Tests for keypresses, sets 'keybd' environment variable",
+	   "Returns 0 (true) to shell if key is pressed."
 );

@@ -2,6 +2,9 @@
 #include "cmd_kbd.h"
 #include <command.h>
 
+#define RECOVERY_KEY  "R" // TODO: Move to device tree (ec101)
+#define SW_LOAD       "S" // TODO: Move to device tree (ec501)
+
 static int safe_boot;
 
 int flir_get_safe_boot(void)
@@ -27,8 +30,7 @@ static int do_recoverykey(struct cmd_tbl *cmdtp, int flag, int argc, char * cons
 	return !s;
 }
 
-U_BOOT_CMD(
-	recoverykey, 1, 1, do_recoverykey,
-	"Test for recovery key, right keypad press",
-	"Returns 0 (true) to shell if key is pressed."
+U_BOOT_CMD(recoverykey, 1, 1, do_recoverykey,
+	   "Test for recovery key, right keypad press",
+	   "Returns 0 (true) to shell if key is pressed."
 );

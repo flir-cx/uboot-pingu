@@ -25,7 +25,4 @@
  */
 int read_keys(char **buf);
 
-#define RECOVERY_KEY  "R"
-#define SW_LOAD       "S"
-
 #endif
