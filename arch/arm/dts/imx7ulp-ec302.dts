@@ -29,6 +29,31 @@
 		#size-cells = <0>;
 	};
 
+	gpio_keys {
+		compatible = "gpio-keys";
+
+		keyboard_up {
+			label = "U";
+			gpios = <&key_pca9534 0 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_down {
+			label = "D";
+			gpios = <&key_pca9534 1 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_left {
+			label = "L";
+			gpios = <&key_pca9534 2 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_right {
+			label = "R";
+			gpios = <&key_pca9534 3 GPIO_ACTIVE_LOW>;
+		};
+		keyboard_press {
+			label = "press";
+			gpios = <&key_pca9534 4 GPIO_ACTIVE_LOW>;
+		};
+	};
+
 	backlight: backlight {
 		compatible = "gpio-backlight";
 		pinctrl-names = "default";
@@ -208,6 +233,13 @@
 	pinctrl-0 = <&pinctrl_lpi2c6>;
 	pinctrl-1 = <&pinctrl_lpi2c6>;
 	status = "okay";
+
+	key_pca9534: key_pca9534@20 {
+		compatible = "nxp,pca9534";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 /*  PMIC */
