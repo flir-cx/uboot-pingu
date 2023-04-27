@@ -27,7 +27,7 @@ static char kbuf[32];
 int read_keys(char **buf)
 {
 	struct udevice *dev;
-	int pos;
+	int pos = 0;
 
 	memset(kbuf, 0, sizeof(kbuf));
 	*buf = kbuf;
