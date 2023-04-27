@@ -149,7 +149,7 @@
 
 #define CONFIG_BOOTCOMMAND \
 	"setmac;" \
-	"if recoverytrigger; then " \
+	"if recoverykey && kbd_secret; then " \
 		"run recoveryboot;" \
 	"else " \
 		"run mmcbootflir;" \
