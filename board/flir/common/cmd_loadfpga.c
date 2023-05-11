@@ -203,6 +203,8 @@ static void power_up_fpga(void)
 	fpga_power(true);
 	mdelay(10);
 	enable_fpga();
+#elif defined(CONFIG_FPGA_LATTICE)
+	fpga_power(true);
 #else
 #error "Unknown FPGA!"
 #endif

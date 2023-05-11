@@ -27,7 +27,7 @@
 
 
 /*Spi*/
-#define CONFIG_SYS_USE_SPINOR
+//#define CONFIG_SYS_USE_SPINOR Temporarily remove to get fpga to be powered
 // CONFIG_SF_DEFAULT_CS = IMX_GPIO_NR(5, 28) = 156
 
 #endif                         /* __MX6EC701_CONFIG_H */

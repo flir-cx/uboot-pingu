@@ -1607,21 +1607,10 @@ int fpga_power(bool enable)
 	// PERI_SW_EN    (1V2_FPGA)
 	pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
 			    enable ? DA9063_PERI_SW_EN : 0);
-	if (conf_id == 0x3b) { //revC
-		// BMEM_EN         (2V5_FPGA)
-		pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
-				    enable ? DA9063_BUCK_EN : 0);
-		// LDO10_EN          (3V15_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
-				    enable ? DA9063_LDO_EN : 0);
-	} else { //revD
-		// LDO10_EN          (2V5_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
-				    enable ? DA9063_LDO_EN : 0);
-		// LDO8_EN          (3V15_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
-				    enable ? DA9063_LDO_EN : 0);
-	}
+	// BMEM_EN         (1V1_FPGA)
+	pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
+			    enable ? DA9063_BUCK_EN : 0);
+
 	spi_release_bus(slave);
 	return 0;
 }

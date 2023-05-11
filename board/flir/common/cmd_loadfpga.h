@@ -32,6 +32,11 @@
 #define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
 #endif
 
+#ifdef CONFIG_FPGA_LATTICE
+#define GPIO_FPGA_PROGRAM_n         IMX_GPIO_NR(5, 25)
+#define GPIO_FPGA_INIT_n            IMX_GPIO_NR(5, 26)
+#define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
+#endif
 
 #ifdef CONFIG_FPGA_ALTERA
 #ifdef CONFIG_FLIR_PLATFORM_EOCO
@@ -45,6 +50,7 @@
 #define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
 #define GPIO_FPGA_CE                IMX_GPIO_NR(4, 10)
 #endif
+
 
 #endif
 void setup_spinor(void);
