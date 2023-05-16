@@ -12,21 +12,18 @@
 #include "linux/delay.h"
 
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
-#define PMIC_WDOG_GPIO	IMX_GPIO_NR(1, 14)
 static iomux_cfg_t const pmic_wdog_pad[] = {
 	MX7ULP_PAD_PTA14__PTA14 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
+#define PMIC_WATCHDOG_PIN "GPIO1_14"
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
-#if (CONFIG_IS_ENABLED(DM_PCA953X))
-#define PMIC_WDOG_GPIO	IMX_GPIO_NR(3, 0+8)
-#else
-#define PMIC_WDOG_GPIO	IMX_GPIO_NR(3, 0)
-#endif
 static iomux_cfg_t const pmic_wdog_pad[] = {
 	MX7ULP_PAD_PTC0__PTC0 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
+#define PMIC_WATCHDOG_PIN "GPIO3_0"
 #endif
 
+struct gpio_desc wdg_desc;
 
 int pf1550_write_reg(int reg, u8 val)
 {
@@ -109,7 +106,7 @@ void power_off(void)
 	//set go to core off mode
 	pmic_goto_core_off(true);
 	//set watchdog signal low
-	gpio_direction_output(PMIC_WDOG_GPIO, 0);
+	dm_gpio_set_value(&wdg_desc, 0);
 
 	while (1) {
 		mdelay(1000);
@@ -123,7 +120,7 @@ void reboot(void)
 	//set go to core off mode
 	pmic_goto_core_off(false);
 	//set watchdog signal low
-	gpio_direction_output(PMIC_WDOG_GPIO, 0);
+	dm_gpio_set_value(&wdg_desc, 0);
 
 	while (1) {
 	}
@@ -133,6 +130,7 @@ void init_pf1550_pmic(void)
 {
 	u8 curr_pwr_ctrl0;
 	u8 new_pwr_ctrl0;
+	int ret;
 
 	//set Carger operation to charger=off, linear=on
 	pf1550_write_reg(PF1550_CHARG_REG_CHG_OPER, CHARGER_OFF_LINEAR_ON);
@@ -162,7 +160,24 @@ void init_pf1550_pmic(void)
 #endif
 
 	mx7ulp_iomux_setup_multiple_pads(pmic_wdog_pad, ARRAY_SIZE(pmic_wdog_pad));
-	gpio_request(PMIC_WDOG_GPIO, "pmic_wdog");
+
+	ret = dm_gpio_lookup_name(PMIC_WATCHDOG_PIN, &wdg_desc);
+	if (ret) {
+		printf("%s lookup %s failed ret = %d\n", __func__, PMIC_WATCHDOG_PIN, ret);
+		return;
+	}
+
+	ret = dm_gpio_request(&wdg_desc, "pmic_wdog");
+	if (ret) {
+		printf("%s request pmic_wdog failed ret = %d\n", __func__, ret);
+		return;
+	}
+
+	ret = dm_gpio_set_dir_flags(&wdg_desc, GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
+	if (ret) {
+		printf("%s set dir flags failed ret = %d\n", __func__, ret);
+		return;
+	}
 }
 
 void pf1550_thm_ok_toogle_charging(void)
