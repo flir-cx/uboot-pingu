@@ -9,6 +9,7 @@
 #include <asm/arch/iomux.h>
 #include <asm/gpio.h>
 #include "pf1550.h"
+#include "linux/delay.h"
 
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 #define PMIC_WDOG_GPIO	IMX_GPIO_NR(1, 14)
@@ -16,7 +17,11 @@ static iomux_cfg_t const pmic_wdog_pad[] = {
 	MX7ULP_PAD_PTA14__PTA14 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(DM_PCA953X))
+#define PMIC_WDOG_GPIO	IMX_GPIO_NR(3, 0+8)
+#else
 #define PMIC_WDOG_GPIO	IMX_GPIO_NR(3, 0)
+#endif
 static iomux_cfg_t const pmic_wdog_pad[] = {
 	MX7ULP_PAD_PTC0__PTC0 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
@@ -33,7 +38,13 @@ int pf1550_write_reg(int reg, u8 val)
 		return ret;
 	}
 
-	return dm_i2c_write(dev, reg, &val, 1);
+	ret = dm_i2c_write(dev, reg, &val, 1);
+	if (ret) {
+		printf("Failed to write pmic: %d\n", ret);
+		return ret;
+	}
+
+	return ret;
 }
 
 int pf1550_read_reg(int reg, u8 *val)
@@ -46,7 +57,13 @@ int pf1550_read_reg(int reg, u8 *val)
 		return ret;
 	}
 
-	return dm_i2c_read(dev, reg, val, 1);
+	ret = dm_i2c_read(dev, reg, val, 1);
+	if (ret) {
+		printf("Failed to read pmic: %d\n", ret);
+		return ret;
+	}
+
+	return ret;
 }
 
 int get_usb_cable_state(void)
@@ -95,6 +112,8 @@ void power_off(void)
 	gpio_direction_output(PMIC_WDOG_GPIO, 0);
 
 	while (1) {
+		mdelay(1000);
+		printf("Still on\n");
 	}
 }
 
