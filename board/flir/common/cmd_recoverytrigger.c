@@ -35,27 +35,22 @@ DECLARE_GLOBAL_DATA_PTR;
 #define OK 0
 #define FAIL 1
 
-
-
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201))
-#define TRIG_GPIO   IMX_GPIO_NR(3, 12)
-#define BTN_GPIO_PAD_CTRL	(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP)
+#define TRIGGER_PIN "GPIO3_12"
 static iomux_cfg_t const btn_trig_pad[] = {
-	MX7ULP_PAD_PTC12__PTC12 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
+	MX7ULP_PAD_PTC12__PTC12 | MUX_PAD_CTRL(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP),
 };
 #define GPIO_PER_CLK PER_CLK_PCTLC
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
-#define TRIG_GPIO   IMX_GPIO_NR(6, 0)
-#define BTN_GPIO_PAD_CTRL	(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP)
+#define TRIGGER_PIN "GPIO6_0"
 static iomux_cfg_t const btn_trig_pad[] = {
-	MX7ULP_PAD_PTF0__PTF0 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
+	MX7ULP_PAD_PTF0__PTF0 | MUX_PAD_CTRL(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP),
 };
 #define GPIO_PER_CLK PER_CLK_PCTLF
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
-#define PWR_GPIO   IMX_GPIO_NR(3, 13)
-#define BTN_GPIO_PAD_CTRL	(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP)
-static iomux_cfg_t const btn_pwr_pad[] = {
-	MX7ULP_PAD_PTC13__PTC13 | MUX_PAD_CTRL(BTN_GPIO_PAD_CTRL),
+#define TRIGGER_PIN "GPIO3_13"
+static iomux_cfg_t const btn_trig_pad[] = {
+	MX7ULP_PAD_PTC13__PTC13 | MUX_PAD_CTRL(PAD_CTL_IBE_ENABLE | PAD_CTL_PUS_UP),
 };
 #define GPIO_PER_CLK PER_CLK_PCTLC
 
@@ -70,14 +65,11 @@ static iomux_cfg_t const btn_pwr_pad[] = {
 #define SEQ_END_MS                  2000	/* 16s */
 #endif
 
+struct gpio_desc trigger_gpio_desc;
+
 int get_button_state(void)
 {
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
-	return gpio_get_value(TRIG_GPIO);
-#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
-	return gpio_get_value(PWR_GPIO);
-#endif
-	return TRIG_OFF;
+	return dm_gpio_get_value(&trigger_gpio_desc);
 }
 
 int trigger_wait_until(int btn_state, int mtimeout)
@@ -227,7 +219,7 @@ int check_button_sequence(void)
 
 	/* Turn off the leds and the system after SOC if button is released */
 	mdelay(SEQ_DISPLAY_SOC_MS);
-	if (gpio_get_value(PWR_GPIO) == TRIG_OFF)
+	if (get_button_state() == TRIG_OFF)
 		goto out_fail;
 
 	printf("LED sequence 1\n");
@@ -265,24 +257,29 @@ out_fail:
 }
 #endif
 
-static bool button_pressed(void)
+static void init_trigger_button(void)
 {
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+	int ret;
+
 	mx7ulp_iomux_setup_multiple_pads(btn_trig_pad, ARRAY_SIZE(btn_trig_pad));
-	gpio_request(TRIG_GPIO, "trig_gpio");
-	if (gpio_direction_input(TRIG_GPIO) == -1)
-		return false;
-	if (gpio_get_value(TRIG_GPIO) != 0)
-		return false;
-#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
-	mx7ulp_iomux_setup_multiple_pads(btn_pwr_pad, ARRAY_SIZE(btn_pwr_pad));
-	gpio_request(PWR_GPIO, "pwr_gpio");
-	if (gpio_direction_input(PWR_GPIO) == -1)
-		return false;
-	if (gpio_get_value(PWR_GPIO) != 0)
-		return false;
-#endif
-	return true;
+
+	ret = dm_gpio_lookup_name(TRIGGER_PIN, &trigger_gpio_desc);
+	if (ret) {
+		printf("%s lookup %s failed ret = %d\n", __func__, TRIGGER_PIN, ret);
+		return;
+	}
+
+	ret = dm_gpio_request(&trigger_gpio_desc, "trigger_btn");
+	if (ret) {
+		printf("%s request trigger_btn failed ret = %d\n", __func__, ret);
+		return;
+	}
+
+	ret = dm_gpio_set_dir_flags(&trigger_gpio_desc, GPIOD_IS_IN);
+	if (ret) {
+		printf("%s set dir flags failed ret = %d\n", __func__, ret);
+		return;
+	}
 }
 
 int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
@@ -292,8 +289,9 @@ int do_recoverytrigger(struct cmd_tbl *cmdtp, int flag, int argc, char *const ar
 	printf("Check recovery\n");
 
 	pcc_clock_enable(GPIO_PER_CLK, true);
+	init_trigger_button();
 
-	if (!button_pressed())
+	if (get_button_state() == TRIG_OFF)
 		return FAIL;
 
 	// Check recovery sequence
