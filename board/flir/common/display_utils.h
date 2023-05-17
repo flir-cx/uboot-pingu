@@ -7,6 +7,7 @@
 
 #include <stdbool.h>
 
+void display_init(void);
 void display_set_text_color(void);
 void display_print_string(char *s);
 void display_print_charge_level(int c);

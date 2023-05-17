@@ -100,6 +100,7 @@ static void check_cable(void)
 static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+	display_init();
 	display_timer_reset();
 	display_set_text_color();
 #endif
@@ -130,7 +131,8 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 
 		/* Turn off screen when timer expires */
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
-		display_check_timer();
+		if (display_is_on())
+			display_check_timer();
 #endif
 
 		udelay(CHARGEAPP_LOOP_DELAY);

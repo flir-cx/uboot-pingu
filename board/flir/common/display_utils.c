@@ -10,7 +10,7 @@
 #include <asm/arch/iomux.h>
 #include <asm/gpio.h>
 
-#define DISPLAY_ENABLE		IMX_GPIO_NR(3, 6)
+#define BACKLIGHT_GPIO_PIN "GPIO3_6"
 
 #define DISPLAY_COLOR_GREEN	0x3dbe54
 #define DISPLAY_COLOR_YELLOW	0xfff959
@@ -20,6 +20,8 @@
 
 bool display_enabled = true;
 u64  display_timer;
+
+struct gpio_desc backlight_gpio_desc;
 
 void display_set_text_color(void)
 {
@@ -129,9 +131,19 @@ void display_timer_reset(void)
 	display_timer = get_ticks();
 }
 
+void display_init(void) {
+	int ret;
+
+	ret = dm_gpio_lookup_name(BACKLIGHT_GPIO_PIN, &backlight_gpio_desc);
+	if (ret) {
+		printf("%s lookup %s failed ret = %d\n", __func__, BACKLIGHT_GPIO_PIN, ret);
+		return;
+	}
+}
+
 void display_on(void)
 {
-	gpio_direction_output(DISPLAY_ENABLE, 1);
+	dm_gpio_set_value(&backlight_gpio_desc, 1);
 	display_timer_reset();
 	display_enabled = true;
 }
@@ -140,7 +152,7 @@ void display_off(void)
 {
 	if (!display_enabled)
 		return;
-	gpio_direction_output(DISPLAY_ENABLE, 0);
+	dm_gpio_set_value(&backlight_gpio_desc, 0);
 	display_enabled = false;
 }
 
