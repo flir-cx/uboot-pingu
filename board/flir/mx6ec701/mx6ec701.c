@@ -62,14 +62,14 @@
 #include "../common/da9063_regs.h"
 #include "../common/board_support.h"
 #include "../common/usbcharge.h"
-#include "../common/cmd_updatefdteeprom.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
 struct spi_slave *slave;
 
+#if defined(CONFIG_IMX6_LDO_BYPASS)
 void imx_bypass_ldo(void);
-
+#endif
 static int setup_pmic_voltages(void);
 static int platform_setup_pmic_voltages(void);
 int fpga_power(bool enable);
@@ -121,7 +121,7 @@ iomux_v3_cfg_t const ecspi4_pads[] = {
 
 //default hw support
 static struct hw_support hardware = {
-	.mipi_mux =	false,
+	.mipi_mux = false,
 	.display = true,
 	.usb_charge = IS_ENABLED(CONFIG_FLIR_USBCHARGE),
 	.name = "Unknown Camera"
@@ -190,17 +190,14 @@ int board_spi_cs_gpio(unsigned int bus, unsigned int cs)
 	return -1;
 }
 
-static int detect_orise(struct display_info_t const *dev)
+
+
+static int detect_truly(struct display_info_t const *dev)
 {
 	return 1;
 }
 
-static int detect_truly(struct display_info_t const *dev)
-{
-	return 0;
-}
-
-static void enable_backlight(struct display_info_t const *dev)
+void backlight_on(bool on)
 {
 	struct udevice *pwm_dev;
 	int ret;
@@ -218,7 +215,12 @@ static void enable_backlight(struct display_info_t const *dev)
 		return;
 	}
 
-	pwm_set_enable(pwm_dev, 0, 1);
+	pwm_set_enable(pwm_dev, 0, on);
+}
+
+static void enable_backlight(struct display_info_t const *dev)
+{
+	backlight_on(true);
 }
 
 #ifdef CONFIG_ENV_IS_IN_MMC
@@ -730,28 +732,6 @@ struct display_info_t const displays[] = {{
 	.addr	= 0,
 	.pixfmt	= IPU_PIX_FMT_RGB24,
 	.di = 0,
-	.detect	= detect_orise,
-	.enable	= enable_backlight,
-	.mode	= {
-		.name           = "ORISE-VGA",
-		.refresh        = 60,
-		.xres           = 640,
-		.yres           = 480,
-		.pixclock       = 37000,
-		.left_margin    = 100,
-		.right_margin   = 100,
-		.upper_margin   = 31,
-		.lower_margin   = 10,
-		.hsync_len      = 96,
-		.vsync_len      = 4,
-		.sync           = 0,
-		.vmode          = FB_VMODE_NONINTERLACED,
-		.flag           = 0
-} }, {
-	.bus	= 1,
-	.addr	= 0,
-	.pixfmt	= IPU_PIX_FMT_RGB24,
-	.di = 0,
 	.detect	= detect_truly,
 	.enable	= enable_backlight,
 	.mode	= {
@@ -769,7 +749,8 @@ struct display_info_t const displays[] = {{
 		.sync           = 0,
 		.vmode          = FB_VMODE_NONINTERLACED,
 		.flag           = 0
-} }
+		}
+	}
 };
 
 size_t display_count = ARRAY_SIZE(displays);
@@ -925,12 +906,10 @@ static void setup_mipi_mux_i2c(void)
 
 int board_early_init_f(void)
 {
-	arch_cpu_init();
 	board_setup_timer();
 	setup_iomux_uart();
 #if defined(CONFIG_VIDEO_IPUV3)
 	setup_display();
-	setup_mipi_mux_i2c();
 #endif
 
 	return 0;
@@ -1010,6 +989,16 @@ int board_init(void)
 
 	if (IS_ENABLED(CONFIG_FEC_MXC))
 		setup_fec();
+
+	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		struct mipi_dsi_ops ops;
+
+		ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
+		ops.lcd_setup = mipid_st7703_lcd_setup;
+
+		setup_mipi_mux_i2c();
+		mxc_mipi_dsi_enable(&ops);
+	}
 
 	return 0;
 }
@@ -1391,17 +1380,7 @@ static const struct boot_mode board_boot_modes[] = {
 
 int board_late_init(void)
 {
-	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
-		if (hardware.display) {
-			struct mipi_dsi_ops ops;
 
-			if (detect_truly(NULL)) {
-				ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
-				ops.lcd_setup = mipid_st7703_lcd_setup;
-			}
-			mxc_mipi_dsi_enable(&ops);
-		}
-	}
 	if (IS_ENABLED(CONFIG_CMD_BMODE))
 		add_board_boot_modes(board_boot_modes);
 
@@ -1610,7 +1589,9 @@ int fpga_power(bool enable)
 	// BMEM_EN         (1V1_FPGA)
 	pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
 			    enable ? DA9063_BUCK_EN : 0);
-
+	// LDO08            (3V15_FPGA)
+	pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
+			    enable ? DA9063_LDO_EN : 0);
 	spi_release_bus(slave);
 	return 0;
 }

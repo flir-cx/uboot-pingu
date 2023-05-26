@@ -13,7 +13,7 @@
 	aliases {
 		mxcfb0 = &mxcfb1;
 		mxcfb1 = &mxcfb2;
-		mxcfb2 = &mxcfb3;
+
 		i2c3 = &i2c4;
 
 		/* FLIR - overwrite imx6qdl standard. Compatible with ROCO  */
@@ -37,46 +37,100 @@
 		};
 	};
 
+	luke-keyboard {
+		compatible = "gpio-keys";
+
+		autorepeat;
+		/*KEY_F3*/
+		keyboard_zoom {
+			label = "Zoom";
+			gpio-key;
+			gpios = <&ec701_pca9534_0x42 2 GPIO_ACTIVE_LOW>;
+			linux,code = <61>;
+		};
+		/*KEY_ENTER*/
+		keyboard_mode {
+			label = "Mode";
+			gpio-key;
+			gpios = <&ec701_pca9534_0x42 3 GPIO_ACTIVE_LOW>;
+			linux,code = <28>;
+		};
+		/*F6*/
+		button_trigger {
+			label = "Trigger";
+			gpio-key;
+			gpios = <&ec701_pca9534_0x42 4 GPIO_ACTIVE_LOW>;
+			linux,code = <64>;
+		};
+	};
+
 	regulators {
 		compatible = "simple-bus";
 
-		reg_ec101_lcd_dummy: reg_ec101_lcd_dummy {
+		/*DISP_PWR_EN*/
+		reg_ec701_lcd_en: reg_ec701_lcd_en {
 			compatible = "regulator-fixed";
-			regulator-name = "lcd_dummy";
+			regulator-name = "lcd_en";
+			gpio = <&ec701_pca9534_0x46 6 GPIO_ACTIVE_HIGH>;
+			regulator-boot-on;
+			enable-active-high;
 		};
 
-		reg_ec101_4v0_fpa: ec101_4v0_fpa {
+		reg_ec701_4v0_fpa: ec701_4v0_fpa {
 			compatible = "regulator-fixed";
 			regulator-name = "4V0_fpa";
 			gpio = <&gpio2 1 0>;
 			enable-active-high;
 		};
 
-		/*Removed on ec101-d but required by fvdk*/
-		reg_ec101_fpa_i2c: ec101_fpa_i2c {
+		/*Required by fvdk*/
+		reg_ec701_fpa_i2c: ec701_fpa_i2c {
 			compatible = "regulator-fixed";
 			regulator-name = "fpa_i2c";
+			enable-active-high;
+		};
+
+		reg_4va_bw_en: reg_4va_bw_en {
+			compatible = "regulator-fixed";
+			regulator-name = "4VA_BW";
+			regulator-min-microvolt = <4000000>;
+			regulator-max-microvolt = <4000000>;
+			gpio = <&ec701_pca9534_0x46 2 GPIO_ACTIVE_HIGH>;
+			regulator-boot-on;
+			startup-delay-us = <10000>;
+			enable-active-high;
+		};
+
+		wlan_en_reg: wlan_en_reg {
+			compatible = "regulator-fixed";
+			regulator-name = "wlan-en";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			gpio = <&gpio2 6 GPIO_ACTIVE_HIGH>;
+			regulator-boot-on;
+			startup-delay-us = <70000>;
+			enable-active-high;
+			vin-supply = <&reg_4va_bw_en>;
+		};
+
+		reg_gps_en: reg_gps_en {
+			compatible = "regulator-fixed";
+			regulator-name = "reg_gps_en";
+			gpio = <&ec701_pca9534_0x46 1 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
 		};
 	};
 
 	fad {
 		compatible = "flir,fad";
-		hasLaser = <1>;
+		hasLaser = <0>;
 		hasGPS = <1>;
-//		laser_on-gpios = <&gpio4 12 GPIO_ACTIVE_HIGH>;
-//		laser_soft-gpios = <&rori_pca9534 5 GPIO_ACTIVE_LOW>;
-//		laser_switch-gpios = <&rori_pca9534 2 GPIO_ACTIVE_LOW>;
 		standbyMinutes = <360>;  // 360 = 6 hours
 		backlight = <&backlight_lcd>;
 	};
 
 	boards{
 		mainboard{
-			article = <0>;
-			rev = <0>;
-		};
-		evro{
 			article = <0>;
 			rev = <0>;
 		};
@@ -101,22 +155,11 @@
 
 	mxcfb2: fb@1 {
 		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "fake";
-		interface_pix_fmt = "RGB24";
-		mode_str ="640x480M@60";
-		default_bpp = <32>;
-		int_clk = <0>;
-		late_init = <0>;
-		status = "okay";
-	};
-
-	mxcfb3: fb@2 {
-		compatible = "fsl,mxc_sdc_fb";
 		interface_pix_fmt = "RGB24";
 		default_bpp = <32>;
 		int_clk = <0>;
 		late_init = <0>;
-		status = "okay";
+		status = "disabled";
 		disp_dev = "lcd";
 		mode_str ="FLIR-DP";
 	};
@@ -125,8 +168,6 @@
 		compatible = "pwm-backlight";
 		pwms = <&pwm1 0 500000>; //500us=2KHz
 		brightness-levels = <0 10 20 30 40 50 60 70 80 90 100>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_pwm1>;
 		default-brightness-level = <7>;
 		options = <3>;	// Restore backlight after suspend
 	};
@@ -146,7 +187,7 @@
 		csi_id = <1>;
 		videoflow_method = <1>;
 		mclk_source = <0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	v4l2_out {
@@ -170,30 +211,6 @@
 		spi-cs-gpio		= <&gpio5 28 GPIO_ACTIVE_HIGH>;
 	};
 
-	fake {
-		compatible = "fsl,imx6q-fake";
-		display = <&fakedisp>;
-		ipu_id = <0>;
-		disp_id = <2>;
-		status = "okay";
-	};
-
-	fakedisp: fake-vga {
-		display-timings {
-			timing {
-				clock-frequency = <40000000>;
-				hactive = <640>;
-				vactive = <480>;
-				hfront-porch = <40>;
-				hback-porch = <88>;
-				hsync-len = <128>;
-				vback-porch = <23>;
-				vfront-porch = <1>;
-				vsync-len = <40>;
-			};
-		};
-	};
-
 	lcd@0 {
 		compatible = "fsl,lcd";
 		ipu_id = <0>;
@@ -203,6 +220,7 @@
 		pinctrl-0 = <&pinctrl_ipu1>;
 		display = <&lcdtiming>;
 		status = "okay";
+		bootlogo = <0x0 0x0>;
 	};
 
 	lcdtiming: lcdtiming {
@@ -221,28 +239,6 @@
 			};
 		};
 	};
-
-	dpsound: dpsound {
-		compatible = "fsl,imx-audio-tc358767a";
-		model = "imx-audio-tc358767a";
-		cpu-dai = <&ssi2>;
-		audio-codec = <&displayport>;
-		mux-int-port = <2>;
-		mux-ext-port = <4>;
-	};
-
-	yildun {
-		compatible = "flir,yildun";
-		pinctrl-names = "default", "idle";
-		pinctrl-0 = <&pinctrl_yildun_spi>;
-		pinctrl-1 = <&pinctrl_yildun_spi_idle>;
-		fpga2-config-gpio	= <&gpio3 0 GPIO_ACTIVE_HIGH>;
-		fpga2-status-gpio	= <&gpio3 1 GPIO_ACTIVE_HIGH>;
-		fpga2-conf-done-gpio	= <&gpio3 2 GPIO_ACTIVE_HIGH>;
-		fpga2-ce-gpio		= <&gpio3 3 GPIO_ACTIVE_HIGH>;
-		spi2-sclk-gpio		= <&gpio2 23 GPIO_ACTIVE_HIGH>;
-		spi2-mosi-gpio		= <&gpio2 24 GPIO_ACTIVE_HIGH>;
-	};
 };
 
 /* LCD */
@@ -250,7 +246,7 @@
 	dev_id = <0>;
 	disp_id = <1>;
 	lcd_panel = "ORISE-VGA";
-	disp-power-on-supply = <&reg_ec101_lcd_dummy>;
+	disp-power-on-supply = <&reg_ec701_lcd_en>;
 	status = "okay";
 };
 
@@ -260,12 +256,6 @@
 };
 
 &ssi2 {
-	status = "okay";
-};
-
-&audmux {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_audmux>;
 	status = "okay";
 };
 
@@ -288,8 +278,8 @@
 		reg = <0>;
 	};
 
-	bie64flash: bie64flash@1 {
-		compatible = "micron,n25q128a13", "micron,n25q256a", "jedec,spi-nor";
+	dat64flash: dat64flash@1 {
+		compatible = "micron,n25q128a13", "jedec,spi-nor";
 		spi-max-frequency = <20000000>;
 		reg = <1>;
 	};
@@ -303,20 +293,12 @@
 
 };
 
-&ecspi2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_yildun_fpga>;
-	status = "okay";
-	fsl,spi-num-chipselects = <1>;
-	cs-gpios = <&gpio2 27 0>;	// Fake pin not used
-};
-
 &ecspi4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_ecspi4>;
 	status = "okay";
 	fsl,spi-num-chipselects = <1>;
-	cs-gpios = <&gpio3 20 0>;
+	cs-gpios = <&gpio3 20 GPIO_ACTIVE_LOW>;
 
 	da9063: da9063@0 {
 		compatible = "dlg,da9063";
@@ -542,28 +524,51 @@
 	};
 };
 
-/*FLIR i2c2 bus: hdmi */
-&i2c4 {
-	clock-frequency = <100000>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_i2c4>;
-	status = "okay";
-
-	hdmi_edid: edid@50 {
-		compatible = "fsl,imx6-hdmi-i2c";
-		i2c_en_gpio = <&gpio2 0 GPIO_ACTIVE_HIGH>;
-		reg = <0x50>;
-	};
-};
-
-/*FLIR i2c1 bus: eeprom*/
 &i2c3 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	ec101_24c02: ec101_24c02@57 {
+	/*Battery fuel gauge*/
+	battery: bq27520g4@55 {
+		compatible = "ti,bq27520g4";
+		reg = <0x55>;
+	};
+
+	/*Battery charger*/
+	bq24298@6b {
+		compatible = "ti,bq24298";
+		reg = <0x6b>;
+		interrupt-parent = <&gpio6>;
+		interrupts = <15 2>;
+		//ti,usb-charger-detection = <&usbotg>;
+		status = "okay";
+	};
+
+	ec701_pca9534_0x42: ec701_pca9534_0x42@21 {
+		//pwr ctrl I/O Expander
+		compatible = "nxp,pca9534";
+		reg = <0x21>;
+		gpio-controller;
+		vcc-supply = <&DA9063_LDO11>;
+		interrupt-parent = <&gpio4>; //I2C3_Alert_n
+		interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-controller;
+		interrupts-shared;
+		#interrupt-cells = <2>;
+		#gpio-cells = <2>;
+	};
+
+	ec701_pca9534_0x46: ec701_pca9534_0x46@23 {
+		compatible = "nxp,pca9534";
+		reg = <0x23>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
+	/*ID EEPROM*/
+	ec701_24c02: ec701_24c02@57 {
 		compatible = "atmel,24c02";
 		reg = <0x57>;
 		pagesize = <16>;
@@ -573,7 +578,7 @@
 		compatible = "flir,flir_csi";
 		reg = <0x3c>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_evco_csi0>;
+		pinctrl-0 = <&pinctrl_ec701_csi0>;
 		clocks = <&clks 201>;
 		clock-names = "csi_mclk";
 		ipu_id = <0>;
@@ -589,7 +594,7 @@
 		compatible = "flir,flir_csi";
 		reg = <0x3d>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_evco_csi1>;
+		pinctrl-0 = <&pinctrl_ec701_csi1>;
 		clocks = <&clks 201>;
 		clock-names = "csi_mclk";
 		ipu_id = <0>;
@@ -598,16 +603,73 @@
 		mclk_source = <0>;
 		capturemode = <5>;
 		format = "UYVY";
-		status = "okay";
+		status = "disabled";
 	};
 
-	displayport: dp@0F {
-		compatible = "tc358767_lcd2dp";
+	/*Accelerometer*/
+	acc_kxtj3: acc_kxtj3@0E {
+		compatible = "kionix,kxtj3";
+		reg = <0x0E>;
+		min-interval = <100>;
+		axis-map-x = <2>;
+		negate-x;
+		axis-map-y = <1>;
+		negate-y;
+		axis-map-z = <0>;
+		negate-z;
+	};
+};
+
+&i2c4 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4>;
+	status = "okay";
+
+	gps:ec701_gps@42 {
+		compatible = "ublox,m8";
+		reg = <0x42>;
+		interrupt-pin = <&gpio7 12 GPIO_ACTIVE_HIGH>;
+		reset-pin = <&ec701_pca9534_0x42 5 GPIO_ACTIVE_LOW>;
+		vin-supply = <&reg_gps_en>;
+	};
+
+	/*Magnetometer*/
+	mag_bm1422: mag_bm1422@0F {
+		compatible = "rohm,bm1422";
 		reg = <0x0F>;
-		reset_gpio = <&gpio4 20 GPIO_ACTIVE_LOW>;
-		shdn_gpio = <&gpio3 13 GPIO_ACTIVE_LOW>;
+		// Remap axes for appcore
+		axis-map-x = <2>; // X = -Z
+		negate-x;
+		axis-map-y = <0>; // Y = X
+		axis-map-z = <1>; // Z = -Y
+		negate-z;
+	  };
+};
+
+/* Wi-Fi */
+&usdhc3 {
+	pinctrl-names = "default", "sleep";
+	pinctrl-0 = <&pinctrl_usdhc3>;
+	pinctrl-1 = <&pinctrl_usdhc3_sleep>;
+	vmmc-supply = <&wlan_en_reg>;
+	non-removable;
+	no-1-8-v;
+	keep-power-in-suspend;
+	cap-power-off-card;
+	max-frequency = <25000000>;
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	wlcore: wlcore@3 {
+		compatible = "ti,wl1807";
+		reg = <2>;
 		interrupt-parent = <&gpio2>;
-		interrupts = <7 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <5 IRQ_TYPE_LEVEL_HIGH>;
+		platform-quirks = <1>;
+		tcxo-clock-frequency = <26000000>;
+		ref-clock-frequency = <26000000>;
 	};
 };
 
@@ -615,9 +677,56 @@
 
 	imx6dl-ec701 {
 
-		pinctrl_pwm1: pwm1 {
+		pinctrl_usdhc3: usdhc3grp {
 			fsl,pins = <
-				MX6QDL_PAD_GPIO_9__PWM1_OUT		0x1b0b1
+				/* Use 22 kohm pull up on SD signals */
+				MX6QDL_PAD_SD3_CMD__SD3_CMD		0x1f020
+				MX6QDL_PAD_SD3_CLK__SD3_CLK		0x10020
+				MX6QDL_PAD_SD3_DAT0__SD3_DATA0		0x1f020
+				MX6QDL_PAD_SD3_DAT1__SD3_DATA1		0x1f020
+				MX6QDL_PAD_SD3_DAT2__SD3_DATA2		0x1f020
+				MX6QDL_PAD_SD3_DAT3__SD3_DATA3		0x1f020
+				MX6QDL_PAD_NANDF_D6__GPIO2_IO06		0x10
+				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x1b010
+			>;
+		};
+
+		pinctrl_usdhc3_sleep: usdhc3grpsleep {
+			fsl,pins = <
+				// 100 kOhm pull down GPIO input
+				MX6QDL_PAD_SD3_CMD__GPIO7_IO02		0x3010
+				MX6QDL_PAD_SD3_CLK__GPIO7_IO03		0x3010
+				MX6QDL_PAD_SD3_DAT0__GPIO7_IO04		0x3010
+				MX6QDL_PAD_SD3_DAT1__GPIO7_IO05		0x3010
+				MX6QDL_PAD_SD3_DAT2__GPIO7_IO06		0x3010
+				MX6QDL_PAD_SD3_DAT3__GPIO7_IO07		0x3010
+				MX6QDL_PAD_NANDF_D5__GPIO2_IO05		0x3010
+			>;
+		};
+
+		pinctrl_uart3: uart3grp {
+			fsl,pins = <
+				MX6QDL_PAD_EIM_D24__UART3_TX_DATA	0x1b0b1
+				MX6QDL_PAD_EIM_D25__UART3_RX_DATA	0x1b0b1
+				MX6QDL_PAD_EIM_D30__UART3_CTS_B		0x1b0b1
+				MX6QDL_PAD_EIM_D31__UART3_RTS_B		0x1b0b1
+				MX6QDL_PAD_NANDF_D4__GPIO2_IO04		0x10
+			>;
+		};
+
+		pinctrl_uart3_sleep: uart3grpsleep {
+			fsl,pins = <
+				// 100 kOhm pull down GPIO input
+				MX6QDL_PAD_EIM_D24__GPIO3_IO24		0x3010
+				MX6QDL_PAD_EIM_D25__GPIO3_IO25		0x3010
+				MX6QDL_PAD_EIM_D30__GPIO3_IO30		0x3010
+				MX6QDL_PAD_EIM_D31__GPIO3_IO31		0x3010
+			>;
+		};
+
+		pinctrl_pwm1: pwm1grp {
+			fsl,pins = <
+				MX6QDL_PAD_GPIO_9__PWM1_OUT		0x80000000
 			>;
 		};
 
@@ -708,7 +817,7 @@
 			>;
 		};
 
-		pinctrl_evco_csi0: ipuevcogrp-0 { /* parallel camera - LCD image */
+		pinctrl_ec701_csi0: ipuec701grp-0 { /* parallel camera - LCD image */
 			fsl,pins = <
 				MX6QDL_PAD_CSI0_DAT12__IPU1_CSI0_DATA12		0x80000000
 				MX6QDL_PAD_CSI0_DAT13__IPU1_CSI0_DATA13		0x80000000
@@ -725,7 +834,7 @@
 				>;
 		};
 
-		pinctrl_evco_csi1: ipuevcogrp-1 { /* parallel camera - visual */
+		pinctrl_ec701_csi1: ipuec701grp-1 { /* parallel camera - visual */
 			fsl,pins = <
 				MX6QDL_PAD_EIM_A17__IPU1_CSI1_DATA12	0x80000000
 				MX6QDL_PAD_EIM_A18__IPU1_CSI1_DATA13	0x80000000
@@ -785,43 +894,6 @@
 			>;
 		};
 
-		pinctrl_audmux: audmuxgrp {
-			fsl,pins = <
-				MX6QDL_PAD_KEY_COL0__AUD5_TXC    0x130b0
-				MX6QDL_PAD_KEY_ROW0__AUD5_TXD    0x110b0
-				MX6QDL_PAD_KEY_COL1__AUD5_TXFS   0x130b0
-				MX6QDL_PAD_KEY_ROW1__AUD5_RXD    0x130b0
-				MX6QDL_PAD_SD2_DAT1__AUD4_TXFS   0x130b0
-				MX6QDL_PAD_SD2_DAT2__AUD4_TXD    0x110b0
-				MX6QDL_PAD_SD2_DAT3__AUD4_TXC    0x130b0
-			>;
-		};
-
-		pinctrl_yildun_fpga: yildunfpgagrp {
-			fsl,pins = <
-				MX6QDL_PAD_EIM_DA0__GPIO3_IO00	0x10030
-				MX6QDL_PAD_EIM_DA1__GPIO3_IO01	0x10030
-				MX6QDL_PAD_EIM_DA2__GPIO3_IO02	0x10030
-				MX6QDL_PAD_EIM_DA3__GPIO3_IO03	0x10030
-			>;
-		};
-
-		pinctrl_yildun_spi: yildunspigrp {
-			fsl,pins = <
-				MX6QDL_PAD_EIM_CS0__ECSPI2_SCLK	0x100b1
-				MX6QDL_PAD_EIM_CS1__ECSPI2_MOSI	0x100b1
-				MX6QDL_PAD_EIM_OE__ECSPI2_MISO	0x100b1
-			>;
-		};
-
-		pinctrl_yildun_spi_idle: yildunspiidlegrp {
-			fsl,pins = <
-				MX6QDL_PAD_EIM_CS0__GPIO2_IO23	0x100b1
-				MX6QDL_PAD_EIM_CS1__GPIO2_IO24	0x100b1
-				MX6QDL_PAD_EIM_OE__GPIO2_IO25	0x100b1
-			>;
-		};
-
 		pinctrl_fvd: fvdgrp {
 			fsl,pins = <
 				MX6QDL_PAD_EIM_D16__GPIO3_IO16  0x10010
@@ -831,11 +903,6 @@
 			>;
 		};
 	};
-};
-
-&pcie {
-	status = "okay";
-	reset-gpio = <&gpio2 3 0>;
 };
 
 &pwm1 {
@@ -875,7 +942,8 @@
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
 	status = "okay";
-	imx6-usb-charger-detection;
+//	imx6-usb-charger-detection;
+	fsl,anatop = <&anatop>;
 //	dr_mode = "host";
 //	dr_mode = "peripheral";
 	dr_mode = "otg";
