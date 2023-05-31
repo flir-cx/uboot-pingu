@@ -28,13 +28,15 @@
 #define LC709203F 1
 #define LC709204F 0
 
+enum fuelgauge_battery_status {BATTERY_NONE, BATTERY_INSERTED, BATTERY_PLUGGED_IN};
+
 int fuelgauge_init(void);
 
 int fuelgauge_get_state_of_charge(u16 *soc);
 int fuelgauge_get_battery_voltage(u16 *voltage);
 int fuelgauge_sleep(void);
 int fuelgauge_operational(void);
-bool fuelgauge_check_battery_insertion(void);
+int fuelgauge_check_battery_insertion(void);
 
 int fuelgauge_battery_profile_one(void);
 int fuelgauge_thermistor_mode(void);

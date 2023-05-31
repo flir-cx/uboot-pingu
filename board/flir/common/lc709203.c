@@ -146,10 +146,19 @@ int fuelgauge_battery_profile(int param)
 				   param ? BATTERY_PROFILE_ONE : BATTERY_PROFILE_ZERO, 0);
 }
 
-/* All registers will be zeroed when battery is
- * removed. So we can check for new battery insertions
- * by reading any register and checking if it is zero. */
-bool fuelgauge_check_battery_insertion(void)
+/*
+ * The battery can either be:
+ *
+ *  - Missing
+ *  - Inserted but not initialized, or
+ *  - Inserted and initialized
+ *
+ * To differentiate between these cases we read the content of a
+ * register that is non-zero if initialized and zero if not. If we
+ * cannot read the register at all we assume that the battery is
+ * missing.
+ */
+int fuelgauge_check_battery_insertion(void)
 {
 	struct udevice *dev;
 	u8 buf;
@@ -158,20 +167,21 @@ bool fuelgauge_check_battery_insertion(void)
 	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
-		return false;
+		return BATTERY_NONE;
 	}
 
 	ret = dm_i2c_read(dev, LC709204_APA, &buf, 1);
 	if (ret) {
 		printf("Failed to read fuelgauge register\n");
-		return false;
+		return BATTERY_NONE;
 	}
 
 	if (buf)
-		return false;
+		return BATTERY_PLUGGED_IN;
 
 	printf("Battery inserted!\n");
-	return true;
+
+	return BATTERY_INSERTED;
 }
 
 int fuelgauge_init(void)
