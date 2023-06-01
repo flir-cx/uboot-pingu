@@ -276,6 +276,12 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 				mdelay(1000);
 			}
 		} while (battery_status == BATTERY_NONE);
+
+		/* Change to battery img before entering charge state */
+		state.boot_state = USB_CHARGE;
+		splash_screen_prepare();
+		splash_display();
+		/* Fall through! */
 #else
 		mdelay(2000);
 		power_off();
