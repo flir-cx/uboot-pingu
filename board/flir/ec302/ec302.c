@@ -34,6 +34,11 @@ DECLARE_GLOBAL_DATA_PTR;
 #undef SNVS_LP_LPCR
 #define SNVS_LP_LPCR	                        (0x41070038)
 
+static iomux_cfg_t const vcm_pwr_en_pad[] = {
+	MX7ULP_PAD_PTF16__PTF16 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+#define VCM_PWR_EN_1V8_PIN "GPIO6_16"
+
 int dram_init(void)
 {
 	gd->ram_size = PHYS_SDRAM_SIZE;
@@ -80,6 +85,37 @@ int board_early_init_f(void)
 	return 0;
 }
 
+/* 
+ * When ec302 is booted, the vcam circuit seeems to interfere
+ * with the i2c bus, causing it to pe pulled low and thus making
+ * it unusable. To mitigate this, we disable the 1.8V regulator.
+ */
+static void disable_vcam_regulator(void)
+{
+	struct gpio_desc vcm_desc;
+	int ret;
+
+	mx7ulp_iomux_setup_multiple_pads(vcm_pwr_en_pad, ARRAY_SIZE(vcm_pwr_en_pad));
+
+	ret = dm_gpio_lookup_name(VCM_PWR_EN_1V8_PIN, &vcm_desc);
+	if (ret) {
+		printf("%s lookup %s failed ret = %d\n", __func__, VCM_PWR_EN_1V8_PIN, ret);
+		return;
+	}
+
+	ret = dm_gpio_request(&vcm_desc, "vcm_1v8_en");
+	if (ret) {
+		printf("%s request vcm_1v8_en failed ret = %d\n", __func__, ret);
+		return;
+	}
+
+	ret = dm_gpio_set_dir_flags(&vcm_desc, GPIOD_IS_OUT);
+	if (ret) {
+		printf("%s set dir flags failed ret = %d\n", __func__, ret);
+		return;
+	}
+}
+
 int board_init(void)
 {
 	int battery_inserted;
@@ -104,6 +140,8 @@ int board_init(void)
 	pmic_goto_core_off(true);
 	//onoff button longpress disabled for snvs block, this functionality is handled by pmic
 	writel((readl(SNVS_LP_LPCR) | SNVS_LPCR_BTN_PRESS_TIME_DISABLE), SNVS_LP_LPCR);
+
+	disable_vcam_regulator();
 
 	return 0;
 }
