@@ -25,11 +25,28 @@ static iomux_cfg_t const pmic_wdog_pad[] = {
 
 struct gpio_desc wdg_desc;
 
+static int get_pf1550_device(struct udevice **dev)
+{
+	static struct udevice *pf1550_dev;
+	int ret = 0;
+
+	if (!pf1550_dev) {
+		ret = i2c_get_chip_for_busnum(PF1550_I2C_BUS, PF1550_I2C_ADDR, 1, &pf1550_dev);
+		if (ret)
+			printf("Cannot find pf1550: %d\n", ret);
+	}
+
+	*dev = pf1550_dev;
+
+	return ret;
+}
+
 int pf1550_write_reg(int reg, u8 val)
 {
 	struct udevice *dev;
-	int ret = i2c_get_chip_for_busnum(5, 0x8, 1, &dev);
+	int ret;
 
+	ret = get_pf1550_device(&dev);
 	if (ret) {
 		printf("Can not find pmic: %d\n", ret);
 		return ret;
@@ -47,8 +64,9 @@ int pf1550_write_reg(int reg, u8 val)
 int pf1550_read_reg(int reg, u8 *val)
 {
 	struct udevice *dev;
-	int ret = i2c_get_chip_for_busnum(5, 0x8, 1, &dev);
+	int ret;
 
+	ret = get_pf1550_device(&dev);
 	if (ret) {
 		printf("Can not find pmic: %d\n", ret);
 		return ret;

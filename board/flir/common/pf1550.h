@@ -124,6 +124,9 @@ enum pf1550_pmic_reg {
 	PF1550_PMIC_REG_END			= 0xff,
 };
 
+#define PF1550_I2C_BUS 5
+#define PF1550_I2C_ADDR 0x08
+
 #define PF1550_CHG_PRECHARGE		0
 #define PF1550_CHG_CONSTANT_CURRENT	1
 #define PF1550_CHG_CONSTANT_VOL		2

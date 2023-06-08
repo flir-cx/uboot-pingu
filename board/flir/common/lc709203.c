@@ -8,6 +8,22 @@
 
 #include "lc709203.h"
 
+static int get_fuelgauge_device(struct udevice **dev)
+{
+	static struct udevice *fuelgauge_dev;
+	int ret = 0;
+
+	if (!fuelgauge_dev) {
+		ret = i2c_get_chip_for_busnum(FUELGAUGE_I2C_BUS, FUELGAUGE_I2C_ADDR, 1, &fuelgauge_dev);
+		if (ret)
+			printf("Cannot find fuelgauge LC709203: %d\n", ret);
+	}
+
+	*dev = fuelgauge_dev;
+
+	return ret;
+}
+
 static u8 crc8(const void *vptr, int len)
 {
 	const u8 *data = vptr;
@@ -33,7 +49,7 @@ int fuelgauge_write_reg(uint reg, u8 lb, u8 hb)
 	int ret;
 	u8 crc;
 
-	ret = i2c_get_chip_for_busnum(FUELGAUGE_I2C_BUS, FUELGAUGE_I2C_ADDR, 1, &dev);
+	ret = get_fuelgauge_device(&dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;
@@ -60,7 +76,7 @@ static int fuelguage_get_type(void)
 	int ret;
 	struct udevice *dev;
 
-	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	ret = get_fuelgauge_device(&dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;
@@ -80,7 +96,7 @@ int fuelgauge_get_state_of_charge(u16 *soc)
 	u8 buf[4];
 	int ret;
 
-	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	ret = get_fuelgauge_device(&dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;
@@ -99,7 +115,7 @@ int fuelgauge_get_battery_voltage(u16 *voltage)
 	u8 buf[4];
 	int ret;
 
-	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	ret = get_fuelgauge_device(&dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;
@@ -164,7 +180,7 @@ int fuelgauge_check_battery_insertion(void)
 	u8 buf;
 	int ret;
 
-	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	ret = get_fuelgauge_device(&dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return BATTERY_NONE;
@@ -192,7 +208,7 @@ int fuelgauge_init(void)
 	int type;
 	int battery_inserted;
 
-	ret = i2c_get_chip_for_busnum(5, 0xb, 1, &dev);
+	ret = get_fuelgauge_device(&dev);
 	if (ret) {
 		printf("Cannot find fuelgauge LC709203: %d\n", ret);
 		return ret;

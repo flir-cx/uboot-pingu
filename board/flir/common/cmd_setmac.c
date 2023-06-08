@@ -11,18 +11,38 @@
 #include <i2c.h>
 #include <asm/arch/pcc.h>
 
+static int get_eeprom_device(struct udevice **dev)
+{
+	static struct udevice *eeprom_dev;
+	int ret = 0;
+
+	if (!eeprom_dev) {
+		ret = i2c_get_chip_for_busnum(6, 0x57, 1, &eeprom_dev);
+		if (ret)
+			printf("Cannot find eeprom: %d\n", ret);
+	}
+
+	*dev = eeprom_dev;
+
+	return ret;
+}
+
 int get_board_serial(uint8_t *buf)
 {
 	struct udevice *dev;
-	int ret = i2c_get_chip_for_busnum(6, 0x57, 1, &dev); //get eprom
+	int ret;
 
+	ret = get_eeprom_device(&dev);
 	if (ret) {
-		printf("Can not find eeprom: %d\n", ret);
+		printf("Can't set mac address\n");
 		return ret;
 	}
 
 	ret = dm_i2c_read(dev, 0x4A, buf, 8);
 	buf[8] = '\0';
+
+	if (ret)
+		printf("Couldn't read from eeprom: %d\n", ret);
 
 	return ret;
 }
