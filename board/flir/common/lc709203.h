@@ -38,7 +38,6 @@ int fuelgauge_sleep(void);
 int fuelgauge_operational(void);
 int fuelgauge_check_battery_insertion(void);
 
-int fuelgauge_battery_profile_one(void);
 int fuelgauge_thermistor_mode(void);
 int fuelgauge_write_reg(uint reg, u8 lb, u8 hb);
 
