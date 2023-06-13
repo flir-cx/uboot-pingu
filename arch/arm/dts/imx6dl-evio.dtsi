@@ -47,11 +47,108 @@
 
 &i2c3 {
 	evio_pca9534_0x40: evio_pca9534_0x40@20 {
+		// Keyboard I/O expander
+		label = "erla";
 		compatible = "nxp,pca9534";
 		reg = <0x20>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		gpio-line-names = "IO0_Right", "IO1_Left", "IO2_Up", "", "IO4_Back",
 		"IO5_Down", "IO6_Mid", "IO7_Arkiv";
+	};
+
+	leif_pca9534_0x42: leif_pca9534_0x42@21 {
+		// USBC MUX control I/O expander
+		label = "usbmux";
+		compatible = "nxp,pca9534";
+		reg = <0x21>;
+		gpio-controller;
+		interrupt-parent = <&gpio4>; //I2C3_Alert_n
+		interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-controller;
+		interrupts-shared;
+		#interrupt-cells = <2>;
+		#gpio-cells = <2>;
+		// EVIO:
+		// gpio-line-names =
+		// "AutoFocus_n", "KB_SOFT", "USBMUX_POL", "USBMUX_AMSEL",
+		// "USBMUX_EN", "GPS_SPARE", "DP_HPD", "";
+		// LEIF:
+		// gpio-line-names =
+		// "SD1_LED_n", "CHG_OTG", "USBMUX_POL", "USBMUX_AMSEL",
+		// "USBMUX_EN", "AMB_RES_n", "TP_LED_EN", "SD1_WP";
+	};
+
+	leif_pca9534_0x46: leif_pca9534_0x46@23 {
+		// Power ctrl I/O Expander
+		label = "pwr";
+		compatible = "nxp,pca9534";
+		reg = <0x23>;
+		gpio-controller;
+		interrupt-parent = <&gpio4>; //I2C3_Alert_n
+		interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-controller;
+		interrupts-shared;
+		#interrupt-cells = <2>;
+		#gpio-cells = <2>;
+		// LEIF:
+		// gpio-line-names =
+		// "AUDIO_EN", "IO[3]", "Audio_Reset_n", "AutoFocus_n",
+		// "KB_SOFT", "3V15_GP_EN", "GPS_SPARE", "4VA_BW_EN";
+		// EVIO:
+		// gpio-line-names =
+		// "Audio_Reset_n", "3V15_GP_EN", "4VA_BW_EN", "SD1_WP",
+		// "SD1_LED_n", "CHG_OTG", "AUDIO_EN", "TP_Reset_n";
+	};
+
+	leif_pca9534_0x4a: leif_pca9534_0x4a@25 {
+		// LEIF: Viewfinder control I/O expander
+		// EVIO: Not existing
+		label = "vf";
+		compatible = "nxp,pca9534";
+		reg = <0x25>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names =
+		"VF_1V8_EN", "VF_4V5_EN", "NC", "TP_Reset_n",
+		"LCD_MIPI_SEL", "LCD_MIPI_EN_n", "VF_RST_n";
+	};
+
+	evro_pca9534_0x48: evro_pca9534_0x48@24 {
+		// Expander on EVRO board
+		label = "evro";
+		compatible = "nxp,pca9534";
+		reg = <0x24>;
+		gpio-controller;
+		vcc-supply = <&DA9063_LDO11>;
+		interrupt-parent = <&gpio4>; //I2C3_Alert_n
+		//interrupts = <7 IRQ_TYPE_EDGE_FALLING>;  //ec101-c
+		interrupts = <5 IRQ_TYPE_EDGE_FALLING>;    //ec101-d
+		interrupt-controller;
+		interrupts-shared;
+		#interrupt-cells = <2>;
+		#gpio-cells = <2>;
+		gpio-line-names =
+		"VCM_CL_EN_n", "Spare", "Sleep_n", "LDM_3V0_EN",
+		"Optics_n", "Key_Pad_1_n", "Key_Pad_2_n", "Key_Pad_3_n";
+	};
+};
+
+&i2c4 {
+	evro_pca9534_0x46: evro_pca9534_0x46@23 {
+		label = "evro";
+		compatible = "nxp,pca9534";
+		reg = <0x23>;
+		gpio-controller;
+		vcc-supply = <&DA9063_LDO11>;
+		interrupt-parent = <&gpio4>; //I2C3_Alert_n
+		interrupts = <5 IRQ_TYPE_EDGE_FALLING>;
+		interrupt-controller;
+		interrupts-shared;
+		#interrupt-cells = <2>;
+		#gpio-cells = <2>;
+		gpio-line-names =
+		"VCM_DOVDD_EN", "BB_En", "VCM_PWDN", "VCM_RESET_n",
+		"OPTICS_POWER_En", "Led_On", "POSITION_SENSOR_EN_n", "RING_SENSOR_EN_n";
 	};
 };
