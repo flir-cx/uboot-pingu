@@ -1820,3 +1820,117 @@ int fpga_power(bool enable)
 	return 0;
 }
 
+static void ec101_disable_gpio(const char *name, unsigned long flags)
+{
+	struct gpio_desc desc;
+	int ret = dm_gpio_lookup_name(name, &desc);
+
+	if (ret < 0)
+		return;
+	ret = dm_gpio_request(&desc, "ioexp");
+	if (ret < 0) {
+		log_err("Request ioexp GPIO '%s' failed\n", name);
+		return;
+	}
+	desc.flags = flags;
+	debug("Clear %s (active %s)\n", name, flags & GPIOD_ACTIVE_LOW ? "LOW" : "HIGH");
+	ret = dm_gpio_set_dir_flags(&desc, flags | GPIOD_IS_OUT);
+	if (ret < 0) {
+		log_err("Setting ioexp dir flags on '%s' failed\n", name);
+		return;
+	}
+	dm_gpio_set_value(&desc, 0);
+	dm_gpio_free(desc.dev, &desc);
+}
+
+/* prepare_power_off() - shut down external stuff before power-off
+ *
+ * Override weak function in usbcharge module
+ */
+void prepare_power_off(void)
+{
+	backlight_on(false);
+
+	if (!strncmp(hardware.name, "Evander", 7)) {
+		log_info("Evander: Additional power-off sequence\n");
+
+		ec101_disable_gpio("usbmux@21_0", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("usbmux@21_1", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("usbmux@21_2", 0);
+		ec101_disable_gpio("usbmux@21_3", 0);
+		ec101_disable_gpio("usbmux@21_4", 0);
+		ec101_disable_gpio("usbmux@21_5", GPIOD_ACTIVE_LOW);
+
+		ec101_disable_gpio("pwr@23_0", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("pwr@23_1", 0);
+		ec101_disable_gpio("pwr@23_2", 0);
+		ec101_disable_gpio("pwr@23_3", 0);
+		ec101_disable_gpio("pwr@23_4", GPIOD_ACTIVE_LOW);
+		// skip CHG_OTG
+		ec101_disable_gpio("pwr@23_6", 0);
+		ec101_disable_gpio("pwr@23_7", GPIOD_ACTIVE_LOW);
+
+	} else if (!strncmp(hardware.name, "Lennox", 6)) {
+		log_info("Lennox: Additional power-off sequence\n");
+
+		// USB MUX, LEDs
+		ec101_disable_gpio("usbmux@21_0", GPIOD_ACTIVE_LOW);
+		// skip CHG_OTG
+		ec101_disable_gpio("usbmux@21_2", 0);
+		ec101_disable_gpio("usbmux@21_3", 0);
+		ec101_disable_gpio("usbmux@21_4", 0);
+		ec101_disable_gpio("usbmux@21_5", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("usbmux@21_6", 0);
+		ec101_disable_gpio("usbmux@21_7", 0);
+		// skip SD1_WP
+
+		// Audio, Autofocus, etc
+		ec101_disable_gpio("pwr@23_0", 0);
+		ec101_disable_gpio("pwr@23_1", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("pwr@23_2", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("pwr@23_3", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("pwr@23_4", GPIOD_ACTIVE_LOW);
+		ec101_disable_gpio("pwr@23_5", 0);
+		// skip GPS_SPARE
+		ec101_disable_gpio("pwr@23_7", 0);
+
+		// Viewfinder
+		// skip DP_OUT
+		ec101_disable_gpio("vf@25_1", 0);
+		ec101_disable_gpio("vf@25_2", 0);
+		// skip IO3 (NC)
+		ec101_disable_gpio("vf@25_4", 0);
+		ec101_disable_gpio("vf@25_5", 0);
+		ec101_disable_gpio("vf@25_6", 0);
+		ec101_disable_gpio("vf@25_7", 0);
+	} else {
+		return;
+	}
+
+	ec101_disable_gpio("erla@20_0", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("erla@20_1", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("erla@20_2", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("erla@20_3", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("erla@20_4", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("erla@20_5", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("erla@20_6", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("erla@20_7", GPIOD_ACTIVE_LOW);
+
+	// EVRO board
+	ec101_disable_gpio("evro@23_0", 0);
+	ec101_disable_gpio("evro@23_1", 0);
+	ec101_disable_gpio("evro@23_2", 0);
+	ec101_disable_gpio("evro@23_3", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("evro@23_4", 0);
+	ec101_disable_gpio("evro@23_5", GPIOD_ACTIVE_LOW);
+	ec101_disable_gpio("evro@23_6", 0);
+	ec101_disable_gpio("evro@23_7", 0);
+
+	ec101_disable_gpio("evro@24_0", GPIOD_ACTIVE_LOW);
+	// skip Spare
+	ec101_disable_gpio("evro@24_2", 0);
+	ec101_disable_gpio("evro@24_3", 0);
+	// skip Optics_En
+	ec101_disable_gpio("evro@24_5", GPIOD_ACTIVE_LOW);
+}
+

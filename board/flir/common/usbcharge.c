@@ -104,10 +104,16 @@ static void print_boot_state(void)
 		log_info("Boot state: undefined (code %d)\n", state.boot_state);
 }
 
+__weak void prepare_power_off(void)
+{
+}
+
 void power_off(bool comparator_enable)
 {
+	prepare_power_off();
+	log_info("Powering off ....\n");
+
 	spi_claim_bus(slave);
-	log_info("Powering off....\n");
 	if (comparator_enable) //enable wake up from comparator events
 		pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, DA9063_COMP1V2_EN);
 	mdelay(100);
