@@ -215,8 +215,12 @@ int fuelgauge_init(void)
 	fuelgauge_thermistor_mode();
 
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
-	/* Set battery profile */
-	fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, 0x00, 0x00);
+	/* Check if battery profile already is selected
+	 * Every write to this register will recalibrate the fuelgauge,
+	 * which we only want to do once. */
+	ret = dm_i2c_read(dev, CHANGE_OF_THE_PARAMETER_REG, buf, 2);
+	if (!ret && *(u16 *)buf != type)
+		fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, 0x00, 0x00);
 	/* Set APA value */
 	fuelgauge_write_reg(LC709204_APA, 0x29, 0x29);
 	/* Set ITE Offset, will scale RSOC to reach 0% when 3.2V */
@@ -226,9 +230,13 @@ int fuelgauge_init(void)
 	/* Empty Cell Voltage. 0 will disable ITE offset update. */
 	fuelgauge_write_reg(LC709204_EMPTY_VOLT, 0x00, 0x00);
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201))
-	/* Set battery profile */
+	/* Check if battery profile already is selected
+	 * Every write to this register will recalibrate the fuelgauge,
+	 * which we only want to do once. */
 	type = fuelguage_get_type();
-	fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, type, 0x00);
+	ret = dm_i2c_read(dev, CHANGE_OF_THE_PARAMETER_REG, buf, 2);
+	if (!ret && *(u16 *)buf != type)
+		fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, type, 0x00);
 	/* Set APA value */
 	fuelgauge_write_reg(LC709204_APA, 0x2d, 0x2d);
 	/* Set ITE Offset, will scale RSOC to reach 0% when 3.2V */
@@ -238,8 +246,12 @@ int fuelgauge_init(void)
 	/* Empty Cell Voltage. 0 will disable ITE offset update. */
 	fuelgauge_write_reg(LC709204_EMPTY_VOLT, 0x00, 0x00);
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
-	/* Set battery profile */
-	fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, 0x02, 0x00);
+	/* Check if battery profile already is selected
+	 * Every write to this register will recalibrate the fuelgauge,
+	 * which we only want to do once. */
+	ret = dm_i2c_read(dev, CHANGE_OF_THE_PARAMETER_REG, buf, 2);
+	if (!ret && *(u16 *)buf != type)
+		fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, 0x02, 0x00);
 	/* Set APA value */
 	fuelgauge_write_reg(LC709204_APA, 0x06, 0x06);
 	/* Set ITE Offset, will scale RSOC to reach 0% when 3.2V */
