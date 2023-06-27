@@ -8,6 +8,7 @@
 
 #ifndef __EOCO_CONFIG_H
 #define __EOCO_CONFIG_H
+#define CONFIG_SYS_USE_SPINOR
 
 #include "flir_mx6_common_pre.h"
 

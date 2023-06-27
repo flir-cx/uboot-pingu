@@ -127,6 +127,11 @@ static struct hw_support hardware = {
 	.name = "Unknown Camera"
 };
 
+
+void fpga_init_ctrl(struct fpga_ctrl *fpga)
+{
+	// To be implemented
+}
 /**
  * @brief Overrides the (weak) splash_screen_prepare in splash.c
  *
@@ -1384,8 +1389,7 @@ int board_late_init(void)
 	if (IS_ENABLED(CONFIG_CMD_BMODE))
 		add_board_boot_modes(board_boot_modes);
 
-	if (IS_ENABLED(CONFIG_SYS_USE_SPINOR))
-		setup_spinor();
+	setup_spinor();
 
 	env_set("tee", "no");
 	if (IS_ENABLED(CONFIG_IMX_OPTEE))

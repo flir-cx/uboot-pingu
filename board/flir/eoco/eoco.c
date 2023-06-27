@@ -56,15 +56,10 @@
 #endif /*CONFIG_FSL_FASTBOOT*/
 #include "../common/da9063.h"
 #include "../common/da9063_regs.h"
+#include "../common/fpga_ctrl.h"
+#include "../common/cmd_loadfpga.h"
 #include "../common/usbcharge.h"
 
-#define ENABLE_DEBUG 0
-
-#if ENABLE_DEBUG
-    #define LOG_MSG printf
-#else
-    #define LOG_MSG(...)
-#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -96,6 +91,11 @@ DECLARE_GLOBAL_DATA_PTR;
 #define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
 
 #define KEY_VOL_UP	IMX_GPIO_NR(1, 4)
+
+#define CMD_WRITE_ENABLE 0x06
+#define CMD_EN4BYTE_ADDR 0xB7
+#define CMD_WRITE_ENHANCED_VOLATILE_CONF 0x61
+#define SPI_FLASH_MAX_SIZE_BUF 32
 
 struct spi_slave *slave;
 
@@ -145,16 +145,24 @@ static iomux_v3_cfg_t const uart1_pads[] = {
 
 #ifdef CONFIG_MXC_SPI
 static iomux_v3_cfg_t const ecspi1_pads[] = {
-    MX6_PAD_CSI0_DAT4__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_CSI0_DAT5__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_CSI0_DAT6__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT4__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_CSI0_DAT5__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_CSI0_DAT6__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
+
+iomux_v3_cfg_t const no_ecspi1_pads[] = {
+	MX6_PAD_CSI0_DAT4__GPIO5_IO22  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT5__GPIO5_IO23  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT6__GPIO5_IO24  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
 static iomux_v3_cfg_t const ecspi4_pads[] = {
-    MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
-    MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+	MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 int platform_check_pmic_boot_reason(void)
@@ -172,7 +180,7 @@ int platform_check_pmic_boot_reason(void)
 	{
 		printf("Powering off....\n");
 
-		// Power off using GPIO. 
+		// Power off using GPIO.
 		gpio_request(IMX_GPIO_NR(2, 30), "PWR_OFF");
 		gpio_direction_output(IMX_GPIO_NR(2, 30),1);
 
@@ -186,10 +194,8 @@ int platform_check_pmic_boot_reason(void)
 void setup_spi(void)
 {
 	SETUP_IOMUX_PADS(ecspi1_pads);
-	gpio_request(IMX_GPIO_NR(5, 28), "CS SPI1 0");
 	gpio_request(IMX_GPIO_NR(5, 29), "CS SPI1 1");
-	gpio_direction_output(IMX_GPIO_NR(5, 28),1);
-	gpio_direction_output(IMX_GPIO_NR(5, 29),1);
+	gpio_direction_output(IMX_GPIO_NR(5, 29), 1);
 }
 
 int platform_setup_pmic_voltages(void)
@@ -1009,7 +1015,7 @@ void set_backlight_off()
 }
 #endif
 
-static int platform_viewfinder_disable()
+static void platform_viewfinder_disable(void)
 {
 	/* On early boards the viewfinder starts with full backlight
 	 * This code is to be able to turn off the viewfinder early.
@@ -1106,6 +1112,239 @@ int board_late_init(void)
 	board_late_mmc_env_init();
 #endif
 
+	setup_spinor();
 	return 0;
 }
 
+static int fpga_power(bool enable)
+{
+	unsigned char conf_id;
+
+	if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+		printf("Could not read PMIC ID registers\n");
+		spi_release_bus(slave);
+		return -EIO;
+	}
+
+	spi_claim_bus(slave);
+	// BPRO_EN (1V0_FPGA)
+	pmic_write_bitfield(DA9063_REG_BPRO_CONT, DA9063_BUCK_EN,
+			    enable ? DA9063_BUCK_EN : 0);
+	// CORE_SW_EN  (1V8_FPGA)
+	pmic_write_bitfield(DA9063_REG_BCORE1_CONT, DA9063_CORE_SW_EN,
+			    enable ? DA9063_CORE_SW_EN : 0);
+	// PERI_SW_EN    (1V2_FPGA)
+	pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
+			    enable ? DA9063_PERI_SW_EN : 0);
+	if (conf_id == 0x3b) { //revC
+		// BMEM_EN         (2V5_FPGA)
+		pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
+				    enable ? DA9063_BUCK_EN : 0);
+		// LDO10_EN          (3V15_FPGA)
+		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
+				    enable ? DA9063_LDO_EN : 0);
+	} else { //revD
+		// LDO10_EN          (2V5_FPGA)
+		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
+				    enable ? DA9063_LDO_EN : 0);
+		// LDO8_EN          (3V15_FPGA)
+		pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
+				    enable ? DA9063_LDO_EN : 0);
+	}
+
+	//Enable BMEM_CONT regualtor, 1V1_FPGA, FPGA Core voltage, Only EOCO??
+	pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
+			    enable ? DA9063_BUCK_EN : 0);
+	spi_release_bus(slave);
+
+	return 0;
+}
+
+#define GPIO_SPI1_SCLK     IMX_GPIO_NR(5, 22)
+#define GPIO_SPI1_MOSI     IMX_GPIO_NR(5, 23)
+#define GPIO_SPI1_MISO     IMX_GPIO_NR(5, 24)
+#define GPIO_SPI1_CS       IMX_GPIO_NR(5, 28)
+
+/**
+ * @brief Fill fpga structure
+ *
+ * @param fpga
+ */
+static void eoco_fpga_set_ctrl(struct fpga_ctrl *fpga)
+{
+	fpga->pins.config_n = IMX_GPIO_NR(1, 7);
+	fpga->pins.status_n = IMX_GPIO_NR(1, 2);
+	fpga->pins.done = IMX_GPIO_NR(1, 8);
+	fpga->pins.ce = IMX_GPIO_NR(5, 25);
+	fpga_set_ops(fpga);
+}
+
+static int eoco_fpga_enable_power(struct fpga_ctrl *fpga)
+{
+	debug("%s\n",  __func__);
+	return fpga_power(true);
+}
+
+static int eoco_fpga_request_flash_spi(struct fpga_ctrl *fpga)
+{
+	int ret = 0;
+
+	debug("%s\n",  __func__);
+
+	//Use as cpu spi bus
+	ret = gpio_request(GPIO_SPI1_CS, "CS SPI1 0");
+	if (ret)
+		log_err("%s: gpio request failure %d\n",  __func__, ret);
+
+	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
+					 ARRAY_SIZE(ecspi1_pads));
+
+	ret = gpio_direction_output(GPIO_SPI1_CS, 1);
+	if (ret)
+		log_err("%s: gpio dir failure %d\n",  __func__, ret);
+
+	return 0;
+}
+
+static int eoco_fpga_release_flash_spi(struct fpga_ctrl *fpga)
+{
+	int ret = 0;
+
+	debug("%s\n",  __func__);
+
+	//cpu spi bus conflicts with fpga spi bus, disable cpu bus
+	imx_iomux_v3_setup_multiple_pads(no_ecspi1_pads,
+					 ARRAY_SIZE(no_ecspi1_pads));
+
+	ret += gpio_request(GPIO_SPI1_SCLK, "spi-1-clk");
+	ret += gpio_request(GPIO_SPI1_MOSI, "spi-1-mosi");
+	ret += gpio_request(GPIO_SPI1_MISO, "spi-1-miso");
+	ret += gpio_direction_input(GPIO_SPI1_SCLK);
+	ret += gpio_direction_input(GPIO_SPI1_MOSI);
+	ret += gpio_direction_input(GPIO_SPI1_MISO);
+	ret += gpio_direction_input(GPIO_SPI1_CS);
+
+	ret += gpio_free(GPIO_SPI1_SCLK);
+	ret += gpio_free(GPIO_SPI1_MOSI);
+	ret += gpio_free(GPIO_SPI1_MISO);
+	ret += gpio_free(GPIO_SPI1_CS);
+
+	if (ret) {
+		log_err("%s: gpio failure\n",  __func__);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int do_spi_xfer(int bus, int cs, int freq, int mode, uchar *dout, int len)
+{
+	struct spi_slave *slave;
+	int ret = 0;
+	int bitlen = (1 + len) * 8;
+	uchar din[SPI_FLASH_MAX_SIZE_BUF];
+
+	if (CONFIG_IS_ENABLED(DM_SPI)) {
+		char name[30], *str;
+		struct udevice *dev;
+
+		snprintf(name, sizeof(name), "generic_%d:%d", bus, cs);
+		str = strdup(name);
+		if (!str)
+			return -ENOMEM;
+		ret = spi_get_bus_and_cs(bus, cs, freq, mode, "spi_generic_drv",
+					 str, &dev, &slave);
+		if (ret)
+			return ret;
+	} else {
+		slave = spi_setup_slave(bus, cs, freq, mode);
+		if (!slave) {
+			printf("Invalid device %d:%d\n", bus, cs);
+			return -EINVAL;
+		}
+	}
+
+	ret = spi_claim_bus(slave);
+	if (ret)
+		goto done;
+
+	ret = spi_xfer(slave, bitlen, dout, din,
+		       SPI_XFER_BEGIN | SPI_XFER_END);
+	if (!CONFIG_IS_ENABLED(DM_SPI)) {
+		/* We don't get an error code in this case */
+		if (ret)
+			ret = -EIO;
+	}
+
+done:
+	spi_release_bus(slave);
+	if (!CONFIG_IS_ENABLED(DM_SPI))
+		spi_free_slave(slave);
+
+	return ret;
+}
+
+/**
+ * @brief Write a command to the spi flash
+ *
+ * @param cmd
+ * @param dout the data to be written, null if no parameters to cmd
+ * @param len length of dout
+ * @return int
+ */
+static int spi_flash_cmd(uchar cmd, uchar *dout, size_t len)
+{
+	uchar buf[SPI_FLASH_MAX_SIZE_BUF] = {cmd};
+	unsigned int bus = 0;
+	unsigned int cs = 0;
+	unsigned int mode = CONFIG_DEFAULT_SPI_MODE;
+	unsigned int freq = 1000000;
+
+	if ((len + 1 >= SPI_FLASH_MAX_SIZE_BUF) || (len > 0 && !dout))
+		return -EINVAL;
+
+	if (len > 0)
+		memcpy(&buf[1], dout, len);
+
+	return do_spi_xfer(bus, cs, freq, mode, buf, len);
+}
+
+/**
+ * @brief Set up spi flash according to altera spec
+ *
+ * @return int negative on error
+ */
+static int setup_fpga_spi_flash(void)
+{
+	uchar hold_disable_mask = 0xef;
+	int ret = 0;
+
+	//enable_spi_bus(); //take control of spi bus
+	ret += spi_flash_cmd(CMD_WRITE_ENABLE, NULL, 0);
+	ret += spi_flash_cmd(CMD_WRITE_ENHANCED_VOLATILE_CONF, &hold_disable_mask, 1);
+	ret += spi_flash_cmd(CMD_WRITE_ENABLE, NULL, 0);
+	ret += spi_flash_cmd(CMD_EN4BYTE_ADDR, NULL, 0);
+
+	return ret;
+}
+
+static int eoco_fpga_init_spi_flash(struct fpga_ctrl *fpga)
+{
+	return setup_fpga_spi_flash();
+}
+
+static void fpga_set_board_ops(struct fpga_board_ops *ops)
+{
+	ops->fpga_request_flash_spi = eoco_fpga_request_flash_spi;
+	ops->fpga_release_flash_spi = eoco_fpga_release_flash_spi;
+	ops->fpga_enable_power = eoco_fpga_enable_power;
+	ops->fpga_init_spi_flash = eoco_fpga_init_spi_flash;
+}
+
+void fpga_init_ctrl(struct fpga_ctrl *fpga)
+{
+	debug("%s:\n", __func__);
+	eoco_fpga_set_ctrl(fpga);
+
+	fpga_set_board_ops(&fpga->board_ops);
+}

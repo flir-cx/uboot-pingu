@@ -62,9 +62,10 @@
 #include "../common/da9063_regs.h"
 #include "../common/board_support.h"
 #include "../common/usbcharge.h"
+#include "../common/fpga_ctrl.h"
 
 DECLARE_GLOBAL_DATA_PTR;
-
+#define LOG_DEBUG
 struct spi_slave *slave;
 
 #if defined(CONFIG_IMX6_LDO_BYPASS)
@@ -122,6 +123,13 @@ iomux_v3_cfg_t const ecspi4_pads[] = {
 	MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const no_ecspi1_pads[] = {
+	MX6_PAD_CSI0_DAT4__GPIO5_IO22  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT5__GPIO5_IO23  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT6__GPIO5_IO24  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
 //default hw support
@@ -1058,7 +1066,7 @@ static void setup_mipi_mux_i2c()
 		if (i2c_ops == NULL) {
 			log_err("Failed to get i2c_ops from device at i2c@21f8000\n");
 			return;
-		}		
+		}
 
 		msg.addr  = LEIF_PCA9534_ADDRESS;
 		msg.flags = 0; // Write
@@ -1151,7 +1159,7 @@ int board_init(void)
 	} else {
 		// IF_DEFINED(CONFIG_FLIR_USBCHARGE) >>>> NOT POPSSIBLE <<<<,
 		// this is a compile time issue and not a run time one!!
-#ifdef CONFIG_FLIR_USBCHARGE 
+#ifdef CONFIG_FLIR_USBCHARGE
 		usb_charge_setup();
 #else
 		log_info("This u-boot was not built with CONFIG_FLIR_USBCHARGE=y!\n");
@@ -1577,10 +1585,9 @@ int board_late_init(void)
 #ifdef CONFIG_CMD_BMODE
 	add_board_boot_modes(board_boot_modes);
 #endif
-	
-#ifdef CONFIG_SYS_USE_SPINOR
-       	setup_spinor();
-#endif
+
+	setup_spinor();
+
 	env_set("tee", "no");
 #ifdef CONFIG_IMX_OPTEE
 	env_set("tee", "yes");
@@ -1778,6 +1785,40 @@ int setup_pmic_voltages(void)
     return 0;
 }
 #endif /* CONFIG_SYS_I2C_MXC */
+
+static void ec101_fpga_set_ctrl(struct fpga_ctrl *fpga)
+{
+#if IS_ENABLED(CONFIG_FPGA_XILINX)
+	fpga->pins.program_n = IMX_GPIO_NR(5, 25);
+	fpga->pins.init_n = IMX_GPIO_NR(5, 26);
+	fpga->pins.done = IMX_GPIO_NR(5, 27);
+
+	fpga_set_ops(fpga);
+	return;
+#endif
+
+#if IS_ENABLED(CONFIG_FPGA_LATTICE)
+	fpga->pins.program_n = IMX_GPIO_NR(5, 25);
+	fpga->pins.init_n = IMX_GPIO_NR(5, 26);
+	fpga->pins.done = IMX_GPIO_NR(5, 27);
+
+	fpga_set_ops(fpga);
+	return;
+#endif
+
+#if IS_ENABLED(CONFIG_FPGA_ALTERA)
+	fpga->pins.config_n = IMX_GPIO_NR(5, 25);
+	fpga->pins.status_n = IMX_GPIO_NR(5, 26);
+	fpga->pins.done = IMX_GPIO_NR(5, 27);
+	fpga->pins.ce = IMX_GPIO_NR(4, 10);
+
+	fpga_set_ops(fpga);
+	return;
+#endif
+
+	log_err("%s: Not a valid FPGA\n", __func__);
+}
+
 int fpga_power(bool enable)
 {
 	unsigned char conf_id;
@@ -1818,6 +1859,75 @@ int fpga_power(bool enable)
 	}
 	spi_release_bus(slave);
 	return 0;
+}
+
+static int ec101_fpga_enable_power(struct fpga_ctrl *fpga)
+{
+	return fpga_power(true);
+}
+
+static int ec101_fpga_request_flash_spi(struct fpga_ctrl *fpga)
+{
+	int ret = 0;
+
+	debug("%s\n",  __func__);
+
+	//Use as cpu spi bus
+	ret = gpio_request(GPIO_SPI1_CS, "spi-1-cs");
+	if (ret)
+		log_err("%s: gpio request failure %d\n",  __func__, ret);
+
+	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
+					 ARRAY_SIZE(ecspi1_pads));
+
+	ret = gpio_direction_output(GPIO_SPI1_CS, 1);
+	if (ret)
+		log_err("%s: gpio dir failure %d\n",  __func__, ret);
+
+	return 0;
+}
+
+static int ec101_fpga_release_flash_spi(struct fpga_ctrl *fpga)
+{
+	int ret = 0;
+
+	debug("%s\n",  __func__);
+
+	//cpu spi bus conflicts with fpga spi bus, disable cpu bus
+	imx_iomux_v3_setup_multiple_pads(no_ecspi1_pads,
+					 ARRAY_SIZE(no_ecspi1_pads));
+
+	ret += gpio_request(GPIO_SPI1_SCLK, "spi-1-clk");
+	ret += gpio_request(GPIO_SPI1_MOSI, "spi-1-mosi");
+	ret += gpio_request(GPIO_SPI1_MISO, "spi-1-miso");
+	ret += gpio_direction_input(GPIO_SPI1_SCLK);
+	ret += gpio_direction_input(GPIO_SPI1_MOSI);
+	ret += gpio_direction_input(GPIO_SPI1_MISO);
+	ret += gpio_direction_input(GPIO_SPI1_CS);
+
+	ret += gpio_free(GPIO_SPI1_SCLK);
+	ret += gpio_free(GPIO_SPI1_MOSI);
+	ret += gpio_free(GPIO_SPI1_MISO);
+	ret += gpio_free(GPIO_SPI1_CS);
+
+	if (ret)
+		log_err("%s: gpio failure\n",  __func__);
+
+	return 0;
+}
+
+static void fpga_set_board_ops(struct fpga_board_ops *ops)
+{
+	ops->fpga_request_flash_spi = ec101_fpga_request_flash_spi;
+	ops->fpga_release_flash_spi = ec101_fpga_release_flash_spi;
+	ops->fpga_enable_power = ec101_fpga_enable_power;
+}
+
+void fpga_init_ctrl(struct fpga_ctrl *fpga)
+{
+	ec101_fpga_set_ctrl(fpga);
+
+	fpga_set_board_ops(&fpga->board_ops);
 }
 
 static void ec101_disable_gpio(const char *name, unsigned long flags)

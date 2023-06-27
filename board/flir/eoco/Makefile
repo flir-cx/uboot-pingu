@@ -4,7 +4,7 @@
 #
 # (C) Copyright 2011 Freescale Semiconductor, Inc.
 
-obj-y  := platform.o eoco.o
+obj-y  := eoco.o
 
 obj-y  += cmd_recoverykey.o
 obj-y  += cmd_printboardinfo.o
