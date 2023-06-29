@@ -21,37 +21,13 @@
 #ifndef __CMD_LOADFPGA_H
 #define __CMD_LOADFPGA_H
 
-#define GPIO_SPI1_SCLK     IMX_GPIO_NR(5, 22)
-#define GPIO_SPI1_MOSI     IMX_GPIO_NR(5, 23)
-#define GPIO_SPI1_MISO     IMX_GPIO_NR(5, 24)
-#define GPIO_SPI1_CS       IMX_GPIO_NR(5, 28)
-
-#ifdef CONFIG_FPGA_XILINX
-#define GPIO_FPGA_PROGRAM_n         IMX_GPIO_NR(5, 25)
-#define GPIO_FPGA_INIT_n            IMX_GPIO_NR(5, 26)
-#define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
-#endif
-
-#ifdef CONFIG_FPGA_LATTICE
-#define GPIO_FPGA_PROGRAM_n         IMX_GPIO_NR(5, 25)
-#define GPIO_FPGA_INIT_n            IMX_GPIO_NR(5, 26)
-#define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
-#endif
-
-#ifdef CONFIG_FPGA_ALTERA
-#ifdef CONFIG_FLIR_PLATFORM_EOCO
-#define GPIO_FPGA_CONFIG_n          IMX_GPIO_NR(1, 7)
-#define GPIO_FPGA_STATUS_n          IMX_GPIO_NR(1, 2)
-#define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(1, 8)
-#define GPIO_FPGA_CE                IMX_GPIO_NR(5, 25)
-#else
-#define GPIO_FPGA_CONFIG_n          IMX_GPIO_NR(5, 25)
-#define GPIO_FPGA_STATUS_n          IMX_GPIO_NR(5, 26)
-#define GPIO_FPGA_CONF_DONE         IMX_GPIO_NR(5, 27)
-#define GPIO_FPGA_CE                IMX_GPIO_NR(4, 10)
-#endif
-
-
-#endif
+/**
+ * The reason to keep this for the while being is to have som idea
+ * of if the spi_flash has been initialized from the board.
+ *
+ * A better solution for this is needed, DM_SPI_FLASH should probably
+ * be used. probe/remove functions may be used for ownership of flash.
+ *
+ */
 void setup_spinor(void);
 #endif

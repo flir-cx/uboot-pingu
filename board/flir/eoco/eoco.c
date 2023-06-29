@@ -1172,6 +1172,10 @@ static int fpga_power(bool enable)
  */
 static void eoco_fpga_set_ctrl(struct fpga_ctrl *fpga)
 {
+#if ! IS_ENABLED(CONFIG_FPGA_ALTERA)
+#error "eoco needs to have CONFIG_FPGA_ALTERA set"
+#endif
+
 	fpga->pins.config_n = IMX_GPIO_NR(1, 7);
 	fpga->pins.status_n = IMX_GPIO_NR(1, 2);
 	fpga->pins.done = IMX_GPIO_NR(1, 8);

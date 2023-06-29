@@ -62,6 +62,7 @@
 #include "../common/da9063_regs.h"
 #include "../common/board_support.h"
 #include "../common/usbcharge.h"
+#include "../common/fpga_ctrl.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -107,6 +108,11 @@ static void setup_mipi_mux_i2c(void);
 #define LEIF_PCA9534_ADDRESS (0x4a >> 1)
 #define PWM1 0
 
+#define GPIO_SPI1_SCLK     IMX_GPIO_NR(5, 22)
+#define GPIO_SPI1_MOSI     IMX_GPIO_NR(5, 23)
+#define GPIO_SPI1_MISO     IMX_GPIO_NR(5, 24)
+#define GPIO_SPI1_CS       IMX_GPIO_NR(5, 28)
+
 iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
@@ -119,6 +125,13 @@ iomux_v3_cfg_t const ecspi4_pads[] = {
 	MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
+iomux_v3_cfg_t const no_ecspi1_pads[] = {
+	MX6_PAD_CSI0_DAT4__GPIO5_IO22  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT5__GPIO5_IO23  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT6__GPIO5_IO24  | MUX_PAD_CTRL(NO_PAD_CTRL),
+	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
 //default hw support
 static struct hw_support hardware = {
 	.mipi_mux = false,
@@ -127,11 +140,6 @@ static struct hw_support hardware = {
 	.name = "Unknown Camera"
 };
 
-
-void fpga_init_ctrl(struct fpga_ctrl *fpga)
-{
-	// To be implemented
-}
 /**
  * @brief Overrides the (weak) splash_screen_prepare in splash.c
  *
@@ -1436,9 +1444,9 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
 	}
 
-	if (IS_ENABLED(CONFIG_CMD_UPDATE_FDT_EEPROM))
+#if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
 		patch_fdt_eeprom(blob);
-
+#endif
 	return 0;
 }
 #endif /* CONFIG_OF_BOARD_SETUP */
@@ -1546,25 +1554,25 @@ int setup_pmic_voltages(void)
 	//disable watchdog
 	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
 
-	if (IS_ENABLED(CONFIG_IMX6_LDO_BYPASS)) {
-		/* 1V3 is highest allowable voltage when LDO is bypassed */
-		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
-		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
-			printf("Could not configure VBCORE1 voltage to 1V3\n");
-		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
-		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
-			printf("Could not configure VBCORE2 voltage to 1V3\n");
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+	/* 1V3 is highest allowable voltage when LDO is bypassed */
+	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+		printf("Could not configure VBCORE1 voltage to 1V3\n");
+	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+		printf("Could not configure VBCORE2 voltage to 1V3\n");
 
-		imx_bypass_ldo();
+	imx_bypass_ldo();
 
-		/* 1V2 is an acceptable level up to 800 MHz */
-		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
-		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
-			printf("Could not configure VBCORE1 voltage to 1V2\n");
-		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
-		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
-			printf("Could not configure VBCORE2 voltage to 1V2\n");
-	}
+	/* 1V2 is an acceptable level up to 800 MHz */
+	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+		printf("Could not configure VBCORE1 voltage to 1V2\n");
+	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+		printf("Could not configure VBCORE2 voltage to 1V2\n");
+#endif
 
 	spi_release_bus(slave);
 	return 0;
@@ -1600,3 +1608,84 @@ int fpga_power(bool enable)
 	return 0;
 }
 
+static void ec701_fpga_set_ctrl(struct fpga_ctrl *fpga)
+{
+#if ! IS_ENABLED(CONFIG_FPGA_LATTICE)
+#error "ec701 needs to have CONFIG_FPGA_LATTICE set"
+#endif
+
+	fpga->pins.program_n = IMX_GPIO_NR(5, 25);
+	fpga->pins.init_n = IMX_GPIO_NR(5, 26);
+	fpga->pins.done = IMX_GPIO_NR(5, 27);
+
+	fpga_set_ops(fpga);
+}
+
+static int ec701_fpga_enable_power(struct fpga_ctrl *fpga)
+{
+	return fpga_power(true);
+}
+
+static int ec701_fpga_request_flash_spi(struct fpga_ctrl *fpga)
+{
+	int ret = 0;
+
+	debug("%s\n",  __func__);
+
+	//Use as cpu spi bus
+	ret = gpio_request(GPIO_SPI1_CS, "spi-1-cs");
+	if (ret)
+		log_err("%s: gpio request failure %d\n",  __func__, ret);
+
+	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
+					 ARRAY_SIZE(ecspi1_pads));
+
+	ret = gpio_direction_output(GPIO_SPI1_CS, 1);
+	if (ret)
+		log_err("%s: gpio dir failure %d\n",  __func__, ret);
+
+	return ret;
+}
+
+static int ec701_fpga_release_flash_spi(struct fpga_ctrl *fpga)
+{
+	int ret = 0;
+
+	debug("%s\n",  __func__);
+
+	//cpu spi bus conflicts with fpga spi bus, disable cpu bus
+	imx_iomux_v3_setup_multiple_pads(no_ecspi1_pads,
+					 ARRAY_SIZE(no_ecspi1_pads));
+
+	ret += gpio_request(GPIO_SPI1_SCLK, "spi-1-clk");
+	ret += gpio_request(GPIO_SPI1_MOSI, "spi-1-mosi");
+	ret += gpio_request(GPIO_SPI1_MISO, "spi-1-miso");
+	ret += gpio_direction_input(GPIO_SPI1_SCLK);
+	ret += gpio_direction_input(GPIO_SPI1_MOSI);
+	ret += gpio_direction_input(GPIO_SPI1_MISO);
+	ret += gpio_direction_input(GPIO_SPI1_CS);
+
+	ret += gpio_free(GPIO_SPI1_SCLK);
+	ret += gpio_free(GPIO_SPI1_MOSI);
+	ret += gpio_free(GPIO_SPI1_MISO);
+	ret += gpio_free(GPIO_SPI1_CS);
+
+	if (ret)
+		log_err("%s: gpio failure\n",  __func__);
+
+	return 0;
+}
+
+static void fpga_set_board_ops(struct fpga_board_ops *ops)
+{
+	ops->fpga_request_flash_spi = ec701_fpga_request_flash_spi;
+	ops->fpga_release_flash_spi = ec701_fpga_release_flash_spi;
+	ops->fpga_enable_power = ec701_fpga_enable_power;
+}
+
+void fpga_init_ctrl(struct fpga_ctrl *fpga)
+{
+	ec701_fpga_set_ctrl(fpga);
+
+	fpga_set_board_ops(&fpga->board_ops);
+}

@@ -113,6 +113,11 @@ static void setup_mipi_mux_i2c(void);
 
 #define PWM1 0
 
+#define GPIO_SPI1_SCLK     IMX_GPIO_NR(5, 22)
+#define GPIO_SPI1_MOSI     IMX_GPIO_NR(5, 23)
+#define GPIO_SPI1_MISO     IMX_GPIO_NR(5, 24)
+#define GPIO_SPI1_CS       IMX_GPIO_NR(5, 28)
+
 iomux_v3_cfg_t const uart1_pads[] = {
 	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
 	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
@@ -1788,35 +1793,15 @@ int setup_pmic_voltages(void)
 
 static void ec101_fpga_set_ctrl(struct fpga_ctrl *fpga)
 {
-#if IS_ENABLED(CONFIG_FPGA_XILINX)
+#if ! IS_ENABLED(CONFIG_FPGA_XILINX)
+#error "ec101 needs to have CONFIG_FPGA_XILINX set"
+#endif
+
 	fpga->pins.program_n = IMX_GPIO_NR(5, 25);
 	fpga->pins.init_n = IMX_GPIO_NR(5, 26);
 	fpga->pins.done = IMX_GPIO_NR(5, 27);
 
 	fpga_set_ops(fpga);
-	return;
-#endif
-
-#if IS_ENABLED(CONFIG_FPGA_LATTICE)
-	fpga->pins.program_n = IMX_GPIO_NR(5, 25);
-	fpga->pins.init_n = IMX_GPIO_NR(5, 26);
-	fpga->pins.done = IMX_GPIO_NR(5, 27);
-
-	fpga_set_ops(fpga);
-	return;
-#endif
-
-#if IS_ENABLED(CONFIG_FPGA_ALTERA)
-	fpga->pins.config_n = IMX_GPIO_NR(5, 25);
-	fpga->pins.status_n = IMX_GPIO_NR(5, 26);
-	fpga->pins.done = IMX_GPIO_NR(5, 27);
-	fpga->pins.ce = IMX_GPIO_NR(4, 10);
-
-	fpga_set_ops(fpga);
-	return;
-#endif
-
-	log_err("%s: Not a valid FPGA\n", __func__);
 }
 
 int fpga_power(bool enable)
