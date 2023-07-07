@@ -269,12 +269,23 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	case NO_BATTERY:
 		printf("Battery missing\n");
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+		display_init();
+		display_timer_reset();
+
 		do {
 			battery_status = fuelgauge_check_battery_insertion();
 			if (battery_status == BATTERY_NONE) {
 				printf("Battery missing\n");
 				mdelay(1000);
 			}
+
+			/* Turn off screen when timer expires */
+			if (display_is_on())
+				display_check_timer();
+
+			/* Turn on display when button is pressed */
+			if (get_onoff_key() && !display_is_on())
+					display_on();
 		} while (battery_status == BATTERY_NONE);
 
 		/* Change to battery img before entering charge state */
