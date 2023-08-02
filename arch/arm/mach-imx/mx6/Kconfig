@@ -293,6 +293,16 @@ config TARGET_MX6EC701
 	select ARCH_MISC_INIT
 	select RNG_SELF_TEST
 
+config TARGET_EC501
+	bool "ec501"
+	select TARGET_MX6SABRESD_COMMON
+	depends on MX6S
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select ARCH_MISC_INIT
+	select RNG_SELF_TEST
+
 config TARGET_EOCO
 	bool "mx6eoco"
 	select TARGET_MX6SABRESD_COMMON
@@ -964,6 +974,7 @@ source "board/engicam/imx6ul/Kconfig"
 source "board/flir/eoco/Kconfig"
 source "board/flir/mx6ec101/Kconfig"
 source "board/flir/mx6ec701/Kconfig"
+source "board/flir/ec501/Kconfig"
 source "board/freescale/mx6qarm2/Kconfig"
 source "board/freescale/mx6memcal/Kconfig"
 source "board/freescale/mx6sabreauto/Kconfig"

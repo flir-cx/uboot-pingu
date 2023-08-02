@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: GPL-2.0
+//
+// Copyright (C) 2023 FLIR AB
+
+/dts-v1/;
+
+#include "imx6dl.dtsi"
+#include "imx6dl-ec501.dtsi"
+
+/ {
+	model = "FLIR i.MX6 Solo ec501 Board";
+	compatible = "fsl,imx6dl-sabresd", "fsl,imx6dl";
+};

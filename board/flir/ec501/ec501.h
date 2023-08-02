@@ -1,0 +1,122 @@
+#ifndef __EC501_H
+#define __EC501_H
+#include <asm/arch-mx6/iomux.h>
+#include <asm/arch-mx6/mx6-pins.h>
+#include <asm/arch-mx6/mx6-ddr.h>
+#include <asm/mach-imx/mxc_i2c.h>
+#include <asm/mach-imx/iomux-v3.h>
+
+#define SPI_PAD_CTRL (PAD_CTL_HYS |				\
+		      PAD_CTL_SPEED_MED |			\
+		      PAD_CTL_DSE_40ohm | PAD_CTL_SRE_FAST)
+
+#define UART_PAD_CTRL  (PAD_CTL_PKE | PAD_CTL_PUE |			\
+			PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |	\
+			PAD_CTL_DSE_40ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
+
+#define ENET_PAD_CTRL  (PAD_CTL_PKE | PAD_CTL_PUE |			\
+			PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED   |	\
+			PAD_CTL_DSE_40ohm   | PAD_CTL_HYS)
+
+#define USDHC_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |			\
+			PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |	\
+			PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
+
+#define I2C_PAD_CTRL	(PAD_CTL_PKE | PAD_CTL_PUE |			\
+			 PAD_CTL_PUS_100K_UP | PAD_CTL_SPEED_MED |	\
+			 PAD_CTL_DSE_40ohm | PAD_CTL_HYS |		\
+			 PAD_CTL_ODE | PAD_CTL_SRE_FAST)
+
+
+iomux_v3_cfg_t const ecspi4_pads[] = {
+    MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const uart1_pads[] = {
+	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const enet_pads[] = {
+	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_REF_CLK__ENET_TX_CLK       | MUX_PAD_CTRL(ENET_PAD_CTRL), // <- this sets SION bit, 
+                                                                               //SION Forces input path of pad ENET_REF_CLK...
+	MX6_PAD_ENET_RX_ER__GPIO1_IO24	        | MUX_PAD_CTRL(NO_PAD_CTRL),   //Interupt
+	MX6_PAD_ENET_CRS_DV__GPIO1_IO25  	| MUX_PAD_CTRL(NO_PAD_CTRL),   //GPIO Reset, Wrong pad name on schematic
+	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TXC__RGMII_TXC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD0__RGMII_TD0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD1__RGMII_TD1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD2__RGMII_TD2		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD3__RGMII_TD3		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RX_CTL__RGMII_RX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD0__RGMII_RD0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TX_CTL__RGMII_TX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD1__RGMII_RD1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD2__RGMII_RD2		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD3__RGMII_RD3		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RXC__RGMII_RXC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const usdhc4_pads[] = {
+	MX6_PAD_SD4_CLK__SD4_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_CMD__SD4_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT0__SD4_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT1__SD4_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT2__SD4_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT3__SD4_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT4__SD4_DATA4 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT5__SD4_DATA5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT6__SD4_DATA6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT7__SD4_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+};
+
+
+iomux_v3_cfg_t const recovery_btn_pad[] = {
+	MX6_PAD_GPIO_16__GPIO7_IO11		| MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+#ifdef CONFIG_SYS_I2C_MXC
+
+/* i2c4: hdmi*/
+struct i2c_pads_info i2c_pad_info1 = {
+	.scl = {
+		.i2c_mode = MX6_PAD_GPIO_7__I2C4_SCL | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gpio_mode = MX6_PAD_GPIO_7__GPIO1_IO07 | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gp = IMX_GPIO_NR(1, 7)
+	},
+	.sda = {
+		.i2c_mode = MX6_PAD_GPIO_8__I2C4_SDA | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gpio_mode = MX6_PAD_GPIO_8__GPIO1_IO08 | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gp = IMX_GPIO_NR(1, 8)
+	}
+};
+/*i2c3: eeprom, irdm i2c,  */
+struct i2c_pads_info i2c_pad_info2 = {
+    .scl = {
+        .i2c_mode = MX6_PAD_GPIO_5__I2C3_SCL | MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gpio_mode = MX6_PAD_GPIO_5__GPIO1_IO05| MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gp = IMX_GPIO_NR(1, 5)
+    },
+    .sda = {
+        .i2c_mode = MX6_PAD_GPIO_6__I2C3_SDA | MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gpio_mode = MX6_PAD_GPIO_6__GPIO1_IO06 | MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gp = IMX_GPIO_NR(1, 6)
+    }
+};
+#endif /* CONFIG_SYS_I2C_MXC */
+
+#ifdef CONFIG_FSL_ESDHC
+
+/* The order of MMC controllers here must match that of CONFIG_MMCDEV_USDHCx
+ * in the platform header
+ */
+struct fsl_esdhc_cfg usdhc_cfg[CONFIG_SYS_FSL_USDHC_NUM] = {
+	{USDHC4_BASE_ADDR},
+};
+#endif
+
+#endif
