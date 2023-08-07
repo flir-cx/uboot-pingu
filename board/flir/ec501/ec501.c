@@ -39,9 +39,10 @@
 #include "../common/da9063.h"
 #include "../common/da9063_regs.h"
 #include "../common/eeprom.h"
-#include "../common/fpga_ctrl.h"
 #include "../common/cmd_updatefdteeprom.h"
-
+#include "../common/cmd_loadfpga.h"
+#include "../common/board_support.h"
+#include "ec501_fpga.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 char *get_last_reset_cause(void);
@@ -49,12 +50,94 @@ void mxc_mipi_dsi_enable(void);
 
 void imx_bypass_ldo(void);
 
-struct spi_slave *slave;
+struct spi_slave *slave; // Extern
+
 int setup_pmic_voltages(void);
 int fpga_power(bool enable);
 int eth_power(bool enable);
 //static void setup_display(void);
 
+iomux_v3_cfg_t const ecspi4_pads[] = {
+    MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
+    MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const uart1_pads[] = {
+	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const enet_pads[] = {
+	MX6_PAD_ENET_MDIO__ENET_MDIO		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_ENET_REF_CLK__ENET_TX_CLK       | MUX_PAD_CTRL(ENET_PAD_CTRL), // <- this sets SION bit,
+                                                                               //SION Forces input path of pad ENET_REF_CLK...
+	MX6_PAD_ENET_RX_ER__GPIO1_IO24	        | MUX_PAD_CTRL(NO_PAD_CTRL),   //Interupt
+	MX6_PAD_ENET_CRS_DV__GPIO1_IO25  	| MUX_PAD_CTRL(NO_PAD_CTRL),   //GPIO Reset, Wrong pad name on schematic
+	MX6_PAD_ENET_MDC__ENET_MDC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TXC__RGMII_TXC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD0__RGMII_TD0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD1__RGMII_TD1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD2__RGMII_TD2		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TD3__RGMII_TD3		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RX_CTL__RGMII_RX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD0__RGMII_RD0		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_TX_CTL__RGMII_TX_CTL	| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD1__RGMII_RD1		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD2__RGMII_RD2		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RD3__RGMII_RD3		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+	MX6_PAD_RGMII_RXC__RGMII_RXC		| MUX_PAD_CTRL(ENET_PAD_CTRL),
+};
+
+iomux_v3_cfg_t const usdhc4_pads[] = {
+	MX6_PAD_SD4_CLK__SD4_CLK   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_CMD__SD4_CMD   | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT0__SD4_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT1__SD4_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT2__SD4_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT3__SD4_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT4__SD4_DATA4 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT5__SD4_DATA5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT6__SD4_DATA6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+	MX6_PAD_SD4_DAT7__SD4_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
+};
+
+
+iomux_v3_cfg_t const recovery_btn_pad[] = {
+	MX6_PAD_GPIO_16__GPIO7_IO11		| MUX_PAD_CTRL(NO_PAD_CTRL),
+};
+
+#ifdef CONFIG_SYS_I2C_MXC
+
+/* i2c4: hdmi*/
+struct i2c_pads_info i2c_pad_info1 = {
+	.scl = {
+		.i2c_mode = MX6_PAD_GPIO_7__I2C4_SCL | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gpio_mode = MX6_PAD_GPIO_7__GPIO1_IO07 | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gp = IMX_GPIO_NR(1, 7)
+	},
+	.sda = {
+		.i2c_mode = MX6_PAD_GPIO_8__I2C4_SDA | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gpio_mode = MX6_PAD_GPIO_8__GPIO1_IO08 | MUX_PAD_CTRL(I2C_PAD_CTRL),
+		.gp = IMX_GPIO_NR(1, 8)
+	}
+};
+
+/*i2c3: eeprom, irdm i2c,  */
+struct i2c_pads_info i2c_pad_info2 = {
+    .scl = {
+        .i2c_mode = MX6_PAD_GPIO_5__I2C3_SCL | MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gpio_mode = MX6_PAD_GPIO_5__GPIO1_IO05| MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gp = IMX_GPIO_NR(1, 5)
+    },
+    .sda = {
+        .i2c_mode = MX6_PAD_GPIO_6__I2C3_SDA | MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gpio_mode = MX6_PAD_GPIO_6__GPIO1_IO06 | MUX_PAD_CTRL(I2C_PAD_CTRL),
+        .gp = IMX_GPIO_NR(1, 6)
+    }
+};
+#endif /* CONFIG_SYS_I2C_MXC */
 
 
 /* DA9063 Voltages */
@@ -245,6 +328,8 @@ int board_early_init_f(void)
 
 int board_init(void)
 {
+	int ret = 0;
+
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
@@ -255,6 +340,8 @@ int board_init(void)
 	/* Setup I2C3 */
 	ret = setup_i2c(2, CONFIG_SYS_I2C_SPEED,
 			CONFIG_SYS_I2C_SLAVE, &i2c_pad_info2);
+#endif /* CONFIG_SYS_I2C */
+
 	ret = setup_pmic_voltages();
 	if (ret)
 		return ret;
@@ -263,17 +350,17 @@ int board_init(void)
 	if(ret)
 		return ret;
 
+#ifdef FLIR_BOARD_SUPPORT
 	struct eeprom ioboard =
 	{
 	 .i2c_bus = 2,
 	 .i2c_address = 0xaa,
 	 .i2c_offset = 0x0,
 	};
-
 	ret = board_support_setup(&ioboard, &hardware);
-#endif /* CONFIG_SYS_I2C_MXC */
+#endif
 
-	return 0;
+	return ret;
 }
 
 #ifdef CONFIG_CMD_BMODE
@@ -291,10 +378,9 @@ int board_late_init(void)
 	add_board_boot_modes(board_boot_modes);
 #endif
 
-#ifdef CONFIG_SYS_USE_SPINOR
        setup_spinor();
-#endif
-	return 0;
+
+       return 0;
 }
 
 #if defined(CONFIG_OF_BOARD_SETUP)
@@ -317,6 +403,9 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	return 0;
 }
 
+#ifndef CONFIG_MXC_SPI
+#error "MXC_SPI must be configured"
+#endif /* CONFIG_MXC_SPI */
 int setup_pmic_voltages()
 {
     unsigned char dev_id, var_id, cust_id, conf_id;
@@ -380,69 +469,6 @@ int setup_pmic_voltages()
     return 0;
 }
 
-
-
-
-int fpga_power(bool enable)
-{
-	//Duplo VBUCKMEM, CORE_SW_S, PERI_SWS, LDO8, LDO10
-	int ret;
-	unsigned char conf_id;
-	ret = spi_claim_bus(slave);
-	if(ret){
-		printf("%s: Failed to claim spi bus\n", __func__);
-		return ret;
-	}
-
-	if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-		printf("Could not read PMIC ID registers\n");
-		spi_release_bus(slave);
-		return -1;
-	}
-
-	// CORE_SW_EN  (1V8_FPGA)
-	ret = pmic_write_bitfield(DA9063_REG_BCORE1_CONT,DA9063_CORE_SW_EN,enable?DA9063_CORE_SW_EN:0);
-	if(ret){
-		printf("Failed to enable 1V8_FPGA\n");
-		return ret;
-	}
-
-	// BUCK_MEM    (1V1_FPGA)
-	ret = pmic_write_bitfield(DA9063_REG_BMEM_CONT,DA9063_BUCK_EN,enable?DA9063_BUCK_EN:0);
-	if(ret){
-		printf("Failed to enable 1V1_FPGA\n");
-		return ret;
-	}
-
-	// PERI_SW_EN    (1V2_FPGA)
-	ret = pmic_write_bitfield(DA9063_REG_BPERI_CONT,DA9063_PERI_SW_EN,enable?DA9063_PERI_SW_EN:0);
-	if(ret){
-		printf("Failed to enable 1V2_FPGA\n");
-		return ret;
-	}
-	// LDO10_EN          (2V5_FPGA)
-	ret = pmic_write_bitfield(DA9063_REG_LDO10_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
-	if(ret){
-		printf("Failed to enable 2V5_FPGA\n");
-		return ret;
-	}
-	// LDO8_EN          (3V15_FPGA)
-	ret = pmic_write_bitfield(DA9063_REG_LDO8_CONT,DA9063_LDO_EN,enable?DA9063_LDO_EN:0);
-	if(ret){
-		printf("Failed to enable 3V15_FPGA\n");
-		return ret;
-	}
-
-	spi_release_bus(slave);
-	return 0;
-}
-
-void fpga_init_ctrl(struct fpga_ctrl *fpga)
-{
-	// TODO: implement fpga overrides
-	// ec501_fpga_set_ctrl(fpga);
-	// fpga_set_board_ops(&fpga->board_ops);
-}
 
 int eth_power(bool enable)
 {

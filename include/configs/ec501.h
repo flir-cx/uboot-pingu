@@ -196,19 +196,8 @@
 #define ESDHCI_QUIRK_BROKEN_TIMEOUT_VALUE // ???
 
 /*Spi*/
-//#define CONFIG_SYS_USE_SPINOR // ???
-//#ifdef CONFIG_SYS_USE_SPINOR
-//#define CONFIG_CMD_SF
-//#define CONFIG_SPI_FLASH
-//#define CONFIG_SPI_FLASH_STMICRO
-//#define CONFIG_SPI_FLASH_BAR
-//#define CONFIG_MXC_SPI
-//#define CONFIG_SF_DEFAULT_BUS  0
-//#define CONFIG_SF_DEFAULT_SPEED 20000000
-//#define CONFIG_SF_DEFAULT_MODE (SPI_MODE_0)
-// #define CONFIG_SF_DEFAULT_CS  IMX_GPIO_NR(5, 28) // = 156
-//#endif
-//#define CONFIG_CMD_SPI		/* SPI utility			*/
+#define CONFIG_SYS_USE_SPINOR
+
 /* DA9063 PMIC */
 #define DA9063_RW                   0x1 /* Host indicate reading acces via RW=1 */ // ???
 #define DA9063_SPI_CS               IMX_GPIO_NR(3, 20) // ???

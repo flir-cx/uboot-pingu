@@ -4,5 +4,5 @@
 # SPDX-License-Identifier:	GPL-2.0
 #
 
-obj-y	:= ec501.o
+obj-y	:= ec501.o ec501_fpga.o
 
