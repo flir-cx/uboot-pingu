@@ -5,6 +5,12 @@
 #ifndef __FPGA_CTRL_H
 #define __FPGA_CTRL_H
 
+#define FPGA_CONF_DONE (2000)
+#define FPGA_CRC_ERR   (2001)
+#define FPGA_CONF_ERR  (2002)
+#define FPGA_TIMEOUT   (2003)
+#define FPGA_NOPOLL    (2004)
+
 struct fpga_pins {
 	int init_n;
 	int program_n;
@@ -21,7 +27,7 @@ struct fpga_ctrl;
  * @brief Operations that may be implemented in the <fpga_name>_fpga_ctrl.c
  *
  * If not implemented the driver will return 0 or ok apart from
- * fpga_poll_config_status which will return -1 to make sure that we
+ * fpga_poll_config_status which will return -FPGA_NOPOLL to make sure that we
  * get stuck with an error if not implemented.
  */
 struct fpga_ops {
@@ -173,7 +179,8 @@ int fpga_enable_power(struct fpga_ctrl *fpga);
  *	  This is mandatory to implement for an fpga
  *
  * @param fpga Completely initialized fpga struct
- * @return 0 if not done, 1 if done, -ve on error that is not recoverable
+ * @return FPGA_TIMEOUT if not done, FPGA_CONF_DONE if done,
+           -ve on error that is not recoverable
  */
 int fpga_poll_config_status(struct fpga_ctrl *fpga);
 

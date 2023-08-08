@@ -133,9 +133,13 @@ static int altera_fpga_poll_config_status(struct fpga_ctrl *fpga)
 	ret = gpio_get_value(fpga->pins.done);
 	debug("%s: done = %d\n", __func__, ret);
 	if (ret == 1)
-		return 1;
+		return FPGA_CONF_DONE;
 
-	return 0;
+	ret = gpio_get_value(fpga->pins.status_n);
+	if (ret == 0)
+		return -FPGA_CONF_ERR;
+
+	return FPGA_TIMEOUT;
 }
 
 void fpga_set_ops(struct fpga_ctrl *ctrl)

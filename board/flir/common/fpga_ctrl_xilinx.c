@@ -103,15 +103,16 @@ static int xilinx_fpga_poll_config_status(struct fpga_ctrl *fpga)
 	ret = gpio_get_value(fpga->pins.done);
 	debug("%s: done = %d\n", __func__, ret);
 	if (ret == 1)
-		return 1;
+		return FPGA_CONF_DONE;
 
 	// Only check for error if done is 0, since init_n is released from fpga
 	// and pulled high after successful init
 	ret = gpio_get_value(fpga->pins.init_n);
 	debug("%s: init_n = %d\n", __func__, ret);
 	if (ret == 0)
-		return -1;
-	return 0;
+		return -FPGA_CRC_ERR;
+
+	return FPGA_TIMEOUT;
 }
 
 void fpga_set_ops(struct fpga_ctrl *ctrl)

@@ -117,6 +117,7 @@ static int load_fpga(uint ms_timeout)
 {
 	const uint poll_rate = 10; // ms
 	uint timeout_laps = ms_timeout / poll_rate;
+	uint dot_modulo = timeout_laps / 20;
 	int i;
 	struct fpga_ctrl fpga;
 	int ret;
@@ -144,21 +145,35 @@ static int load_fpga(uint ms_timeout)
 	for (i = 0; i < timeout_laps; i++) {
 		mdelay(poll_rate);
 		ret = fpga_poll_config_status(&fpga);
-		if (ret != 0)
+		if (ret != FPGA_TIMEOUT)
 			break;
 
-		if (i % 5 == 0)
+		if (i % dot_modulo == 0)
 			log_info(".");
 	}
-	if (ret > 0) {
+	switch (ret) {
+	case FPGA_CONF_DONE:
 		log_info(" done (took %u ms)\n", poll_rate * i);
 		fpga_enable(&fpga);
-	} else if (ret < 0) {
+		break;
+	case -FPGA_CRC_ERR:
 		log_err("\nFPGA CRC error, giving up\n");
 		fpga_disable(&fpga);
-	} else {
-		log_err("\nFPGA timeout reached, failed to config FPGA\n");
+		break;
+	case -FPGA_CONF_ERR:
+		log_err("\nFPGA configuration error, giving up\n");
 		fpga_disable(&fpga);
+		break;
+	case FPGA_TIMEOUT:
+		log_err("\nFPGA %ums timeout reached, configuration failed\n", ms_timeout);
+		fpga_disable(&fpga);
+		break;
+	case -FPGA_NOPOLL:
+		log_err("\nFPGA config-poll function missing\n");
+		fpga_disable(&fpga);
+		break;
+	default:
+		log_err("\nUnknown FPGA poll status code: %d\n", ret);
 	}
 
 #if defined CONFIG_SYS_USE_SPINOR

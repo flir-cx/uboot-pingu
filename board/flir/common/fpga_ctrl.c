@@ -116,5 +116,5 @@ int fpga_poll_config_status(struct fpga_ctrl *fpga)
 	if (fpga && fpga->ops.fpga_poll_config_status)
 		return fpga->ops.fpga_poll_config_status(fpga);
 	log_err("%s not defined for this FPGA\n", __func__);
-	return -1;
+	return -FPGA_NOPOLL;
 }
