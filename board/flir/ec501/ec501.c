@@ -57,6 +57,10 @@ int fpga_power(bool enable);
 int eth_power(bool enable);
 //static void setup_display(void);
 
+#define DA9063_SPI_CS      0
+#define DA9063_SPI_BUS     3
+#define DA9063_SPI_CS_GPIO IMX_GPIO_NR(3, 20)
+
 iomux_v3_cfg_t const ecspi4_pads[] = {
     MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
     MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
@@ -266,9 +270,32 @@ int board_phy_config(struct phy_device *phydev)
 }
 #endif /* defined(CONFIG_PHY_TI) */
 
+/*
+ * Override for the weak definition in mxc_spi
+ * Note: bus is 0-indexed, in schematic it is 1-indexed
+ */
 int board_spi_cs_gpio(unsigned bus, unsigned cs)
 {
-       return cs;
+	debug("%s(%u, %u)\n", __func__, bus, cs);
+
+	switch (bus) {
+	case 0:
+		if (cs == 1)
+			return IMX_GPIO_NR(5, 28); // FPGA
+		break;
+	case 1:
+		if (cs == 0)
+			return IMX_GPIO_NR(2, 26);
+		if (cs == 1)
+			return IMX_GPIO_NR(2, 27);
+		if (cs == 2)
+			return IMX_GPIO_NR(2, 28);
+	case 3:
+		if (cs == 0)
+			return IMX_GPIO_NR(3, 20); // DA9063
+	}
+
+	return -1;
 }
 
 int board_eth_init(struct bd_info *bis)
@@ -411,6 +438,14 @@ int setup_pmic_voltages()
     unsigned char dev_id, var_id, cust_id, conf_id;
     struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
     int ret;
+
+    ret = gpio_request(DA9063_SPI_CS_GPIO, "spi4-cs0");
+    if (ret) {
+	    log_err("Failed to request PMIC CS\n");
+	    return -1;
+    }
+    gpio_direction_output(DA9063_SPI_CS_GPIO, 1);
+    gpio_free(DA9063_SPI_CS_GPIO);
 
     imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
 				     ARRAY_SIZE(ecspi4_pads));
