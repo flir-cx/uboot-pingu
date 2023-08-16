@@ -16,6 +16,7 @@
  * CONF_DONE       input
  */
 #include <spi.h>
+#include <linux/mtd/spi-nor.h>
 #include <linux/delay.h>
 #include "ec501.h"
 #include "../common/da9063.h"
@@ -34,9 +35,6 @@
 #define GPIO_FPGA_CONF_DONE IMX_GPIO_NR(5, 27)
 #define GPIO_FPGA_CE        IMX_GPIO_NR(4, 10)
 
-#define CMD_WRITE_ENABLE 0x06
-#define CMD_EN4BYTE_ADDR 0xB7
-#define CMD_WRITE_ENHANCED_VOLATILE_CONF 0x61
 #define SPI_FLASH_MAX_SIZE_BUF 32
 
 static iomux_v3_cfg_t const ecspi1_pads[] = {
@@ -137,7 +135,6 @@ static void ec501_fpga_set_ctrl(struct fpga_ctrl *fpga)
 	fpga_set_ops(fpga);
 }
 
-
 static int ec501_fpga_enable_power(struct fpga_ctrl *fpga)
 {
 	debug("%s\n",  __func__);
@@ -195,12 +192,136 @@ static int ec501_fpga_release_flash_spi(struct fpga_ctrl *fpga)
 	return 0;
 }
 
+static int do_spi_xfer(int bus, int cs, int freq, int mode, uchar *dout, int len)
+{
+	struct spi_slave *slave;
+	int ret = 0;
+	int bitlen = (1 + len) * 8;
+	uchar din[SPI_FLASH_MAX_SIZE_BUF];
+
+	if (CONFIG_IS_ENABLED(DM_SPI)) {
+		char name[30], *str;
+		struct udevice *dev;
+
+		snprintf(name, sizeof(name), "generic_%d:%d", bus, cs);
+		str = strdup(name);
+		if (!str)
+			return -ENOMEM;
+		ret = spi_get_bus_and_cs(bus, cs, freq, mode, "spi_generic_drv",
+					 str, &dev, &slave);
+		if (ret)
+			return ret;
+	} else {
+		slave = spi_setup_slave(bus, cs, freq, mode);
+		if (!slave) {
+			printf("Invalid device %d:%d\n", bus, cs);
+			return -EINVAL;
+		}
+	}
+
+	ret = spi_claim_bus(slave);
+	if (ret)
+		goto done;
+
+	ret = spi_xfer(slave, bitlen, dout, din,
+		       SPI_XFER_BEGIN | SPI_XFER_END);
+	if (!CONFIG_IS_ENABLED(DM_SPI)) {
+		/* We don't get an error code in this case */
+		if (ret)
+			ret = -EIO;
+	}
+
+done:
+	spi_release_bus(slave);
+	if (!CONFIG_IS_ENABLED(DM_SPI))
+		spi_free_slave(slave);
+
+	return ret;
+}
+
+/**
+ * @brief Write a command to the spi flash
+ *
+ * @param cmd
+ * @param dout the data to be written, null if no parameters to cmd
+ * @param len length of dout
+ * @return int
+ */
+static int spi_flash_cmd(uchar cmd, uchar *dout, size_t len)
+{
+	uchar buf[SPI_FLASH_MAX_SIZE_BUF] = {cmd};
+	unsigned int bus = CONFIG_DEFAULT_SPI_BUS;
+	unsigned int cs = CONFIG_SF_DEFAULT_CS;
+	unsigned int mode = CONFIG_SF_DEFAULT_MODE;
+	unsigned int freq = CONFIG_SF_DEFAULT_SPEED;
+
+	if ((len + 1 >= SPI_FLASH_MAX_SIZE_BUF) || (len > 0 && !dout))
+		return -EINVAL;
+
+	if (len > 0)
+		memcpy(&buf[1], dout, len);
+
+	return do_spi_xfer(bus, cs, freq, mode, buf, len);
+}
+
+/**
+ * @brief Set up spi flash according to altera spec
+ * Disable HOLD pin functionality
+ * Use 12 dummy bits after FAST READ
+ * Enable 4B mode
+ *
+ * @return int negative on error
+ */
+static int ec501_fpga_init_spi_flash(struct fpga_ctrl *fpga)
+{
+	u8 hold_disable_mask = 0xef;
+	u8 twelve_dummy_bits_mask = 0xcb;
+	int ret = 0;
+
+	(void)fpga;
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_WD_EVCR, &hold_disable_mask, 1);
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_MT_WR_ANY_REG, &twelve_dummy_bits_mask, 1);
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_EN4B, NULL, 0);
+	if (ret)
+		log_err("Failed to configure the SPI Flash\n");
+
+	return ret;
+}
+
+/**
+ * @brief Revert (some) flash chip settings
+ * Use 16 dummy bits after FAST READ
+ * Disable 4B mode
+ *
+ * @return int negative on error
+ */
+static int ec501_fpga_uninit_spi_flash(struct fpga_ctrl *fpga)
+{
+	u8 sixteen_dummy_bits_mask = 0xfb;
+	int ret = 0;
+
+	(void)fpga;
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_MT_WR_ANY_REG, &sixteen_dummy_bits_mask, 1);
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_EX4B, NULL, 0);
+	if (ret)
+		log_err("Failed to de-configure the SPI Flash\n");
+
+	return ret;
+}
+
 static void fpga_set_board_ops(struct fpga_board_ops *ops)
 {
 	debug("%s\n",  __func__);
 	ops->fpga_request_flash_spi = ec501_fpga_request_flash_spi;
 	ops->fpga_release_flash_spi = ec501_fpga_release_flash_spi;
 	ops->fpga_enable_power = ec501_fpga_enable_power;
+	ops->fpga_init_spi_flash = ec501_fpga_init_spi_flash;
+	ops->fpga_uninit_spi_flash = ec501_fpga_uninit_spi_flash;
 }
 
 void fpga_init_ctrl(struct fpga_ctrl *fpga)

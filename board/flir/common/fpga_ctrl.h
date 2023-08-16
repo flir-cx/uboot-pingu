@@ -53,6 +53,7 @@ struct fpga_board_ops {
 	int (*fpga_request_flash_spi)(struct fpga_ctrl *fpga);
 	int (*fpga_release_flash_spi)(struct fpga_ctrl *fpga);
 	int (*fpga_init_spi_flash)(struct fpga_ctrl *fpga);
+	int (*fpga_uninit_spi_flash)(struct fpga_ctrl *fpga);
 	int (*fpga_enable_power)(struct fpga_ctrl *fpga);
 };
 
@@ -133,6 +134,15 @@ int fpga_release_flash_spi(struct fpga_ctrl *fpga);
 int fpga_init_spi_flash(struct fpga_ctrl *fpga);
 
 /**
+ * @brief Implement this if you need to de-configure the flash after FPGA
+ *	  configuration. E.g. enable hold or setting dummy bits.
+ *
+ * @param fpga Completely initialized fpga struct
+ * @return 0 if OK, -ve on error
+ */
+int fpga_uninit_spi_flash(struct fpga_ctrl *fpga);
+
+/**
  * @brief Implement this if you need to have a chip enable to be triggered after
  *	  programming is complete
  *
@@ -180,7 +190,7 @@ int fpga_enable_power(struct fpga_ctrl *fpga);
  *
  * @param fpga Completely initialized fpga struct
  * @return FPGA_TIMEOUT if not done, FPGA_CONF_DONE if done,
-           -ve on error that is not recoverable
+ *         -ve on error that is not recoverable
  */
 int fpga_poll_config_status(struct fpga_ctrl *fpga);
 

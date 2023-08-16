@@ -65,6 +65,15 @@ int fpga_init_spi_flash(struct fpga_ctrl *fpga)
 	return 0;
 }
 
+int fpga_uninit_spi_flash(struct fpga_ctrl *fpga)
+{
+	debug("Enter %s\n", __func__);
+	if (fpga && fpga->board_ops.fpga_uninit_spi_flash)
+		return fpga->board_ops.fpga_uninit_spi_flash(fpga);
+	debug("%s not defined for this FPGA\n", __func__);
+	return 0;
+}
+
 int fpga_enable(struct fpga_ctrl *fpga)
 {
 	debug("Enter %s\n", __func__);

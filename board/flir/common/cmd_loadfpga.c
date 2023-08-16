@@ -85,7 +85,7 @@ static int check_fpga_flash_header(void)
 	int ret;
 
 	if (!flash) {
-		log_info("SPI FLASH probe failed, keep going anyway\n");
+		log_warning("SPI FLASH probe not done, proceeding anyway\n");
 		return 0; // try to load fpga anyway
 	}
 
@@ -178,6 +178,7 @@ static int load_fpga(uint ms_timeout)
 
 #if defined CONFIG_SYS_USE_SPINOR
 	fpga_request_flash_spi(&fpga);
+	fpga_uninit_spi_flash(&fpga);
 #endif
 	return (ret > 0) ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 }
