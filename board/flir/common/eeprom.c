@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 #include <i2c.h>
+#include <env.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
 #include "eeprom.h"
@@ -15,7 +16,7 @@
 
 // Product Version
 // 0x40 (64) bytes
-struct product_ver {
+struct __packed product_ver {
 	char name[20];
 	char article[16];
 	char serial[10];
@@ -26,7 +27,7 @@ struct product_ver {
 
 // CPU board Article Version
 // 0x20 (32) bytes
-struct article_ver {
+struct __packed article_ver {
 	char article[10];
 	char serial[10];
 	char revision[4];
@@ -34,7 +35,17 @@ struct article_ver {
 	char chksum[2];
 };
 
+// MAC Address, offset 0x80
+// 0x20 (32) bytes
+struct __packed mac_data {
+	uchar devid[3];
+	char reserved[27];
+	u16 chksum;
+};
+
 #define PRODUCT_DATA_OFFSET (0x00)
+#define ARTICLE_DATA_OFFSET (0x40)
+#define MAC_DATA_OFFSET     (0x80)
 
 static int eeprom_read_data(struct eeprom *eeprom, unsigned int offset,
 			    u8 *data, unsigned int length)
@@ -106,3 +117,42 @@ int eeprom_read_product(struct eeprom *eeprom)
 	return ret;
 }
 
+/**
+ * mac_read_from_eeprom - read MAC addresses from EEPROM and write to env
+ *
+ * This function reads the MAC addresses from EEPROM and sets the
+ * appropriate environment variables for each one read.
+ *
+ * The ethaddr env is a WRITE_ONCE var, that will keep its value forever once
+ * it has been set. Subsequent attempts at changing it will fail.
+ *
+ * Note: Must be called after relocation and is invoked by init_sequence_r
+ */
+int mac_read_from_eeprom(void)
+{
+	char ethaddr[18];
+	struct eeprom eeprom = {
+		.i2c_bus = CONFIG_SYS_I2C_EEPROM_BUS,
+		.i2c_address = CONFIG_SYS_I2C_EEPROM_ADDR
+	};
+	struct mac_data data;
+
+	if (env_get("ethaddr"))
+		return 0;
+
+	if (eeprom_read_data(&eeprom, MAC_DATA_OFFSET,
+			     (u8 *)&data, sizeof(data))) {
+		// Do not return error, let init_sequence_r proceed
+		log_err("%s: Failed to read MAC from EEPROM\n", __func__);
+		return 0;
+	}
+
+	if (memcmp(data.devid, "\0\0\0", 3) &&
+	    memcmp(data.devid, "\xFF\xFF\xFF", 3)) {
+		sprintf(ethaddr, "00:40:7F:%02X:%02X:%02X",
+			data.devid[0], data.devid[1], data.devid[2]);
+		env_set("ethaddr", ethaddr);
+		log_info("Saved new ethaddr: %s\n", ethaddr);
+	}
+	return 0;
+}

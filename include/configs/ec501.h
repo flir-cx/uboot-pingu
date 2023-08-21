@@ -182,6 +182,7 @@
 //#define CONFIG_SYS_EEPROM_BUS_NUM   2 // ???
 //#define CONFIG_SYS_I2C_EEPROM_ADDR   (0xae>>1)
 //#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
+#define CONFIG_SYS_I2C_MAC_OFFSET // Triggers mac_read_from_eeprom()
 
 
 //#define CONFIG_SYS_BOARD "ec501"

@@ -17,6 +17,8 @@ struct eeprom {
 	u32 article_revision;
 
 	char name[32];
+	u8 mac[6];
+	u16 mac_crc;
 };
 
 int eeprom_read_rev(struct eeprom *eeprom);
