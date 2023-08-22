@@ -524,6 +524,11 @@ int eth_power(bool enable)
 		return ret;
 	}
 	spi_release_bus(slave);
+
+	// DP83867 stabilization time
+	// (nominal 200ms, n.b.)
+	mdelay(100);
+
 	return 0;
 }
 
