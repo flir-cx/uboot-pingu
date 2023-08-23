@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 #include <command.h>
 #include <linux/delay.h>
+#include <linux/errno.h>
 #include <errno.h>
 #include <vsprintf.h>
 #include <stdio_dev.h>
@@ -20,6 +21,16 @@
 #define EEPROM_BUS_ID (2)
 #define MAIN_EEPROM_I2C_ADDR (0xae)
 #define MAIN_EEPROM_I2C_OFFS (0x40)
+
+#ifndef CONFIG_DM_VIDEO
+
+static int init_stdio(void) { return -ENODEV; }
+static int compute_stdio_dimensions(void) { return -ENODEV; }
+static inline void print_display(char *s) {}
+static int set_cursor_pos(unsigned int row, unsigned int col) { return 0; }
+static int print_recovery_banner(void) { return 0; }
+
+#else
 
 static struct stdio_dev *sdev;
 struct stdio_dim {
@@ -119,6 +130,7 @@ bail_out:
 	print_display(CLR_LINE "\r:..Recovery");
 	return 0;
 }
+#endif // CONFIG_DM_VIDEO
 
 /*
  * Poll keyboard for 'secret' button presses.
