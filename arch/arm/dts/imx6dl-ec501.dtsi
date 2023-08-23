@@ -188,6 +188,15 @@
 		temp-critical = <100000>;
 		hysteresis = <3000>;
 	};
+
+	keyboard {
+		compatible = "gpio-keys";
+
+		sw_load {
+			label = "S";
+			gpios = <&gpio7 11 GPIO_ACTIVE_LOW>;
+		};
+	};
 };
 
 &hdmi_core {

@@ -108,10 +108,6 @@ iomux_v3_cfg_t const usdhc4_pads[] = {
 	MX6_PAD_SD4_DAT7__SD4_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
-iomux_v3_cfg_t const recovery_btn_pad[] = {
-	MX6_PAD_GPIO_16__GPIO7_IO11		| MUX_PAD_CTRL(NO_PAD_CTRL),
-};
-
 #ifdef CONFIG_SYS_I2C_MXC
 
 /* i2c4: hdmi*/
@@ -309,12 +305,6 @@ int board_eth_init(struct bd_info *bis)
 	return 0;
 }
 
-static void setup_buttons(void)
-{
-	gpio_direction_input(IMX_GPIO_NR(7, 11));
-	imx_iomux_v3_setup_multiple_pads(recovery_btn_pad, ARRAY_SIZE(recovery_btn_pad));
-}
-
 // Initialize boot timer
 void board_setup_timer(void)
 {
@@ -335,7 +325,6 @@ int board_early_init_f(void)
 {
 	board_setup_timer();
 	setup_iomux_uart();
-	setup_buttons();
 
 #if defined(CONFIG_VIDEO_IPUV3)
 	if (hardware.display)
