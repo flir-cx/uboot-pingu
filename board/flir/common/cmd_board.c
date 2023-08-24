@@ -21,7 +21,9 @@ struct eeprom eeprom [] =
 	Eeprom_entry(6, 0xae, 0x40, "ec401w"),
 	Eeprom_entry(6, 0xae, 0x40, "ec201"),
 	Eeprom_entry(6, 0xae, 0x40, "ec302"),
+	Eeprom_entry(2, 0xae, 0x40, "ec501"),
 };
+#define SUPP_BRD_STR "main, ec101, ec201, ec302, ec401w, ec501, eoco, evio"
 
 static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
@@ -73,7 +75,7 @@ U_BOOT_CMD(
 	   "	<name>_board_revision and \n"
 	   "	<name>_board_article\n"
 	   "supported eeproms: \n"
-	   "ec401w ec101 ec201"
+	   SUPP_BRD_STR
 	   );
 #endif
 
@@ -85,5 +87,5 @@ U_BOOT_CMD(
 	   "	<name>_board_revision and \n"
 	   "	<name>_board_article\n"
 	   "supported eeproms: \n"
-	   "main, ec101, eoco, evio"
+	   SUPP_BRD_STR
 );
