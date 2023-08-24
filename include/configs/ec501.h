@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2015 FLIR Systems.
  *
@@ -23,14 +24,13 @@
 
 #ifdef is_boot_from_usb
 #undef  is_boot_from_usb
-#define is_boot_from_usb(void) (false)
+#define is_boot_from_usb() (false)
 #endif
 
 #define CONFIG_SYS_FSL_ESDHC_ADDR      0
 
 #define CONFIG_ARP_TIMEOUT     200UL
 
-#undef CONFIG_CMD_USB
 #ifdef CONFIG_CMD_USB
 #define CONFIG_USB_EHCI
 #define CONFIG_USB_EHCI_MX6
@@ -65,9 +65,9 @@
 #define CONFIG_SYS_INIT_RAM_ADDR       IRAM_BASE_ADDR
 #define CONFIG_SYS_INIT_RAM_SIZE       IRAM_SIZE
 
-#define CONFIG_SYS_INIT_SP_OFFSET \
+#define CONFIG_SYS_INIT_SP_OFFSET				\
 	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
-#define CONFIG_SYS_INIT_SP_ADDR \
+#define CONFIG_SYS_INIT_SP_ADDR					\
 	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
 
 #define CONFIG_SYS_I2C_SPEED           100000
@@ -91,10 +91,10 @@
 #if CONFIG_MFG == 1
 /* MFG preloaded recovery boot for board production */
 
-#define CONFIG_BOOTCOMMAND \
-	"setenv ethaddr 00:40:7f:21:22:23; " \
-        "fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; " \
-        "run partition_mmc_flir; run recboot"
+#define CONFIG_BOOTCOMMAND					\
+	"setenv ethaddr 00:40:7f:21:22:23; "			\
+	"fuse prog -y 0 6 0x10; fuse prog -y 0 5 0x5860; "	\
+	"run partition_mmc_flir; run recboot"
 
 #ifdef CONFIG_ENV_IS_IN_MMC
 #undef CONFIG_ENV_IS_IN_MMC
@@ -113,7 +113,7 @@
 #endif
 #define CONFIG_ENV_IS_NOWHERE
 
-#define CONFIG_BOOTCOMMAND \
+#define CONFIG_BOOTCOMMAND			\
 	"run recboot"
 
 #ifdef CONFIG_SPLASH_SCREEN
@@ -124,43 +124,17 @@
 #else
 /* Standard ec501 u-boot */
 
-//#define CONFIG_ENV_IS_IN_MMC
-//#if defined(CONFIG_ENV_IS_IN_MMC)
-//#define CONFIG_ENV_OFFSET		(1792 * 1024)	/* 256kB below 2MiB */
-//#define CONFIG_ENV_OFFSET_REDUND	(CONFIG_ENV_OFFSET + (128 * 1024))
-//#define CONFIG_ENV_SIZE_REDUND		CONFIG_ENV_SIZE
-//#endif
-
-#define CONFIG_BOOTCOMMAND \
-	"if recoverykey && kbd_secret; then " \
-                "run recoveryboot;" \
-	"else " \
-                "chargeState; run mmcbootflir;" \
-	"fi;" \
-	"echo Fallback to recovery boot!....;" \
+#define CONFIG_BOOTCOMMAND			\
+	"if recoverykey && kbd_secret; then "	\
+	"run recoveryboot;"			\
+	"else "					\
+	"chargeState; run mmcbootflir;"		\
+	"fi;"					\
+	"echo Fallback to recovery boot!....;"	\
 	"run recoveryboot;"
 #endif /* CONFIG_MFG */
 
 #include "ec501_env.h"
 
-   //#define CONFIG_IMX_HDMI
-   //#define CONFIG_VIDEO
-   //#define CONFIG_VIDEO_IPUV3
-   //#define CONFIG_CFB_CONSOLE
-   //#define CONFIG_CFB_CONSOLE_ANSI
-   //#define CONFIG_VGA_AS_SINGLE_DEVICE
-//#define CONFIG_SYS_CONSOLE_IS_IN_ENV
-//#define CONFIG_SYS_CONSOLE_OVERWRITE_ROUTINE
-//#define CONFIG_VIDEO_BMP_RLE8
-//#define CONFIG_SPLASH_SCREEN
-//#define CONFIG_VIDEO_BMP_GZIP
-//#define CONFIG_BMP_16BPP
-//#define CONFIG_SPLASHIMAGE_GUARD
-//#define CONFIG_SYS_VIDEO_LOGO_MAX_SIZE		(1024*1024)
-//#define CONFIG_CMD_BMP
-//#define CONFIG_VIDEO_LOGO
-//#define CONFIG_IPUV3_CLK 260000000
-
-//#define CONFIG_FPGA_ALTERA
 #endif /* #ifndef __EC501_CONFIG_H */
 
