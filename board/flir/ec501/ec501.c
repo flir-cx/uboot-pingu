@@ -52,9 +52,8 @@ void imx_bypass_ldo(void);
 
 struct spi_slave *slave; // Extern
 
-int setup_pmic_voltages(void);
-int fpga_power(bool enable);
-int eth_power(bool enable);
+static int setup_pmic_voltages(void);
+static int eth_power(bool enable);
 
 #define DA9063_SPI_CS	   0
 #define DA9063_SPI_BUS	   3
@@ -191,7 +190,6 @@ static void setup_iomux_uart(void)
 void ldo_mode_set(int ldo_bypass)
 {
 }
-
 #endif /* CONFIG_LDO_BYPASS_CHECK */
 
 #ifdef CONFIG_FSL_ESDHC
@@ -395,7 +393,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 #ifndef CONFIG_MXC_SPI
 #error "MXC_SPI must be configured"
 #endif /* CONFIG_MXC_SPI */
-int setup_pmic_voltages(void)
+static int setup_pmic_voltages(void)
 {
 	unsigned char dev_id, var_id, cust_id, conf_id;
 	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
@@ -465,7 +463,7 @@ int setup_pmic_voltages(void)
 	return 0;
 }
 
-int eth_power(bool enable)
+static int eth_power(bool enable)
 {
 	//Duplo LDO6, VBUCKPRO
 	int ret;
