@@ -26,6 +26,7 @@
 #include <asm/arch/crm_regs.h>
 #include <asm/gpio.h>
 #include <asm/mach-imx/boot_mode.h>
+#include <asm/mach-imx/video.h>
 #include <linux/fb.h>
 #include <i2c.h>
 #include <fsl_esdhc.h>
@@ -42,12 +43,10 @@
 #include "../common/eeprom.h"
 #include "../common/cmd_updatefdteeprom.h"
 #include "../common/cmd_loadfpga.h"
-#include "../common/board_support.h"
 #include "ec501_fpga.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 char *get_last_reset_cause(void);
-void mxc_mipi_dsi_enable(void);
 
 void imx_bypass_ldo(void);
 
@@ -56,7 +55,6 @@ struct spi_slave *slave; // Extern
 int setup_pmic_voltages(void);
 int fpga_power(bool enable);
 int eth_power(bool enable);
-//static void setup_display(void);
 
 #define DA9063_SPI_CS	   0
 #define DA9063_SPI_BUS	   3
@@ -165,16 +163,9 @@ struct i2c_pads_info i2c_pad_info2 = {
 /* LDO10      | 2V5D_FPGA     | 2V5D_FPGA    */
 /* LDO11      | +3V15D	      | +3V15D	     */
 
-//default hw support
-/*
-  static struct hw_support hardware =
-  {
-  .mipi_mux =	false,
-  .display =	true,
-  .usb_charge = false,
-  .name = "Unknown Camera"
-  };
-*/
+#if defined(CONFIG_VIDEO_IPUV3)
+static void setup_display(void);
+#endif
 
 int dram_init(void)
 {
@@ -325,10 +316,8 @@ int board_early_init_f(void)
 {
 	board_setup_timer();
 	setup_iomux_uart();
-
 #if defined(CONFIG_VIDEO_IPUV3)
-	if (hardware.display)
-		setup_display();
+	setup_display();
 #endif
 	return 0;
 }
@@ -356,15 +345,6 @@ int board_init(void)
 	ret = eth_power(true);
 	if (ret)
 		return ret;
-
-#ifdef FLIR_BOARD_SUPPORT
-	struct eeprom ioboard = {
-		.i2c_bus = 2,
-		.i2c_address = 0xaa,
-		.i2c_offset = 0x0,
-	};
-	ret = board_support_setup(&ioboard, &hardware);
-#endif
 
 	return ret;
 }
@@ -395,6 +375,7 @@ int board_late_init(void)
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
 	uchar enetaddr[6];
+
 	//fix ethernet mac-address using direct path to node
 	eth_env_get_enetaddr("ethaddr", enetaddr);
 	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000",
@@ -540,29 +521,35 @@ static void do_enable_hdmi(struct display_info_t const *dev)
 }
 
 /*
-  struct display_info_t const displays[] = {{
-  .bus	= -1,
-  .addr	= 0,
-  .pixfmt	= IPU_PIX_FMT_RGB24,
-  .detect	= NULL,
-  .enable	= do_enable_hdmi,
-  .mode	= {
-  .name		  = "HDMI",
-  .refresh	  = 60,
-  .xres		  = 640,
-  .yres		  = 480,
-  .pixclock	  = 39721,
-  .left_margin	  = 48,
-  .right_margin	  = 16,
-  .upper_margin	  = 33,
-  .lower_margin	  = 10,
-  .hsync_len	  = 96,
-  .vsync_len	  = 2,
-  .sync		  = 0,
-  .vmode	  = FB_VMODE_NONINTERLACED
-  } } };
-*/
-//size_t display_count = ARRAY_SIZE(displays);
+ * HDMI can be enabled for debugging purposes:
+ * - Enable DM_VIDEO, IMX_HDMI and VIDEO_IPUV3
+ * - set env panel HDMI
+ * - set env extra_bootargs "quiet video=mxcfb0:dev=hdmi,1920x1080M@60,if=RGB24"
+ * See e.g. https://www.nxp.com/docs/en/user-guide/IMXLUG.pdf
+ * section on eMMC booting.
+ */
+struct display_info_t const displays[] = {{
+		.bus	= -1,
+		.addr	= 0,
+		.pixfmt	= IPU_PIX_FMT_RGB24,
+		.detect	= NULL,
+		.enable	= do_enable_hdmi,
+		.mode	= {
+			.name		  = "HDMI",
+			.refresh	  = 60,
+			.xres		  = 640,
+			.yres		  = 480,
+			.pixclock	  = 39721,
+			.left_margin	  = 48,
+			.right_margin	  = 16,
+			.upper_margin	  = 33,
+			.lower_margin	  = 10,
+			.hsync_len	  = 96,
+			.vsync_len	  = 2,
+			.sync		  = 0,
+			.vmode	  = FB_VMODE_NONINTERLACED
+		} } };
+size_t display_count = ARRAY_SIZE(displays);
 
 static void setup_display(void)
 {
