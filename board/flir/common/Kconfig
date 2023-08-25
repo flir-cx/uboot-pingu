@@ -3,6 +3,7 @@ config FLIR_EEPROM
 	default n
 	help
 	  Common code for system EEPROM access
+	  Requires: DM_I2C
 
 config FLIR_DA9063
 	bool "DA9063 PMIC"

@@ -5,8 +5,12 @@
 #include <dm/device.h>
 #include "eeprom.h"
 
-#if ! CONFIG_IS_ENABLED(DM_I2C)
+#if !CONFIG_IS_ENABLED(DM_I2C)
 #error "Must configure DM_I2C to access EEPROM"
+#endif
+#if !defined(CONFIG_SYS_I2C_EEPROM_BUS)	|| \
+	!defined(CONFIG_SYS_I2C_EEPROM_ADDR)
+#error "Must configure CONFIG_SYS_I2C_EEPROM_BUS and CONFIG_SYS_I2C_EEPROM_ADDR"
 #endif
 
 /*
@@ -14,7 +18,7 @@
  * as specified in doc d1002343
  */
 
-// Product Version
+// Product Version, offset 0x00
 // 0x40 (64) bytes
 struct __packed product_ver {
 	char name[20];
@@ -25,7 +29,7 @@ struct __packed product_ver {
 	char chksum[2];
 };
 
-// CPU board Article Version
+// CPU board Article Version, offset 0x40
 // 0x20 (32) bytes
 struct __packed article_ver {
 	char article[10];
@@ -43,19 +47,33 @@ struct __packed mac_data {
 	u16 chksum;
 };
 
-#define PRODUCT_DATA_OFFSET (0x00)
-#define ARTICLE_DATA_OFFSET (0x40)
-#define MAC_DATA_OFFSET     (0x80)
+// The complete AT24C02 layout, 256 bytes
+struct __packed main_eeprom {
+	struct product_ver product;
+	struct article_ver article;
+	u8 unused_article[32];
+	struct mac_data mac;
+	u16 core_ver;
+	u8 unused_core[30];
+	u8 params[16];
+	u8 unused_params[47];
+	u8 memtest_result;
+};
 
-static int eeprom_read_data(struct eeprom *eeprom, unsigned int offset,
-			    u8 *data, unsigned int length)
+static unsigned int bus = CONFIG_SYS_I2C_EEPROM_BUS;
+static unsigned int addr = CONFIG_SYS_I2C_EEPROM_ADDR;
+#ifdef CONFIG_SYS_I2C_EEPROM_ADDR_LEN
+static const int OFFS_LEN = CONFIG_SYS_I2C_EEPROM_ADDR_LEN;
+#else
+static const int OFFS_LEN = 1;
+#endif
+
+static int eeprom_read_data(unsigned int offset, u8 *data, unsigned int length)
 {
 	int ret = 0;
-	const int I2C_OFFS_LEN = 1;
 	struct udevice *dev;
 
-	ret = i2c_get_chip_for_busnum(eeprom->i2c_bus, (eeprom->i2c_address >> 1),
-				      I2C_OFFS_LEN, &dev);
+	ret = i2c_get_chip_for_busnum(bus, (addr >> 1), OFFS_LEN, &dev);
 	if (ret != 0) {
 		printf("EEPROM chip not found\n\n");
 		return ret;
@@ -79,7 +97,11 @@ static int eeprom_read_data(struct eeprom *eeprom, unsigned int offset,
 int eeprom_read_rev(struct eeprom *eeprom)
 {
 	struct article_ver data;
-	int ret = eeprom_read_data(eeprom, eeprom->i2c_offset, (u8 *)&data, sizeof(data));
+	unsigned int offs = offsetof(struct main_eeprom, article);
+	int ret;
+
+	eeprom_select(eeprom->i2c_bus, eeprom->i2c_address);
+	ret = eeprom_read_data(offs, (u8 *)&data, sizeof(data));
 
 	if (ret != 0) {
 		printf("Read article info from EEPROM failed\n");
@@ -103,7 +125,11 @@ int eeprom_read_rev(struct eeprom *eeprom)
 int eeprom_read_product(struct eeprom *eeprom)
 {
 	struct product_ver data;
-	int ret = eeprom_read_data(eeprom, PRODUCT_DATA_OFFSET, (u8 *)&data, sizeof(data));
+	unsigned int offs = offsetof(struct main_eeprom, product);
+	int ret;
+
+	eeprom_select(eeprom->i2c_bus, eeprom->i2c_address);
+	ret = eeprom_read_data(offs, (u8 *)&data, sizeof(data));
 
 	if (ret != 0) {
 		printf("Read product info from EEPROM failed\n");
@@ -131,17 +157,13 @@ int eeprom_read_product(struct eeprom *eeprom)
 int mac_read_from_eeprom(void)
 {
 	char ethaddr[18];
-	struct eeprom eeprom = {
-		.i2c_bus = CONFIG_SYS_I2C_EEPROM_BUS,
-		.i2c_address = CONFIG_SYS_I2C_EEPROM_ADDR
-	};
+	unsigned int offs = offsetof(struct main_eeprom, mac);
 	struct mac_data data;
 
 	if (env_get("ethaddr"))
 		return 0;
 
-	if (eeprom_read_data(&eeprom, MAC_DATA_OFFSET,
-			     (u8 *)&data, sizeof(data))) {
+	if (eeprom_read_data(offs, (u8 *)&data, sizeof(data))) {
 		// Do not return error, let init_sequence_r proceed
 		log_err("%s: Failed to read MAC from EEPROM\n", __func__);
 		return 0;
@@ -155,4 +177,10 @@ int mac_read_from_eeprom(void)
 		log_info("Saved new ethaddr: %s\n", ethaddr);
 	}
 	return 0;
+}
+
+void eeprom_select(unsigned int i2c_bus, unsigned int i2c_addr)
+{
+	bus = i2c_bus;
+	addr = i2c_addr;
 }

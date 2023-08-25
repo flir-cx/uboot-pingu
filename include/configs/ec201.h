@@ -97,6 +97,11 @@
 #define CONFIG_CMD_CACHE
 #endif
 
+// Config main EEPROM here, unless the entire EEPROM driver is used
+#define CONFIG_SYS_I2C_EEPROM_BUS      6
+#define CONFIG_SYS_I2C_EEPROM_ADDR     0xae
+#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
+
 #ifdef CONFIG_DM_VIDEO
 #define CONFIG_VIDEO_MXS
 #define CONFIG_VIDEO_LOGO

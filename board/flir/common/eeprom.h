@@ -21,6 +21,15 @@ struct eeprom {
 	u16 mac_crc;
 };
 
+/**
+ * eeprom_set_addr() - set non-default eeprom address
+ *
+ * Mainboard I2C EEPROM is configured using SYS_I2C_EEPROM_BUS
+ * and SYS_I2C_EEPROM_ADDR. Use this function to select alternate
+ * addresses.
+ */
+void eeprom_select(unsigned int bus, unsigned int addr);
+
 int eeprom_read_rev(struct eeprom *eeprom);
 int eeprom_read_product(struct eeprom *eeprom);
 

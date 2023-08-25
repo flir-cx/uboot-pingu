@@ -28,6 +28,11 @@
 
 /*Spi*/
 #define CONFIG_SYS_USE_SPINOR
-// CONFIG_SF_DEFAULT_CS = IMX_GPIO_NR(5, 28) = 156
+
+// Config main EEPROM here, unless the entire EEPROM driver is used
+#define CONFIG_SYS_I2C_EEPROM_BUS      2
+#define CONFIG_SYS_I2C_EEPROM_ADDR     0xae
+#define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
+
 
 #endif                         /* __MX6EC701_CONFIG_H */
