@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2015 FLIR Systems.
  *
@@ -21,9 +22,9 @@
 
 void patch_fdt_eeprom(void *blob);
 
-struct Eeprom_list{
-    struct list_head list;
-    struct eeprom  eeprom;
+struct eeprom_list {
+	struct list_head list;
+	struct eeprom  eeprom;
 };
 
 #endif
