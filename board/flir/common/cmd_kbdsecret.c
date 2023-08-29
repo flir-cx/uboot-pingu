@@ -17,11 +17,6 @@
 #define CSI "\x1b["
 #define CLR_LINE CSI "2K"
 
-// TODO: Centralize EEPROM address info
-#define EEPROM_BUS_ID (2)
-#define MAIN_EEPROM_I2C_ADDR (0xae)
-#define MAIN_EEPROM_I2C_OFFS (0x40)
-
 #ifndef CONFIG_DM_VIDEO
 
 static int init_stdio(void) { return -ENODEV; }
@@ -92,11 +87,7 @@ static int print_recovery_banner(void)
 {
 	unsigned int row;
 	unsigned int col;
-	struct eeprom prodinfo = {
-		.i2c_bus = EEPROM_BUS_ID,
-		.i2c_address = MAIN_EEPROM_I2C_ADDR,
-		.i2c_offset = MAIN_EEPROM_I2C_OFFS
-	};
+	struct board_info prodinfo;
 	char msg[32] = "Recovery Mode";
 	unsigned int mlen = strlen(msg);
 
@@ -115,11 +106,11 @@ static int print_recovery_banner(void)
 		goto bail_out;
 	print_display(msg);
 
-	snprintf(msg, sizeof(msg), "Product: %s", prodinfo.product_name);
+	snprintf(msg, sizeof(msg), "Product: %s", prodinfo.name);
 	if (set_cursor_pos(row + 2, col))
 		goto bail_out;
 	print_display(msg);
-	snprintf(msg, sizeof(msg), " Serial: %d", prodinfo.product_serial);
+	snprintf(msg, sizeof(msg), " Serial: %d", prodinfo.serial);
 	if (set_cursor_pos(row + 3, col))
 		goto bail_out;
 	print_display(msg);

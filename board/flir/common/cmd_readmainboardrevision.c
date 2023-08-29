@@ -18,26 +18,22 @@
 #include "eeprom.h"
 #include "cmd_kbd.h"
 
-#define EEPROM_BUS_ID (2)
-#define MAIN_EEPROM_I2C_ADDR (0xae)
-#define MAIN_EEPROM_I2C_OFFS (0x40)
+/*
+ * Note: Board "main" means whatever board that has been setup using
+ * CONFIG_SYS_I2C_EEPROM_BUS and CONFIG_SYS_I2C_EEPROM_ADDR
+ */
+#define MAIN_BOARD "main"
 
 static int get_mainboard_version(int *article, int *revision)
 {
-	static struct eeprom cache = {
-		.i2c_bus = EEPROM_BUS_ID,
-		.i2c_address = MAIN_EEPROM_I2C_ADDR,
-		.i2c_offset = MAIN_EEPROM_I2C_OFFS,
-		.article_number = 0,
-		.article_revision = 0
-	};
+	static struct board_info cache;
 	int ret = 0;
 
-	if (!cache.article_number)
-		ret = eeprom_read_rev(&cache);
+	if (!cache.article)
+		ret = eeprom_read_rev(MAIN_BOARD, &cache);
 
-	*article = cache.article_number;
-	*revision = cache.article_revision;
+	*article = cache.article;
+	*revision = cache.revision;
 
 	return ret;
 }
@@ -71,12 +67,12 @@ static int do_readmainboardrevision(struct cmd_tbl *cmdtp, int flag, int argc, c
 }
 
 U_BOOT_CMD(readmainboardrevision, CONFIG_SYS_MAXARGS, 0, do_readmainboardrevision,
-	   "Read the revision of the ec101 mainboard",
-	   "Read the revision of the ec101 mainboard\n"
+	   "Read the revision of the CPU (main) board",
+	   "Read the revision of the CPU (main) board\n"
 	);
 
 U_BOOT_CMD(readmainboardarticle, CONFIG_SYS_MAXARGS, 0, do_readmainboardarticle,
-	   "Read the article of the ec101 mainboard",
-	   "Read the article of the ec101 mainboard\n"
+	   "Read the article of the CPU (main)  board",
+	   "Read the article of the CPU (main) board\n"
 	);
 

@@ -3,6 +3,7 @@
 #include <env.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
+#include <errno.h>
 #include "eeprom.h"
 
 #if !CONFIG_IS_ENABLED(DM_I2C)
@@ -47,7 +48,7 @@ struct __packed mac_data {
 	u16 chksum;
 };
 
-// The complete AT24C02 layout, 256 bytes
+// The complete mainboard AT24C02 layout, 256 bytes
 struct __packed main_eeprom {
 	struct product_ver product;
 	struct article_ver article;
@@ -60,15 +61,64 @@ struct __packed main_eeprom {
 	u8 memtest_result;
 };
 
-static unsigned int bus = CONFIG_SYS_I2C_EEPROM_BUS;
-static unsigned int addr = CONFIG_SYS_I2C_EEPROM_ADDR;
+/* The complete external (e.g. io board) layout, 256 bytes
+ * Only CPU-board EEPROMs store article data on a
+ * non-zero offset.
+ * struct __packed ext_eeprom {
+ *     struct article_ver article;
+ *     char data[224];
+ * };
+ */
+
 #ifdef CONFIG_SYS_I2C_EEPROM_ADDR_LEN
 static const int OFFS_LEN = CONFIG_SYS_I2C_EEPROM_ADDR_LEN;
 #else
 static const int OFFS_LEN = 1;
 #endif
 
-static int eeprom_read_data(unsigned int offset, u8 *data, unsigned int length)
+#define BUF_SZ sizeof(struct product_ver)
+#define PROD_INFO CONFIG_SYS_I2C_EEPROM_BUS,		\
+		CONFIG_SYS_I2C_EEPROM_ADDR,		\
+		false
+
+struct sup_info {
+	char name[10];
+	u8 bus;
+	u16 address;
+	bool ext;
+};
+
+/*
+ * Registry of supported boards.
+ * Any hard-coded info is to be kept in this module.
+ * One sunny day in the future, this should all be stored in kconfig.
+ */
+static struct sup_info boards[] = {
+	{"main", PROD_INFO}, {"ec101", PROD_INFO},
+	{"ec201", PROD_INFO}, {"ec302", PROD_INFO},
+	{"ec401w", PROD_INFO}, {"ec501", PROD_INFO},
+	{"eoco", PROD_INFO},
+	{"evio", .bus = 2, .address = 0xaa, true}
+};
+
+static void hexdump_buffer(u8 *buf, int len)
+{
+#ifdef DEBUG
+	int i;
+
+	printf("EEPROM dump: (%d (0x%02x) bytes)\n", len, len);
+	for (i = 0; i < len; i++) {
+		if ((i % 16) == 0)
+			printf("%02X: ", i);
+		printf("%02X ", buf[i]);
+		if (((i % 16) == 15) || (i == len - 1))
+			printf("\n");
+	}
+#endif
+}
+
+static int eeprom_read_data(unsigned int bus, unsigned int addr,
+			    unsigned int offset, u8 *data, unsigned int length)
 {
 	int ret = 0;
 	struct udevice *dev;
@@ -83,62 +133,102 @@ static int eeprom_read_data(unsigned int offset, u8 *data, unsigned int length)
 	if (ret != 0)
 		printf("Failed to read EEPROM\n");
 
+	hexdump_buffer(data, length);
 	return ret;
 }
 
 /*
- * Read article data from the EEPROM.
- * The supplied argument must define bus and address (a.k.a chip).
- * (Offset will be ignored)
- * Article data is parsed and written back to the eeprom struct.
- *
- * Return 0 on success, <0 on fail
+ * eeprom_supported_board() - Is this board known to us?
+ * @name: article string name
+ * Return: -ENODEV if name not found, >=0 on success
  */
-int eeprom_read_rev(struct eeprom *eeprom)
+static int eeprom_supported_board(const char *name)
 {
-	struct article_ver data;
-	unsigned int offs = offsetof(struct main_eeprom, article);
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(boards); i++)
+		if (!strcmp(boards[i].name, name))
+			return i;
+	return -ENODEV;
+}
+
+static int eeprom_do_read(const char *name, struct board_info *info,
+			  u8 *buf, bool prodinfo)
+{
 	int ret;
+	int ix = eeprom_supported_board(name);
+	unsigned int offs = 0;
 
-	eeprom_select(eeprom->i2c_bus, eeprom->i2c_address);
-	ret = eeprom_read_data(offs, (u8 *)&data, sizeof(data));
+	if (!info)
+		return -EINVAL;
 
-	if (ret != 0) {
-		printf("Read article info from EEPROM failed\n");
-		return ret;
+	if (ix < 0) {
+		log_err("Board '%s' is not supported\n", name);
+		return -EINVAL;
 	}
-	eeprom->article_number = simple_strtoul(&data.article[1], NULL, 10);
-	eeprom->article_revision = simple_strtoul(data.revision, NULL, 10);
-	eeprom->article_serial = simple_strtoul(data.serial, NULL, 10);
 
+	if (prodinfo) {
+		if (boards[ix].ext) {
+			log_err("No Product Info on non-CPU boards\n");
+			return -EINVAL;
+		}
+	} else {
+		if (!boards[ix].ext)
+			offs = offsetof(struct main_eeprom, article);
+	}
+	log_info("%s: bus %u addr 0x%02x offs 0x%02x\n", __func__,
+		 boards[ix].bus, boards[ix].address, offs);
+	ret = eeprom_read_data(boards[ix].bus, boards[ix].address, offs,
+			       buf, BUF_SZ);
 	return ret;
 }
 
-/*
- * Read product data from the EEPROM.
- * The supplied argument must define bus and address (a.k.a chip).
- * (Offset will be ignored)
- * Product data is parsed and written back to the eeprom struct.
- *
- * Return 0 on success, <0 on fail
- */
-int eeprom_read_product(struct eeprom *eeprom)
+int eeprom_read_rev(const char *name, struct board_info *info)
 {
-	struct product_ver data;
-	unsigned int offs = offsetof(struct main_eeprom, product);
-	int ret;
+	struct article_ver *art;
+	u8 buf[BUF_SZ] = {0};
+	int ret = eeprom_do_read(name, info, buf, false);
 
-	eeprom_select(eeprom->i2c_bus, eeprom->i2c_address);
-	ret = eeprom_read_data(offs, (u8 *)&data, sizeof(data));
-
-	if (ret != 0) {
-		printf("Read product info from EEPROM failed\n");
+	if (ret)
 		return ret;
-	}
-	eeprom->product_number = simple_strtoul(data.article, NULL, 10);
-	eeprom->product_revision = simple_strtoul(data.revision, NULL, 10);
-	eeprom->product_serial = simple_strtoul(data.serial, NULL, 10);
-	memcpy(eeprom->product_name, data.name, sizeof(eeprom->product_name));
+	art = (struct article_ver *)buf;
+	info->article = simple_strtoul(&art->article[1], NULL, 10);
+	info->revision = simple_strtoul(art->revision, NULL, 10);
+	info->serial = simple_strtoul(art->serial, NULL, 10);
+	return 0;
+}
+
+int eeprom_read_product(struct board_info *info)
+{
+	struct product_ver *prod;
+	u8 buf[BUF_SZ] = {0};
+	int ret = eeprom_do_read("main", info, buf, true);
+
+	if (ret)
+		return ret;
+	prod = (struct product_ver *)buf;
+	memcpy(info->name, prod->name, sizeof(info->name));
+	info->article = simple_strtoul(&prod->article[1], NULL, 10);
+	info->revision = simple_strtoul(prod->revision, NULL, 10);
+	info->serial = simple_strtoul(prod->serial, NULL, 10);
+	return 0;
+}
+
+int eeprom_read_rev_generic(unsigned int bus, unsigned int address, unsigned int offset,
+			    struct board_info *info)
+{
+	struct article_ver *art;
+	int ret = 0;
+	u8 buf[BUF_SZ] = {0};
+
+	ret = eeprom_read_data(bus, address, offset, buf, sizeof(buf));
+	if (ret)
+		return ret;
+
+	art = (struct article_ver *)buf;
+	info->article = simple_strtoul(&art->article[1], NULL, 10);
+	info->revision = simple_strtoul(art->revision, NULL, 10);
+	info->serial = simple_strtoul(art->serial, NULL, 10);
 
 	return ret;
 }
@@ -157,13 +247,15 @@ int eeprom_read_product(struct eeprom *eeprom)
 int mac_read_from_eeprom(void)
 {
 	char ethaddr[18];
-	unsigned int offs = offsetof(struct main_eeprom, mac);
 	struct mac_data data;
+	unsigned int bus = CONFIG_SYS_I2C_EEPROM_BUS;
+	unsigned int addr = CONFIG_SYS_I2C_EEPROM_ADDR;
+	unsigned int offs = offsetof(struct main_eeprom, mac);
 
 	if (env_get("ethaddr"))
 		return 0;
 
-	if (eeprom_read_data(offs, (u8 *)&data, sizeof(data))) {
+	if (eeprom_read_data(bus, addr, offs, (u8 *)&data, sizeof(data))) {
 		// Do not return error, let init_sequence_r proceed
 		log_err("%s: Failed to read MAC from EEPROM\n", __func__);
 		return 0;
@@ -177,10 +269,4 @@ int mac_read_from_eeprom(void)
 		log_info("Saved new ethaddr: %s\n", ethaddr);
 	}
 	return 0;
-}
-
-void eeprom_select(unsigned int i2c_bus, unsigned int i2c_addr)
-{
-	bus = i2c_bus;
-	addr = i2c_addr;
 }

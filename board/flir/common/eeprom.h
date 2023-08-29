@@ -2,35 +2,42 @@
 #ifndef __FLIR_EEPROM_H
 #define __FLIR_EEPROM_H
 
-struct eeprom {
-	u8 i2c_bus;
-	u16 i2c_address;
-	u8 i2c_offset;
-
-	char product_name[20];
-	u32 product_number;
-	u32 product_serial;
-	u32 product_revision;
-
-	u32 article_number;
-	u32 article_serial;
-	u32 article_revision;
-
-	char name[32];
-	u8 mac[6];
-	u16 mac_crc;
+struct board_info {
+	char name[20];
+	u32 article;
+	u32 serial;
+	u32 revision;
 };
 
 /**
- * eeprom_set_addr() - set non-default eeprom address
- *
- * Mainboard I2C EEPROM is configured using SYS_I2C_EEPROM_BUS
- * and SYS_I2C_EEPROM_ADDR. Use this function to select alternate
- * addresses.
+ * eeprom_read_rev() - Read article info from EEPROM
+ * @name: board name, e.g. ec101, ec302, evio
+ * @info: info that is filled in on success
+ * Return: 0 on success, <0 on failure
  */
-void eeprom_select(unsigned int bus, unsigned int addr);
+int eeprom_read_rev(const char *name, struct board_info *info);
 
-int eeprom_read_rev(struct eeprom *eeprom);
-int eeprom_read_product(struct eeprom *eeprom);
+/**
+ * eeprom_read_product() - Read product info from main-board EEPROM
+ * @info: info that is filled in on success
+ * Return: 0 on success, <0 on failure
+ */
+int eeprom_read_product(struct board_info *info);
+
+/**
+ * eeprom_read_rev_generic() - Read article info from EEPROM
+ *
+ * Read board info from EEPROM, using its explicit I2C info.
+ * Try not to use this. Offset info is maintained in the module.
+ *
+ * @bus: I2C bus number
+ * @address: I2C chip address
+ * @offset: data ofset on chip (only 0x0 and 0x40 allowed..)
+ * @info: return data
+ *
+ * Return: 0 on success, <0 on failure
+ */
+int eeprom_read_rev_generic(unsigned int bus, unsigned int address, unsigned int offset,
+			    struct board_info *info);
 
 #endif

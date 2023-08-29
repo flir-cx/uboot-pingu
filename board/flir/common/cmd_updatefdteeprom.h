@@ -22,9 +22,4 @@
 
 void patch_fdt_eeprom(void *blob);
 
-struct eeprom_list {
-	struct list_head list;
-	struct eeprom  eeprom;
-};
-
 #endif

@@ -975,15 +975,7 @@ int board_init(void)
 	if (ret)
 		return ret;
 
-	struct eeprom ioboard = {
-	 .i2c_bus = 2,
-	 .i2c_address = 0xaa,
-	 .i2c_offset = 0x0,
-	 //.article = 0,
-	 //.revision = 0,
-	 //.name = "\0",
-	};
-
+	struct board_info ioboard;
 	ret = board_support_setup(&ioboard, &hardware);
 	if (ret < 0) {
 		printf("IO Board either missing or is not functioning!!\n");
