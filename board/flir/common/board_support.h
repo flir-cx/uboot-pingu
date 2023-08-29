@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0+ */
 /*
  * Copyright (C) 2015 FLIR Systems.
  * Copyright (C) 2017 FLIR Systems.
