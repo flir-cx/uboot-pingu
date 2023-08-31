@@ -176,8 +176,6 @@ static int eeprom_do_read(const char *name, struct hw_version *info,
 		if (!boards[ix].ext)
 			offs = offsetof(struct main_eeprom, article);
 	}
-	log_info("%s: bus %u addr 0x%02x offs 0x%02x\n", __func__,
-		 boards[ix].bus, boards[ix].address, offs);
 	ret = eeprom_read_data(boards[ix].bus, boards[ix].address, offs,
 			       buf, BUF_SZ);
 	return ret;
