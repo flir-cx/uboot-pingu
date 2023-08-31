@@ -32,6 +32,6 @@
 #define CONFIG_SYS_I2C_EEPROM_BUS      2
 #define CONFIG_SYS_I2C_EEPROM_ADDR     0xae
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
-
+#define CONFIG_SYS_I2C_MAC_OFFSET // Triggers mac_read_from_eeprom()
 
 #endif                         /* __MX6EC101_CONFIG_H */
