@@ -87,7 +87,7 @@ static int print_recovery_banner(void)
 {
 	unsigned int row;
 	unsigned int col;
-	struct board_info prodinfo;
+	struct hw_version prodinfo;
 	char msg[32] = "Recovery Mode";
 	unsigned int mlen = strlen(msg);
 

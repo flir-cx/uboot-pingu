@@ -3,7 +3,7 @@
 #include "flir_generic.h"
 #include "eeprom.h"
 
-int board_support_setup(struct board_info *ioboard, struct hw_support *hardware)
+int board_support_setup(struct hw_version *ioboard, struct hw_support *hardware)
 {
 	// Note: "evio" means the IO board, even if the name is
 	// really specific to Evander

@@ -22,7 +22,7 @@
 
 struct eeprom_list {
 	struct list_head list;
-	struct board_info eeprom;
+	struct hw_version eeprom;
 };
 
 /*

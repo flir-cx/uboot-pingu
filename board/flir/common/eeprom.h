@@ -2,7 +2,7 @@
 #ifndef __FLIR_EEPROM_H
 #define __FLIR_EEPROM_H
 
-struct board_info {
+struct hw_version {
 	char name[20];
 	u32 article;
 	u32 serial;
@@ -15,14 +15,14 @@ struct board_info {
  * @info: info that is filled in on success
  * Return: 0 on success, <0 on failure
  */
-int eeprom_read_rev(const char *name, struct board_info *info);
+int eeprom_read_rev(const char *name, struct hw_version *info);
 
 /**
  * eeprom_read_product() - Read product info from main-board EEPROM
  * @info: info that is filled in on success
  * Return: 0 on success, <0 on failure
  */
-int eeprom_read_product(struct board_info *info);
+int eeprom_read_product(struct hw_version *info);
 
 /**
  * eeprom_read_rev_generic() - Read article info from EEPROM
@@ -38,6 +38,6 @@ int eeprom_read_product(struct board_info *info);
  * Return: 0 on success, <0 on failure
  */
 int eeprom_read_rev_generic(unsigned int bus, unsigned int address, unsigned int offset,
-			    struct board_info *info);
+			    struct hw_version *info);
 
 #endif

@@ -26,7 +26,7 @@
 
 static int get_mainboard_version(int *article, int *revision)
 {
-	static struct board_info cache;
+	static struct hw_version cache;
 	int ret = 0;
 
 	if (!cache.article)

@@ -1147,7 +1147,7 @@ int board_init(void)
 	if (ret)
 		return ret;
 
-	struct board_info ioboard;
+	struct hw_version ioboard;
 
 	ret = board_support_setup(&ioboard, &hardware);
 	if (ret < 0) {

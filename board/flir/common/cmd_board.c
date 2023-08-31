@@ -10,7 +10,7 @@ static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[
 	int ret;
 	char env[64];
 	char var[32];
-	struct board_info board;
+	struct hw_version board;
 
 	if (argc != 2)
 		return CMD_RET_USAGE;

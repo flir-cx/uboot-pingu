@@ -20,6 +20,6 @@
 #include "flir_generic.h"
 #include "eeprom.h"
 
-int board_support_setup(struct board_info *ioboard, struct hw_support *hardware);
+int board_support_setup(struct hw_version *ioboard, struct hw_support *hardware);
 
 #endif

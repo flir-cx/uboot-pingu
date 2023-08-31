@@ -152,7 +152,7 @@ static int eeprom_supported_board(const char *name)
 	return -ENODEV;
 }
 
-static int eeprom_do_read(const char *name, struct board_info *info,
+static int eeprom_do_read(const char *name, struct hw_version *info,
 			  u8 *buf, bool prodinfo)
 {
 	int ret;
@@ -183,7 +183,7 @@ static int eeprom_do_read(const char *name, struct board_info *info,
 	return ret;
 }
 
-int eeprom_read_rev(const char *name, struct board_info *info)
+int eeprom_read_rev(const char *name, struct hw_version *info)
 {
 	struct article_ver *art;
 	u8 buf[BUF_SZ] = {0};
@@ -198,7 +198,7 @@ int eeprom_read_rev(const char *name, struct board_info *info)
 	return 0;
 }
 
-int eeprom_read_product(struct board_info *info)
+int eeprom_read_product(struct hw_version *info)
 {
 	struct product_ver *prod;
 	u8 buf[BUF_SZ] = {0};
@@ -215,7 +215,7 @@ int eeprom_read_product(struct board_info *info)
 }
 
 int eeprom_read_rev_generic(unsigned int bus, unsigned int address, unsigned int offset,
-			    struct board_info *info)
+			    struct hw_version *info)
 {
 	struct article_ver *art;
 	int ret = 0;
