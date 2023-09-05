@@ -1630,8 +1630,13 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 
 		/* Set the status of the touch of the truly display to ok, */
 		/* it should be disabled by default from the device tree. */
+		/* The compatible strings differ from 3.15 (cy,cyttsp5_i2c_adapter) */
+		/* in 5.10 (cypress,tt21000) we need to try to set both */
 		do_fixup_by_compat(blob, "cypress,tt21000", "status",
 				   "okay", 5, 0);
+		do_fixup_by_compat(blob, "cy,cyttsp5_i2c_adapter", "status",
+				   "okay", 5, 0);
+
 		/* Set the status of the orise touch to disabled, it should */
 		/* be enabled by default from the edevice tree */
 		/* The compatible strings differ from 3.15 (edt,ft5x06) in 5.10 (edt,ft5336)*/
