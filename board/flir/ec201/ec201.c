@@ -34,6 +34,9 @@ DECLARE_GLOBAL_DATA_PTR;
 #undef SNVS_LP_LPCR
 #define SNVS_LP_LPCR	                        (0x41070038)
 
+#define IMX7_M4_SRAM_L      (0x1ffd0000)
+#define IMX7_M4_SRAM_L_SIZE (0x30000)
+
 int dram_init(void)
 {
 	gd->ram_size = PHYS_SDRAM_SIZE;
@@ -62,6 +65,24 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
 	return USB_INIT_HOST;
 }
 #endif
+
+static void setup_m4_sram(void)
+{
+	int bank;
+
+	// Quirk that enables ext4load to write the M4 bin
+	// by adding the M4 SRAM as a memory bank.
+	// Make sure that CONFIG_NR_DRAM_BANKS has an empty slot.
+	for (bank = 0; bank < CONFIG_VAL(NR_DRAM_BANKS); bank++) {
+		if (gd->bd->bi_dram[bank].start == 0) {
+			gd->bd->bi_dram[bank].start = IMX7_M4_SRAM_L;
+			gd->bd->bi_dram[bank].size = IMX7_M4_SRAM_L_SIZE;
+			return;
+		}
+	}
+
+	log_err("M4 SRAM Configuration FAILED\n");
+}
 
 int usb_charge_detect(void)
 {
@@ -97,6 +118,8 @@ int board_init(void)
 	pmic_goto_core_off(true);
 	//onoff button longpress disabled for snvs block, this functionality is handled by pmic
 	writel((readl(SNVS_LP_LPCR) | SNVS_LPCR_BTN_PRESS_TIME_DISABLE), SNVS_LP_LPCR);
+
+	setup_m4_sram();
 
 	return 0;
 }
