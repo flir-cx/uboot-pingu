@@ -139,6 +139,30 @@ static void set_boot_logo(void)
 	}
 }
 
+/*
+ * Upgrades on cameras that do not have "loadsplash" set
+ * will need to create the loadsplash env variable.
+ */
+int check_and_patch_loadsplash(char **env_loadsplash)
+{
+	int ret = 0;
+#ifdef CONFIG_LOADSPLASH_ENV
+	char *lsenv = CONFIG_LOADSPLASH_ENV;
+#else
+	char *lsenv = NULL;
+#endif
+
+	*env_loadsplash = env_get("loadsplash");
+	if (*env_loadsplash)
+		return 0;
+
+	ret = env_set("loadsplash", lsenv);
+	if (!ret)
+		*env_loadsplash = env_get("loadsplash");
+
+	return ret;
+}
+
 int splash_screen_prepare(void)
 {
 	char *env_loadsplash;
@@ -150,7 +174,7 @@ int splash_screen_prepare(void)
 		return -EINVAL;
 	}
 
-	env_loadsplash = env_get("loadsplash");
+	check_and_patch_loadsplash(&env_loadsplash);
 	if (!env_loadsplash) {
 		log_err("Environment variable loadsplash not found!\n");
 		return -EINVAL;
