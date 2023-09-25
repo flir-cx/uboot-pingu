@@ -383,6 +383,28 @@ void backlight_on(bool on)
 	pwm_set_enable(pwm_dev, 0, on);
 }
 
+#if defined(CONFIG_VIDEO_BACKLIGHT_OFF_HANDOVER)
+void set_backlight_off(void)
+{
+	struct udevice *pwm_dev;
+	int ret;
+
+	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
+	if (ret) {
+		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
+		return;
+	}
+
+	/* Set to 0%% duty cycle */
+	ret = pwm_set_config(pwm_dev, 0, 500000, 0);
+	if (ret) {
+		log_err("%s: pwm_set_config failed '%d'\n", __func__, ret);
+		return;
+	}
+	pwm_set_enable(pwm_dev, 0, 1);
+}
+#endif
+
 static void enable_backlight(struct display_info_t const *dev)
 {
 	backlight_on(true);
