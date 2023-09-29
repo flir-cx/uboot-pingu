@@ -1998,6 +1998,52 @@ static void ec101_disable_gpio(const char *name, unsigned long flags)
 	dm_gpio_free(desc.dev, &desc);
 }
 
+/**
+ * @brief Disables the viewfinder ioexpander
+ *
+ * @return int 0 on success, -ve on error
+ */
+static int disable_vf_ioexpander(void)
+{
+	struct udevice *bus, *pwrdev;
+	int ret;
+	unsigned int val;
+
+	ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21a8000", &bus);
+	if (ret) {
+		log_err("%s: probe pwr expander, failed on bus 2\n", __func__);
+		return ret;
+	}
+
+	ret = dm_i2c_probe(bus, LEIF_PCA9534_ADDRESS, DM_I2C_CHIP_RD_ADDRESS |
+				  DM_I2C_CHIP_WR_ADDRESS, &pwrdev);
+	if (ret) {
+		log_err("%s: probe pwr expander, failed on device 0x%02x\n",
+			__func__, LEIF_PCA9534_ADDRESS);
+		return ret;
+	}
+
+	val = dm_i2c_reg_read(pwrdev, 1);
+	if (val < 0)
+		return val;
+	// skip DP_OUT
+	ret = dm_i2c_reg_write(pwrdev, 1, val | 0xFE);
+	if (ret) {
+		log_err("%s: failed to write to register 1 of vf ioexp\n", __func__);
+		return ret;
+	}
+
+	val = dm_i2c_reg_read(pwrdev, 3);
+	if (val < 0)
+		return val;
+	// skip DP_OUT
+	ret = dm_i2c_reg_write(pwrdev, 3, val & ~0xFE);
+	if (ret)
+		log_err("%s: failed to write to register 3 of vf ioexp\n", __func__);
+
+	return ret;
+}
+
 /* prepare_power_off() - shut down external stuff before power-off
  *
  * Override weak function in usbcharge module
@@ -2079,13 +2125,14 @@ void prepare_power_off(void)
 		// the device tree is broken for non existing i2c devices.
 		// This is also the reason for it to be disabled in imx6dl-evio.dtsi
 		// skip DP_OUT
-		ec101_disable_gpio("vf@25_1", 0);
-		ec101_disable_gpio("vf@25_2", 0);
-		ec101_disable_gpio("vf@25_3", 0);
-		ec101_disable_gpio("vf@25_4", 0);
-		ec101_disable_gpio("vf@25_5", 0);
-		ec101_disable_gpio("vf@25_6", 0);
-		ec101_disable_gpio("vf@25_7", 0);
+		disable_vf_ioexpander();
+		// ec101_disable_gpio("vf@25_1", 0);
+		// ec101_disable_gpio("vf@25_2", 0);
+		// ec101_disable_gpio("vf@25_3", 0);
+		// ec101_disable_gpio("vf@25_4", 0);
+		// ec101_disable_gpio("vf@25_5", 0);
+		// ec101_disable_gpio("vf@25_6", 0);
+		// ec101_disable_gpio("vf@25_7", 0);
 	} else {
 		return;
 	}
