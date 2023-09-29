@@ -245,17 +245,17 @@ static u8 get_tp_expander_mask(void)
 }
 
 /**
- * @brief Detects Orise panel by probing the touch located on bus 3,
- *	  address 0x38. To probe the touch it first needs to be enabled.
+ * @brief Enables the touch display
  *
- * @param dev N/A
- * @return int 0 if found
+ * @return int 0 on success, -ve on error
  */
-static int do_detect_orise(u8 expander_addr, u8 expander_mask)
+static int enable_touch(void)
 {
-	struct udevice *bus2, *bus3, *pwrdev, *touchdev;
+	struct udevice *bus2, *pwrdev;
 	int ret;
 	unsigned int val;
+	u8 expander_addr = get_tp_expander_addr();
+	u8 expander_mask = get_tp_expander_mask();
 
 	/* First enable the touch, O7 of PCA9534BS on bus 2 address 0x23, reg 3 */
 	ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21a8000", &bus2);
@@ -272,31 +272,36 @@ static int do_detect_orise(u8 expander_addr, u8 expander_mask)
 		return ret;
 	}
 
-	ret = dm_i2c_reg_read(pwrdev, 3);
-	if (ret < 0)
-		return ret;
-	val = ret;
+	val = dm_i2c_reg_read(pwrdev, 3);
+	if (val < 0)
+		return val;
+
 	val &= ~expander_mask;
 	ret = dm_i2c_reg_write(pwrdev, 3, val);
+	return ret;
+}
 
-	/* Wait 200 ms, from data sheet, for touch controller to start up. */
-	mdelay(200);
+/**
+ * @brief Detects Orise panel by probing the touch located on bus 3,
+ *	  address 0x38. To probe the touch it first needs to be enabled.
+ *
+ * @param dev N/A
+ * @return int 0 if found
+ */
+static int do_detect_orise(void)
+{
+	struct udevice *bus3, *touchdev;
+	int ret;
 
 	/* Try to probe the actual touch device, bus 3 addr 0x38 */
 	ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &bus3);
 	if (ret) {
 		log_info("%s: Orise display probed, not found on bus 3\n", __func__);
-		goto touch_enable_restore;
+		return ret;
 	}
 
 	ret = dm_i2c_probe(bus3, 0x38, DM_I2C_CHIP_RD_ADDRESS |
 				  DM_I2C_CHIP_WR_ADDRESS, &touchdev);
-
-touch_enable_restore:
-	/* Turn off the touch again by setting enable to input on pwr expander */
-	val |= 0x80;
-	dm_i2c_reg_write(pwrdev, 3, val);
-
 	return ret;
 }
 
@@ -311,12 +316,8 @@ static int detect_orise(struct display_info_t const *dev)
 {
 	static int cache_ret = -ENOTCONN;
 
-	if (cache_ret == -ENOTCONN) {
-		u8 expander_addr = get_tp_expander_addr();
-		u8 expander_mask = get_tp_expander_mask();
-
-		cache_ret = do_detect_orise(expander_addr, expander_mask);
-	}
+	if (cache_ret == -ENOTCONN)
+		cache_ret = do_detect_orise();
 
 	return (cache_ret == 0);
 }
@@ -1134,6 +1135,32 @@ int checkboard(void)
 	return 0;
 }
 
+static void reset_ioexpander(void)
+{
+	int ret;
+	struct udevice *bus2, *pwrdev;
+	u8 expander_addr = get_tp_expander_addr();
+
+	ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21a8000", &bus2);
+	if (ret) {
+		log_err("%s: probe pwr expander, failed on bus 2\n", __func__);
+		return;
+	}
+
+	ret = dm_i2c_probe(bus2, expander_addr, DM_I2C_CHIP_RD_ADDRESS |
+				  DM_I2C_CHIP_WR_ADDRESS, &pwrdev);
+	if (ret) {
+		log_err("%s: probe pwr expander, failed on device %d\n",
+			__func__, expander_addr);
+		return;
+	}
+
+	// The reset values are:
+	ret = dm_i2c_reg_write(pwrdev, 1, 0xFF);
+	ret = dm_i2c_reg_write(pwrdev, 2, 0);
+	ret = dm_i2c_reg_write(pwrdev, 3, 0xFF);
+}
+
 int board_init(void)
 {
 	int ret = 0;
@@ -1196,21 +1223,31 @@ int board_init(void)
 	setup_fec();
 #endif
 
+	reset_ioexpander();
 	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
 		struct mipi_dsi_ops ops;
 		int panel_found = 1;
 
+		ret = enable_touch();
+		if (ret)
+			log_err("%s: Failed to enable touch panel\n", __func__);
+		// This sleep is taken from the linux driver for cyttsp5
+		mdelay(20);
 		if (detect_truly(NULL)) {
 			ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
 			ops.lcd_setup = mipid_st7703_lcd_setup;
 			log_info("Found Truly display\n");
-		} else if (detect_orise(NULL)) {
-			ops.get_lcd_videomode = mipid_otm1287a_get_lcd_videomode;
-			ops.lcd_setup = mipid_otm1287a_lcd_setup;
-			log_info("Found ORISE display\n");
 		} else {
-			log_err("No panel detected, video will probably fail!\n");
-			panel_found = 0;
+			// 200 ms, 20 above and 180 here, taken from datasheet of focaltech
+			mdelay(180);
+			if (detect_orise(NULL)) {
+				ops.get_lcd_videomode = mipid_otm1287a_get_lcd_videomode;
+				ops.lcd_setup = mipid_otm1287a_lcd_setup;
+				log_info("Found ORISE display\n");
+			} else {
+				log_err("No panel detected, video will probably fail!\n");
+				panel_found = 0;
+			}
 		}
 
 		if (panel_found) {
@@ -1631,7 +1668,7 @@ int board_late_init(void)
 
 #if defined(CONFIG_OF_BOARD_SETUP)
 
-/* Platform function to modify the FDT as needed */
+/* Platform function to modify the FDT passed to linux as needed */
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
 	uchar enetaddr[6];
