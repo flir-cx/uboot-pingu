@@ -101,22 +101,9 @@
 		// "SD1_LED_n", "CHG_OTG", "AUDIO_EN", "TP_Reset_n";
 	};
 
-	leif_pca9534_0x4a: leif_pca9534_0x4a@25 {
-		// LEIF: Viewfinder control I/O expander
-		// EVIO: Not existing
-		label = "vf";
-		compatible = "nxp,pca9534";
-		reg = <0x25>;
-		gpio-controller;
-		#gpio-cells = <2>;
-		gpio-line-names =
-		"VF_1V8_EN", "VF_4V5_EN", "NC", "TP_Reset_n",
-		"LCD_MIPI_SEL", "LCD_MIPI_EN_n", "VF_RST_n";
-	};
-
 	evro_pca9534_0x48: evro_pca9534_0x48@24 {
-		// Expander on EVRO board
-		label = "evro";
+		// Expander on EVRO board, Evander
+		label = "evro_e";
 		compatible = "nxp,pca9534";
 		reg = <0x24>;
 		gpio-controller;
@@ -131,6 +118,20 @@
 		gpio-line-names =
 		"VCM_CL_EN_n", "Spare", "Sleep_n", "LDM_3V0_EN",
 		"Optics_n", "Key_Pad_1_n", "Key_Pad_2_n", "Key_Pad_3_n";
+	};
+
+	leif_pca9534_0x4a: leif_pca9534_0x4a@25 {
+		// LEIF: Viewfinder control I/O expander
+		// EVIO: Not existing
+		label = "vf";
+		compatible = "nxp,pca9534";
+		reg = <0x25>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		gpio-line-names =
+		"VF_1V8_EN", "VF_4V5_EN", "NC", "TP_Reset_n",
+		"LCD_MIPI_SEL", "LCD_MIPI_EN_n", "VF_RST_n";
+		status = "disabled";
 	};
 };
 
