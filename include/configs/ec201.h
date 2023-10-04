@@ -205,7 +205,7 @@
 	"update-fdt=" \
 			  "if ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} /boot/update-fdt.uscr; then " \
 					"source ${tempaddr}; " \
-			  "fi\0 " \
+			  "fi\0" \
 	"selectfdtfile=" \
 			"if test -n ${fdt_file};then " \
 				  "echo Devicetree file already selected;" \
@@ -253,7 +253,7 @@
 				  "mmc rescan; " \
 			  "else; " \
 			  "fi; " \
-		"fi; \0"
+		"fi;\0"
 
 
 /* FLIR Recovery boot
@@ -273,7 +273,7 @@
 \
 	"recboot=echo Booting preloaded recovery...; "\
 		"run recargs; " \
-		"bootz ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
+		"bootz ${loadaddr} ${initrd_addr} ${fdt_addr};\0" \
 \
 	"recoveryboot=echo Booting from mmc recovery;" \
 				 "run selectrecfdtfile; run recargs; " \
@@ -296,7 +296,7 @@
 		"then " \
 			  "setenv mmcpart 3; setenv rootfs root=/dev/mmcblk0p3; " \
 		"else setenv mmcpart 2; setenv rootfs root=/dev/mmcblk0p2; " \
-		"fi; \0"
+		"fi;\0"
 
 /* common mmc boot
 * Environment shared between flir mmc boot and legacy mmc boot
@@ -307,7 +307,7 @@
 	"mmcargs=setenv bootargs console=${console},${baudrate} " \
 		"${rootfs} rootwait rw ethaddr=${ethaddr} " \
 		"wlanaddr=${wlanaddr} btaddr=${btaddr} ${bootargs_once} " \
-		 "${extra_bootargs} \0" \
+		 "${extra_bootargs}\0" \
 \
 	"loadimage=fatload mmc ${mmcdev}:${mmcpart} ${loadaddr} ${image}\0" \
 	"loadimage4=ext4load mmc ${mmcdev}:${mmcpart} ${loadaddr} boot/${image}\0" \
@@ -364,25 +364,18 @@
 #define CONFIG_M4_BOOT_ENV \
 	"m4_image=imx7ulpm4.bin\0" \
 	"m4_addr=0x1ffd2000\0" \
-	"m4_bin_size=ext4size mmc ${mmcdev}:${mmcpart} boot/${m4_image}\0" \
-	"copyM4=cp.b ${tempaddr} ${m4_addr} ${filesize}\0" \
-	"loadM4_to_temp=ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} boot/${m4_image}\0" \
-	"loadM4=if run loadM4_to_temp; then " \
-		"run copyM4;" \
-	"fi;\0" \
-\
+	"loadM4=ext4load mmc ${mmcdev}:${mmcpart} ${m4_addr} boot/${m4_image}\0" \
 	"startM4=echo Starting M4 ...; " \
 			"if run loadM4; then " \
 				"bootaux ${m4_addr};" \
 			"fi;\0"
 
 #define CONFIG_LOADSPLASH_ENV \
-	"run select_boot; ext4load mmc ${mmcdev}:${mmcpart} ${splashimage} /boot/${bootlogo}\0"
+	"run select_boot; ext4load mmc ${mmcdev}:${mmcpart} ${splashimage} ${splashfile}\0"
 #define CONFIG_SPLASH_IMAGE_ENV \
 	"splashimage=0x67000000\0" \
 	"splashsource=mmc_fs\0" \
 	"splashfile=/boot/bootlogo.bmp.gz\0" \
-	"bootlogo=bootlogo.bmp.gz\0"	     \
 	"loadsplash="CONFIG_LOADSPLASH_ENV \
 	"panel=TRULY-VGA-SHERLOCK\0"
 
