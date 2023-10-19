@@ -7,7 +7,6 @@
 
 static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {
-	int ret;
 	char env[64];
 	char var[32];
 	struct hw_version board;
@@ -15,9 +14,8 @@ static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[
 	if (argc != 2)
 		return CMD_RET_USAGE;
 
-	ret = eeprom_read_rev(argv[1], &board);
-	if (ret)
-		return ret;
+	if (eeprom_read_rev(argv[1], &board))
+		return 1;
 
 	snprintf(env, sizeof(env), "%s_board_revision", argv[1]);
 	snprintf(var, sizeof(var), "%i", board.revision);
@@ -27,7 +25,7 @@ static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[
 	snprintf(var, sizeof(var), "%i", board.article);
 	env_set(env, var);
 
-	return ret;
+	return 0;
 }
 
 #ifdef CONFIG_FLIR_OLD_COMMAND_STYLE

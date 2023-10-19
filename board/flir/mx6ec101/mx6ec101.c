@@ -63,6 +63,7 @@
 #include "../common/board_support.h"
 #include "../common/usbcharge.h"
 #include "../common/fpga_ctrl.h"
+#include "../common/cmd_updatefdteeprom.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 #define LOG_DEBUG
