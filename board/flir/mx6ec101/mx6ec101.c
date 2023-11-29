@@ -76,7 +76,7 @@ static int setup_pmic_voltages(void);
 static int platform_setup_pmic_voltages(void);
 int fpga_power(bool enable);
 
-static void setup_mipi_mux_i2c(void);
+static int setup_mipi_mux_i2c(void);
 
 #define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
 	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
@@ -111,6 +111,10 @@ static void setup_mipi_mux_i2c(void);
 #define LEIF_TP_EN_PIN (4)
 #define EVIO_PCA9534_ADDRESS (0x46 >> 1)
 #define EVIO_TP_EN_PIN (7)
+#define PCA9534_INPUT 0
+#define PCA9534_OUTPUT 1
+#define PCA9534_INVERSION 1
+#define PCA9534_CONFIG 3
 
 #define PWM1 0
 
@@ -1078,38 +1082,50 @@ void board_setup_timer(void)
 	writel(reg, &mxc_ccm->CCGR1);
 }
 
-static void setup_mipi_mux_i2c()
+static int setup_mipi_mux_i2c()
 {
-	const struct dm_i2c_ops *i2c_ops = NULL;
-	struct udevice *i2c_devp = NULL;
+	int ret = 0;
 
 	if (hardware.mipi_mux)
 	{
-		unsigned char buf[2];
-		struct i2c_msg msg;
-		if (uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &i2c_devp) == -ENODEV) {
-			printf("%s, %s, %d: dev i2c@21f8000 not found!\n", __FILE__, __FUNCTION__, __LINE__);
-			return;
-		}
-		i2c_ops = device_get_ops(i2c_devp);
-		if (i2c_ops == NULL) {
-			log_err("Failed to get i2c_ops from device at i2c@21f8000\n");
-			return;
+		struct udevice *bus;
+		struct udevice *pwrdev;
+
+		ret = uclass_get_device_by_name(UCLASS_I2C, "i2c@21a8000", &bus);
+		if (ret) {
+			log_err("%s: probe pwr expander, failed on bus 2\n", __func__);
+			return ret;
 		}
 
-		msg.addr  = LEIF_PCA9534_ADDRESS;
-		msg.flags = 0; // Write
-		msg.len   = 1;
+		ret = dm_i2c_probe(bus, LEIF_PCA9534_ADDRESS, DM_I2C_CHIP_RD_ADDRESS |
+				   DM_I2C_CHIP_WR_ADDRESS, &pwrdev);
+		if (ret) {
+			log_err("%s: probe pwr expander, failed on device %d\n",
+				__func__, LEIF_PCA9534_ADDRESS);
+			return ret;
+		}
 
-		//set LCD_MIPI_SEL=1 and LCD_MIPI_EN=0
-		buf[0] = 0xbf;
-		msg.buf = buf;
-		i2c_ops->xfer(i2c_devp, &msg, 1);
+		//set LCD_MIPI_SEL high (b5) and LCD_MIPI_EN low (b6)
+		ret = dm_i2c_reg_read(pwrdev, PCA9534_CONFIG);
+		if (ret < 0)
+			return ret;
 
-		buf[0] = 0x9f;
-		msg.buf = buf;
-		i2c_ops->xfer(i2c_devp, &msg, 1);
+		ret &= 0x9f;	//set bit 5 and 6 as outputs
+		ret = dm_i2c_reg_write(pwrdev, PCA9534_CONFIG, ret);
+
+		ret = dm_i2c_reg_read(pwrdev, PCA9534_OUTPUT);
+		if (ret < 0)
+			return ret;
+
+		ret &= 0xbf; //LCD_MIPI_EN low
+		ret |= 0x20; //LCD_MIPI_SEL high
+
+		ret = dm_i2c_reg_write(pwrdev, PCA9534_OUTPUT, ret);
+		if (ret)
+			return ret;
 	}
+
+	return ret;
 }
 
 int board_early_init_f(void)
@@ -1252,7 +1268,10 @@ int board_init(void)
 		}
 
 		if (panel_found) {
-			setup_mipi_mux_i2c();
+			ret = setup_mipi_mux_i2c();
+			if (ret) {
+				log_err("Failed to configure mipi mux\n");
+			}
 			mxc_mipi_dsi_enable(&ops);
 		}
 	}
