@@ -219,7 +219,7 @@ int fuelgauge_init(void)
 	 * Every write to this register will recalibrate the fuelgauge,
 	 * which we only want to do once. */
 	ret = dm_i2c_read(dev, CHANGE_OF_THE_PARAMETER_REG, buf, 2);
-	if (!ret && *(u16 *)buf != type)
+	if (!ret && *(u16 *)buf != 0x00)
 		fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, 0x00, 0x00);
 	/* Set APA value */
 	fuelgauge_write_reg(LC709204_APA, 0x29, 0x29);
@@ -250,7 +250,7 @@ int fuelgauge_init(void)
 	 * Every write to this register will recalibrate the fuelgauge,
 	 * which we only want to do once. */
 	ret = dm_i2c_read(dev, CHANGE_OF_THE_PARAMETER_REG, buf, 2);
-	if (!ret && *(u16 *)buf != type)
+	if (!ret && *(u16 *)buf != 0x02)
 		fuelgauge_write_reg(CHANGE_OF_THE_PARAMETER_REG, 0x02, 0x00);
 	/* Set APA value */
 	fuelgauge_write_reg(LC709204_APA, 0x06, 0x06);
