@@ -9,6 +9,10 @@ struct hw_version {
 	u32 revision;
 };
 
+struct mac {
+	u8 b[6];
+};
+
 /**
  * eeprom_read_rev() - Read article info from EEPROM
  * @name: board name, e.g. ec101, ec302, evio
@@ -23,6 +27,19 @@ int eeprom_read_rev(const char *name, struct hw_version *info);
  * Return: 0 on success, <0 on failure
  */
 int eeprom_read_product(struct hw_version *info);
+
+/**
+ * eeprom_read_mac() - Read MAC NIC from main EEPROM
+ * Return: 0 on success, <0 on failure
+ */
+int eeprom_read_mac(struct mac *addr);
+
+/**
+ * eeprom_write_mac() - Write MAC to main EEPROM
+ * Vendor (OUI) will be set to 00:40:7f (FLIR Systems)
+ * Return: 0 on success, <0 on failure
+ */
+int eeprom_write_mac(struct mac *addr);
 
 /**
  * eeprom_read_rev_generic() - Read article info from EEPROM

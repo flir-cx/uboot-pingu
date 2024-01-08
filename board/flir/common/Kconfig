@@ -144,12 +144,15 @@ config FLIR_CHARGEAPP
 	help
 	  Command 'chargeapp', for charging in u-boot.
 
-config FLIR_SYS_EEPROM
+config FLIR_COMMAND_MAC
 	bool "EEPROM MAC access (mac)"
 	depends on FLIR_COMMANDS
+	depends on FLIR_EEPROM
 	default n
 	help
-	  Command 'mac', for accessing MAC from SYS_EEPROM
+	  Command 'mac', for reading/writing MAC stored in mainboard EEPROM
+	  Note that only the NIC bytes are stored in EEPROM.
+	  FLIR device ID (OUI) is always 00:40:7f
 
 config READMAINBOARDREVISION
 	bool "Mainboard revision (readmainboardrevision/article)"

@@ -3,6 +3,8 @@
 #include <env.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
+#include <linux/delay.h>
+#include <u-boot/crc.h>
 #include <errno.h>
 #include "eeprom.h"
 
@@ -91,7 +93,7 @@ struct sup_info {
 /*
  * Registry of supported boards.
  * Any hard-coded info is to be kept in this module.
- * One sunny day in the future, this should all be stored in kconfig.
+ * One sunny day in the future, this should all be stored in kconfig or dts.
  */
 static struct sup_info boards[] = {
 	{"main", PROD_INFO}, {"ec101", PROD_INFO},
@@ -134,6 +136,36 @@ static int eeprom_read_data(unsigned int bus, unsigned int addr,
 		printf("Failed to read EEPROM\n");
 
 	hexdump_buffer(data, length);
+	return ret;
+}
+
+static int eeprom_write_data(unsigned int bus, unsigned int addr,
+			     unsigned int offset, u8 *data, unsigned int length)
+{
+	int ret = 0;
+	struct udevice *dev;
+	void *pos;
+	int b_written;
+
+	hexdump_buffer(data, length);
+	ret = i2c_get_chip_for_busnum(bus, (addr >> 1), OFFS_LEN, &dev);
+	if (ret != 0) {
+		printf("EEPROM chip not found\n\n");
+		return ret;
+	}
+
+	/*
+	 * The AT24C02 datasheet says that data can only be written in page
+	 * mode, which means 8 bytes at a time, and it takes up to 5ms to
+	 * complete a given write.
+	 */
+	for (b_written = 0, pos = data; b_written < length; b_written += 8, pos += 8) {
+		ret = dm_i2c_write(dev, offset + b_written, pos, min((int)length - b_written, 8));
+		if (ret)
+			break;
+		mdelay(5);
+	}
+
 	return ret;
 }
 
@@ -209,6 +241,61 @@ int eeprom_read_product(struct hw_version *info)
 	info->article = simple_strtoul(&prod->article[1], NULL, 10);
 	info->revision = simple_strtoul(prod->revision, NULL, 10);
 	info->serial = simple_strtoul(prod->serial, NULL, 10);
+	return 0;
+}
+
+int eeprom_read_mac(struct mac *addr)
+{
+	const u8 oui[3] = {0, 0x40, 0x7f};
+	struct mac_data data;
+	u16 stored_crc = 0;
+	unsigned int offs = offsetof(struct main_eeprom, mac);
+	int ret = eeprom_read_data(CONFIG_SYS_I2C_EEPROM_BUS,
+				   CONFIG_SYS_I2C_EEPROM_ADDR,
+				   offs,
+				   (u8 *)&data, sizeof(data));
+
+	if (ret) {
+		log_err("%s: Failed to read MAC from EEPROM\n", __func__);
+		return 1;
+	}
+
+	stored_crc = data.chksum;
+	data.chksum = 0;
+	data.chksum = crc16_ccitt(0, (u8 *)&data, 32);
+	if (stored_crc != data.chksum)
+		log_err("%s: MAC DeviceID (OUI) CRC is incorrect\n", __func__);
+
+	memcpy(&addr->b[0], oui, 3);
+	memcpy(&addr->b[3], data.devid, 3);
+
+	return 0;
+}
+
+int eeprom_write_mac(struct mac *addr)
+{
+	struct mac_data data, verify_data;
+	unsigned int offs = offsetof(struct main_eeprom, mac);
+	int ret;
+
+	memset(&data, 0, sizeof(data));
+	memcpy(&data, &addr->b[3], 3);
+	data.chksum = crc16_ccitt(0, (u8 *)&data, 32);
+
+	ret = eeprom_write_data(CONFIG_SYS_I2C_EEPROM_BUS,
+				CONFIG_SYS_I2C_EEPROM_ADDR,
+				offs,
+				(u8 *)&data, sizeof(data));
+	if (ret)
+		return 1;
+
+	ret = eeprom_read_data(CONFIG_SYS_I2C_EEPROM_BUS,
+			       CONFIG_SYS_I2C_EEPROM_ADDR,
+			       offs,
+			       (u8 *)&verify_data, sizeof(verify_data));
+	if (ret || memcmp(&verify_data, &data, sizeof(data)))
+		log_err("%s: EEPROM write verification failed\n", __func__);
+
 	return 0;
 }
 
