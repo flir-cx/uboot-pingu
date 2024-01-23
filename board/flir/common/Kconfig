@@ -83,24 +83,55 @@ config FLIR_COMMAND_KBD
 	  command 'flir_kbd'.
 
 config FLIR_COMMAND_RECOVERYKEY
-	bool "Recovery key (recoverykey)"
+	bool "Recovery key command (recoverykey)"
 	depends on FLIR_COMMANDS
 	depends on FLIR_COMMAND_KBD
 	default n
 	help
-	  Command 'recoverykey' that detects whether the designated
-	  recovery-key is pressed. Returns 0 if it is pressed.
+	  Command 'recoverykey' that detects whether a designated
+	  trigger key is pressed. Returns a true value in the Hush shell
+	  if it is pressed and false otherwise.
 
+config FLIR_RECOVERYKEY_VALUE
+	string "Recovery-key value"
+	depends on FLIR_COMMAND_RECOVERYKEY
+	default "R"
+	help
+	  Device-tree label of the button-class device that causes the recoverykey
+	  command to return true. Only single-character labels are supported in this
+	  implementation.
+
+config FLIR_SAFEBOOT_KEY_VALUE
+	string "Safe-boot key value"
+	depends on FLIR_COMMAND_RECOVERYKEY
+	default "S"
+	help
+	  Device-tree label of a button-class device that overrides the recoverykey.
+	  Motivation for the safeboot key is to provide a single-press method that forces
+	  the kbd_secret command to return true.
+	  The current version only supports single-character labels.
 
 config FLIR_COMMAND_KBDSECRET
-	bool "Recovery sequence (kbd_secret)"
-	depends on FLIR_COMMANDS
-	depends on FLIR_COMMAND_KBD
+	bool "Recovery sequence command (kbd_secret)"
+	depends on FLIR_COMMAND_RECOVERYKEY
 	default n
 	help
-	  Command 'kbd_secret', for detecting secret keyboard
-	  sequence. Boot into recovery mode if so, otherwise
-	  perform normal boot.
+	  Command 'kbd_secret', for detecting keyboard sequences.
+	  Returns a true value in the Hush shell if the defined key sequence
+	  is pressed fast enough, otherwise false.
+	  There is a 3s timeout for each keypress.
+	  The command is intended for triggering recovery boot, and will
+	  display FLIR-specific system info on available stdio device.
+
+config FLIR_RECOVERY_SEQUENCE
+	string "Recovery-boot sequence"
+	depends on FLIR_COMMAND_KBDSECRET
+	default "UD"
+	help
+	  Key sequence used by the kbd_secret command.
+	  The string value corresponds to labels of button-class devices
+	  in the device tree.
+	  The current version only supports single-character labels.
 
 config FLIR_COMMAND_CHECKCHARGER
 	bool "Charger check (flir_checkcharger)"

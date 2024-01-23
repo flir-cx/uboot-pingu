@@ -9,7 +9,6 @@
 #include <video_font.h>
 #include <dm/uclass.h>
 #include "cmd_kbd.h"
-#include "cmd_kbdsecret.h"
 #include "cmd_recoverykey.h"
 #include "eeprom.h"
 
@@ -166,7 +165,7 @@ static int poll_key(char k)
 
 static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-	char *chp = secret;
+	char *chp = CONFIG_FLIR_RECOVERY_SEQUENCE "";
 	bool has_console = false;
 
 	//MSD_LOAD button overrides security check
@@ -186,6 +185,9 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		set_cursor_pos(1, 1);
 		print_display(CLR_LINE ":");
 	}
+
+	if (!*chp)
+		log_warning("Recovery sequence is undefined, will boot recovery\n");
 
 	while (*chp) {
 		int keypressed = poll_key(*chp);

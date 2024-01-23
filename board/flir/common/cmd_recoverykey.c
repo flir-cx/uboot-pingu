@@ -2,10 +2,9 @@
 #include "cmd_kbd.h"
 #include <command.h>
 
-#define RECOVERY_KEY  "R" // TODO: Move to device tree (ec101)
-#define SW_LOAD       "S" // TODO: Move to device tree (ec501)
-
 static int safe_boot;
+static const char *safe_key = CONFIG_FLIR_SAFEBOOT_KEY_VALUE "";
+static const char *rec_key = CONFIG_FLIR_RECOVERYKEY_VALUE "";
 
 int flir_get_safe_boot(void)
 {
@@ -15,18 +14,21 @@ int flir_get_safe_boot(void)
 static int do_recoverykey(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	char *keybuf;
-	char *s;
+	char *s = NULL;
 
 	if (read_keys(&keybuf) < 0)
 		return 1;
 
-	s = strstr(keybuf, SW_LOAD);
-	if (s) {
+	if (*safe_key && strstr(keybuf, safe_key)) {
 		safe_boot = 1;
 		return 0;
 	}
 
-	s = strstr(keybuf, RECOVERY_KEY);
+	if (*rec_key)
+		s = strstr(keybuf, rec_key);
+	else
+		log_warning("No recovery-key value is defined\n");
+
 	return !s;
 }
 
