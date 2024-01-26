@@ -123,6 +123,8 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
+	disable_vcam_regulator();
+
 #ifdef CONFIG_DM_USB
 	setup_usb();
 #endif
@@ -140,8 +142,6 @@ int board_init(void)
 	pmic_goto_core_off(true);
 	//onoff button longpress disabled for snvs block, this functionality is handled by pmic
 	writel((readl(SNVS_LP_LPCR) | SNVS_LPCR_BTN_PRESS_TIME_DISABLE), SNVS_LP_LPCR);
-
-	disable_vcam_regulator();
 
 	return 0;
 }

@@ -14,6 +14,8 @@
 #include "display_utils.h"
 #endif
 
+#include "eeprom.h"'
+#include "flir_generic.h"
 #include "lc709203.h"
 #include "pf1550.h"
 #if CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W)
@@ -59,6 +61,7 @@ static struct boot_state
 };
 
 #define LOW_BATTERY_mV 3300
+#define LOW_BATTERY_LOWER_mV 3100
 
 //Pmic registers defines
 //Special register in pmic which we can use to force boot state between reboots
@@ -190,7 +193,22 @@ int splash_screen_prepare(void)
 
 static void set_boot_state(void)
 {
+	int low_batt_level;
+	int ret;
+	struct hw_version board = {0};
+
 	printf("Setting boot state!\n");
+
+	if (IS_ENABLED(CONFIG_TARGET_MX7ULP_EC302)) {
+		if (eeprom_read_rev("main", &board))
+			printf("Failed to read board\n");
+	}
+
+	if (board.article == EC302_ARTICLE && board.revision >= 4)
+		/* For ec302 rev 4 or later we should boot above 3.1V */
+		low_batt_level = LOW_BATTERY_LOWER_mV;
+	else
+		low_batt_level = LOW_BATTERY_mV;
 
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
 	if (fuelgauge_check_battery_insertion() == BATTERY_NONE) {
@@ -207,7 +225,7 @@ static void set_boot_state(void)
 	case ONKEY:
 		fuelgauge_get_battery_voltage(&state.battery_mv);
 		printf("Battery voltage mV=%d... ", state.battery_mv);
-		if (state.battery_mv < LOW_BATTERY_mV) {
+		if (state.battery_mv < low_batt_level) {
 			printf("LOW\n");
 			state.boot_state = LOW_BATTERY;
 		} else {
@@ -243,6 +261,7 @@ int boot_state_init(void)
 	}
 
 	state.wake_event = get_wake_event(dev);
+
 	set_boot_state();
 
 	dm_i2c_read(dev, PF1550_PMIC_REG_PWRCTRL3, &pwrctrl3, 1);

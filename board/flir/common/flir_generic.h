@@ -10,6 +10,7 @@
 #define LEIF4_ARTICLE 300503
 #define DUPLO_ARTICLE 0
 #define SVIO_ARTICLE 199489
+#define EC302_ARTICLE 300645
 
 struct hw_support
 {
