@@ -371,7 +371,7 @@
 			"fi;\0"
 
 #define CONFIG_LOADSPLASH_ENV \
-	"run select_boot; ext4load mmc ${mmcdev}:${mmcpart} ${splashimage} ${splashfile}\0"
+	"run select_boot; ext4load mmc ${mmcdev}:${mmcpart} ${splashimage} /boot/${bootlogo}\0"
 #define CONFIG_SPLASH_IMAGE_ENV \
 	"splashimage=0x67000000\0" \
 	"splashsource=mmc_fs\0" \
