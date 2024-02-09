@@ -313,6 +313,16 @@ config TARGET_EOCO
 	select ARCH_MISC_INIT
 	select RNG_SELF_TEST
 
+config TARGET_EC702
+	bool "mx6ec702"
+	select TARGET_MX6SABRESD_COMMON
+	depends on MX6QP
+	select FSL_CAAM
+	select FSL_BLOB
+	select MISC
+	select ARCH_MISC_INIT
+	select RNG_SELF_TEST
+
 config TARGET_GE_BX50V3
 	bool "General Electric Bx50v3"
 	depends on MX6Q
@@ -974,6 +984,7 @@ source "board/engicam/imx6ul/Kconfig"
 source "board/flir/eoco/Kconfig"
 source "board/flir/mx6ec101/Kconfig"
 source "board/flir/mx6ec701/Kconfig"
+source "board/flir/ec702/Kconfig"
 source "board/flir/ec501/Kconfig"
 source "board/freescale/mx6qarm2/Kconfig"
 source "board/freescale/mx6memcal/Kconfig"
