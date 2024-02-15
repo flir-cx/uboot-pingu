@@ -119,16 +119,16 @@
 				"mmc rescan; " \
 			"else; " \
 			"fi; " \
-		"fi; \0" \
+		"fi;\0" \
 	"recargs=setenv bootargs console=${console},${baudrate} " \
 		"root=/dev/ram0 ethaddr=${ethaddr}\0"\
 	"recboot=echo Booting preloaded recovery...; " \
 		"run recargs; " \
-		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
+		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr};\0" \
 	"update-fdt=" \
 			  "if ext4load mmc ${mmcdev}:${mmcpart} ${tempaddr} /boot/update-fdt.uscr; then " \
 					"source ${tempaddr}; " \
-			  "fi\0 " \
+			  "fi\0" \
 	"selectfdtfile=" \
 		"if test -n ${fdt_file};then " \
 			"echo Devicetree file already selected;" \
@@ -156,18 +156,13 @@
 	"loadfdt=fatload mmc ${mmcdev}:${mmcpart} ${fdt_addr} ${fdt_file}\0" \
 	"loadfdt4=ext4load mmc ${mmcdev}:${mmcpart} ${fdt_addr} " \
 		"boot/${fdt_file}\0" \
-	"recargs=setenv bootargs console=${console},${baudrate} " \
-		"root=/dev/ram0 ethaddr=${ethaddr}\0" \
-	"recboot=echo Booting preloaded recovery...; "\
-		"run recargs; " \
-		"bootm ${loadaddr} ${initrd_addr} ${fdt_addr}; \0" \
 	"setup_boot=bootargs_once=init=/sbin/preinit; " \
 		"run select_boot;\0" \
 	"select_boot=" \
 		"if itest.s ${system_active} == system2; " \
 		"then setenv mmcpart 3; setenv rootfs root=/dev/mmcblk0p3; " \
 		"else setenv mmcpart 2; setenv rootfs root=/dev/mmcblk0p2; " \
-	"fi; \0" \
+	"fi;\0" \
 	"mmcbootflir=echo Booting from mmc (flir)...;" \
 		"run setup_boot;run update-fdt; run selectfdtfile; " \
 		"run hw_start;" \
@@ -217,9 +212,8 @@
 		"name=rootfsrw,size=128MiB,uuid=${part4_uuid};" \
 		"name=apps,size=512MiB,uuid=${part5_uuid};" \
 		"name=data,size=512MiB,uuid=${part6_uuid};" \
-		"name=spare,size=-,uuid=${part7_uuid};\" \0" \
+		"name=spare,size=-,uuid=${part7_uuid};\"\0" \
 	"mmcdev=0\0" \
-	"bootdelay=0\0" \
 	"" /* EOL */
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
