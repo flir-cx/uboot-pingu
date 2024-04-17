@@ -22,4 +22,6 @@
 
 int board_support_setup(struct hw_version *ioboard, struct hw_support *hardware);
 
+bool board_support_known(void);
+
 #endif

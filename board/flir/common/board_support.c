@@ -3,6 +3,13 @@
 #include "flir_generic.h"
 #include "eeprom.h"
 
+static unsigned my_ioboard = UNKNOWN_ARTICLE;
+
+bool board_support_known(void)
+{
+	return (my_ioboard != UNKNOWN_ARTICLE);
+}
+
 int board_support_setup(struct hw_version *ioboard, struct hw_support *hardware)
 {
 	// Note: "evio" means the IO board, even if the name is
@@ -11,6 +18,7 @@ int board_support_setup(struct hw_version *ioboard, struct hw_support *hardware)
 
 	if (ret)
 		return ret;
+	my_ioboard = ioboard->article;
 
 	switch (ioboard->article) {
 	case EVIO_ARTICLE:
@@ -30,13 +38,6 @@ int board_support_setup(struct hw_version *ioboard, struct hw_support *hardware)
 		strncpy(hardware->name, "Lennox Camera", 20);
 		break;
 
-	case DUPLO_ARTICLE:
-		hardware->display = true;
-		hardware->mipi_mux = false;
-		hardware->usb_charge = false;
-		strncpy(hardware->name, "Duplo Camera", 20);
-		break;
-
 	case SVIO_ARTICLE:
 		hardware->display = true;
 		hardware->mipi_mux = false;
@@ -45,8 +46,9 @@ int board_support_setup(struct hw_version *ioboard, struct hw_support *hardware)
 		break;
 
 	default:
-		printf("Unknown camera, using default hw support %d\n",
-		       ioboard->article);
+		log_warning("Unknown IO-board ID (%d), using default hw support\n",
+			    ioboard->article);
+		my_ioboard = UNKNOWN_ARTICLE;
 	}
 
 	return ret;

@@ -8,9 +8,9 @@
 #define LEIF_ARTICLE 199287
 #define LEIF2_ARTICLE 199581
 #define LEIF4_ARTICLE 300503
-#define DUPLO_ARTICLE 0
 #define SVIO_ARTICLE 199489
 #define EC302_ARTICLE 300645
+#define UNKNOWN_ARTICLE 0
 
 struct hw_support
 {

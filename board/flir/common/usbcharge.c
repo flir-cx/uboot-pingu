@@ -35,6 +35,7 @@
 #include <dm/uclass.h>
 #include "da9063.h"
 #include "da9063_regs.h"
+#include "board_support.h"
 #include "usbcharge.h"
 
 extern struct spi_slave *slave;
@@ -106,6 +107,11 @@ static void print_boot_state(void)
 
 __weak void prepare_power_off(void)
 {
+}
+
+__weak bool board_support_known(void)
+{
+	return true;
 }
 
 void power_off(bool comparator_enable)
@@ -322,7 +328,8 @@ int usb_charge_setup(void)
 	case RTC_TICK:
 		// Uninteresting or invalid event:
 		// Power off and stop listening to comparator
-		power_off(false);
+		if (board_support_known())
+			power_off(false);
 		break;
 	}
 
@@ -342,7 +349,8 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 
 	case NO_BATTERY:
 		log_info("Battery missing\n");
-		power_off(true);
+		if (board_support_known())
+			power_off(true);
 		break;
 
 	case LOW_BATTERY:
