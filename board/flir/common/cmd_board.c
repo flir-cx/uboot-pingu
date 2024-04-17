@@ -25,7 +25,7 @@ static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[
 	snprintf(var, sizeof(var), "%i", board.article);
 	env_set(env, var);
 
-	return 0;
+	return (board.article == 0);
 }
 
 #ifdef CONFIG_FLIR_OLD_COMMAND_STYLE
@@ -37,6 +37,8 @@ U_BOOT_CMD(board, CONFIG_SYS_MAXARGS, 0, do_board,
 	   "	<name>_board_article\n"
 	   "supported eeproms:\n"
 	   SUPP_BRD_STR
+	   "\n\nReturns fail when article is unknown.\n"
+	   "Note: 'evio' usually means 'any io board'\n"
 	   );
 #endif
 
@@ -48,4 +50,6 @@ U_BOOT_CMD(flir_board, CONFIG_SYS_MAXARGS, 0, do_board,
 	   "	<name>_board_article\n"
 	   "supported eeproms:\n"
 	   SUPP_BRD_STR
+	   "\n\nReturns fail when article is unknown.\n"
+	   "Note: 'evio' usually means 'any io board'\n"
 );
