@@ -671,20 +671,29 @@ void set_backlight_off()
 }
 #endif
 
-static void platform_viewfinder_disable(void)
+static void platform_viewfinder_power_set(bool enable)
 {
-	/* On early boards the viewfinder starts with full backlight
-	 * This code is to be able to turn off the viewfinder early.
-	 */
-	const int VFM_PWR_EN = IMX_GPIO_NR(4, 20);
-	gpio_request(VFM_PWR_EN, "VFM_PWR_EN");
-	gpio_direction_output(VFM_PWR_EN, false);
+	struct gpio_desc disp_pwr_en_desc;
+	int ret;
+
+	ret = dm_gpio_lookup_name("gpio@23_6", &disp_pwr_en_desc);
+	if (ret) {
+		log_err("%s lookup gpio@23_6 failed with status %d\n", __func__, ret);
+		return;
+	}
+
+	ret = dm_gpio_request(&disp_pwr_en_desc, "DISP_PWR_EN");
+	if (ret) {
+		log_err("%s request DISP_PWR_EN failed with status %d\n", __func__, ret);
+		return;
+	}
+
+	dm_gpio_set_dir_flags(&disp_pwr_en_desc, GPIOD_IS_OUT);
+	dm_gpio_set_value(&disp_pwr_en_desc, enable);
 }
 
 int board_init(void)
 {
-	platform_viewfinder_disable();
-
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
@@ -696,6 +705,7 @@ int board_init(void)
 	platform_setup_pmic_voltages();
 	platform_check_pmic_boot_reason();
 #endif
+	platform_viewfinder_power_set(true);
 
 #ifdef CONFIG_DM_I2C
 	platform_check_fuelgauge();
