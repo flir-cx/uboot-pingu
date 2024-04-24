@@ -335,20 +335,6 @@ int platform_check_fuelgauge(void)
 
 #endif
 
-#if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
-iomux_v3_cfg_t const pcie_pads[] = {
-	IOMUX_PADS(PAD_EIM_D19__GPIO3_IO19 | MUX_PAD_CTRL(NO_PAD_CTRL)),	/* POWER */
-	IOMUX_PADS(PAD_GPIO_17__GPIO7_IO12 | MUX_PAD_CTRL(NO_PAD_CTRL)),	/* RESET */
-};
-
-static void setup_pcie(void)
-{
-	SETUP_IOMUX_PADS(pcie_pads);
-	gpio_request(CONFIG_PCIE_IMX_POWER_GPIO, "PCIE Power Enable");
-	gpio_request(CONFIG_PCIE_IMX_PERST_GPIO, "PCIE Reset");
-}
-#endif
-
 iomux_v3_cfg_t const di0_pads[] = {
 	IOMUX_PADS(PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK),	/* DISP0_CLK */
 	IOMUX_PADS(PAD_DI0_PIN2__IPU1_DI0_PIN02),		/* DISP0_HSYNC */
@@ -709,10 +695,6 @@ int board_init(void)
 
 #ifdef CONFIG_DM_I2C
 	platform_check_fuelgauge();
-#endif
-
-#if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
-	setup_pcie();
 #endif
 
 #ifdef CONFIG_FEC_MXC
