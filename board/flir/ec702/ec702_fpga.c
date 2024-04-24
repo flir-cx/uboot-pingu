@@ -40,46 +40,47 @@ iomux_v3_cfg_t const no_ecspi1_pads[] = {
 	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
-static int fpga_power(bool enable)
+/**
+ * ec702_fpga_power() - Enable or disable FPGA power
+ *
+ * Sequence:
+ * - Read OTP revision
+ * - Set CORE_SW (1V8D_FPGA)
+ * - Set BUCKPRO (1V1D_FPGA)
+ * - Set PERI_SW (1V2D_FPGA)
+ * - Set BUCKMEM (2V5D_FPGA)
+ * - Set LDO8    (3V15D_FPGA)
+ */
+#define VBPRO_1V1D 0x39 // 0.01V inc from 0.53V
+#define VBMEM_2V5D 0x55 // 0.02V inc from 0.80V
+static int ec702_fpga_power(bool enable)
 {
 	unsigned char conf_id;
 
 	if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-		printf("Could not read PMIC ID registers\n");
+		log_err("Could not read PMIC ID registers\n");
 		spi_release_bus(slave);
 		return -EIO;
 	}
-
+	log_info("PMIC config rev 0x%02x\n", conf_id);
 	spi_claim_bus(slave);
-	// BPRO_EN (1V0_FPGA)
-	pmic_write_bitfield(DA9063_REG_BPRO_CONT, DA9063_BUCK_EN,
-			    enable ? DA9063_BUCK_EN : 0);
-	// CORE_SW_EN  (1V8_FPGA)
+
 	pmic_write_bitfield(DA9063_REG_BCORE1_CONT, DA9063_CORE_SW_EN,
 			    enable ? DA9063_CORE_SW_EN : 0);
-	// PERI_SW_EN    (1V2_FPGA)
+
+	pmic_write_bitfield(DA9063_REG_VBPRO_A, DA9063_VBUCK_MASK, VBPRO_1V1D);
+	pmic_write_bitfield(DA9063_REG_BPRO_CONT, DA9063_BUCK_EN,
+			    enable ? DA9063_BUCK_EN : 0);
+
 	pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
 			    enable ? DA9063_PERI_SW_EN : 0);
-	if (conf_id == 0x3b) { //revC
-		// BMEM_EN         (2V5_FPGA)
-		pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
-				    enable ? DA9063_BUCK_EN : 0);
-		// LDO10_EN          (3V15_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
-				    enable ? DA9063_LDO_EN : 0);
-	} else { //revD
-		// LDO10_EN          (2V5_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO10_CONT, DA9063_LDO_EN,
-				    enable ? DA9063_LDO_EN : 0);
-		// LDO8_EN          (3V15_FPGA)
-		pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
-				    enable ? DA9063_LDO_EN : 0);
-	}
 
-	//Enable BMEM_CONT regualtor, 1V1_FPGA, FPGA Core voltage, Only EOCO??
+	pmic_write_bitfield(DA9063_REG_VBMEM_A, DA9063_VBUCK_MASK, VBMEM_2V5D);
 	pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
 			    enable ? DA9063_BUCK_EN : 0);
-	spi_release_bus(slave);
+
+	pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
+			    enable ? DA9063_LDO_EN : 0);
 
 	return 0;
 }
@@ -100,7 +101,7 @@ static void ec702_fpga_set_ctrl(struct fpga_ctrl *fpga)
 static int ec702_fpga_enable_power(struct fpga_ctrl *fpga)
 {
 	debug("%s\n",  __func__);
-	return fpga_power(true);
+	return ec702_fpga_power(true);
 }
 
 static int ec702_fpga_request_flash_spi(struct fpga_ctrl *fpga)
