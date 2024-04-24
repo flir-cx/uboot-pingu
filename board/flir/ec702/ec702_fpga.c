@@ -56,33 +56,61 @@ iomux_v3_cfg_t const no_ecspi1_pads[] = {
 static int ec702_fpga_power(bool enable)
 {
 	unsigned char conf_id;
+	int ret;
 
-	if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+	spi_claim_bus(slave);
+	ret = pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id);
+	if (ret) {
 		log_err("Could not read PMIC ID registers\n");
-		spi_release_bus(slave);
-		return -EIO;
+		ret = -EIO;
+		goto fpga_pwr_exit;
 	}
 	log_info("PMIC config rev 0x%02x\n", conf_id);
-	spi_claim_bus(slave);
 
-	pmic_write_bitfield(DA9063_REG_BCORE1_CONT, DA9063_CORE_SW_EN,
-			    enable ? DA9063_CORE_SW_EN : 0);
+	ret = pmic_write_bitfield(DA9063_REG_BCORE1_CONT, DA9063_CORE_SW_EN,
+				  enable ? DA9063_CORE_SW_EN : 0);
+	if (ret) {
+		log_err("Failed to set CORE_SW state\n");
+		goto fpga_pwr_exit;
+	}
+	ret = pmic_write_bitfield(DA9063_REG_VBPRO_A, DA9063_VBUCK_MASK, VBPRO_1V1D);
+	if (ret) {
+		log_err("Failed to set BUCKPRO voltage\n");
+		goto fpga_pwr_exit;
+	}
+	ret = pmic_write_bitfield(DA9063_REG_BPRO_CONT, DA9063_BUCK_EN,
+				  enable ? DA9063_BUCK_EN : 0);
+	if (ret) {
+		log_err("Failed to set BUCKPRO state\n");
+		goto fpga_pwr_exit;
+	}
+	ret = pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
+				  enable ? DA9063_PERI_SW_EN : 0);
+	if (ret) {
+		log_err("Failed to set PERI_SW state\n");
+		goto fpga_pwr_exit;
+	}
+	ret = pmic_write_bitfield(DA9063_REG_VBMEM_A, DA9063_VBUCK_MASK, VBMEM_2V5D);
+	if (ret) {
+		log_err("Failed to set BUCKMEM voltage\n");
+		goto fpga_pwr_exit;
+	}
+	ret = pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
+				  enable ? DA9063_BUCK_EN : 0);
+	if (ret) {
+		log_err("Failed to set BUCKMEM state\n");
+		goto fpga_pwr_exit;
+	}
+	ret = pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
+				  enable ? DA9063_LDO_EN : 0);
+	if (ret) {
+		log_err("Failed to set LDO8 state\n");
+		goto fpga_pwr_exit;
+	}
 
-	pmic_write_bitfield(DA9063_REG_VBPRO_A, DA9063_VBUCK_MASK, VBPRO_1V1D);
-	pmic_write_bitfield(DA9063_REG_BPRO_CONT, DA9063_BUCK_EN,
-			    enable ? DA9063_BUCK_EN : 0);
-
-	pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
-			    enable ? DA9063_PERI_SW_EN : 0);
-
-	pmic_write_bitfield(DA9063_REG_VBMEM_A, DA9063_VBUCK_MASK, VBMEM_2V5D);
-	pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
-			    enable ? DA9063_BUCK_EN : 0);
-
-	pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
-			    enable ? DA9063_LDO_EN : 0);
-
-	return 0;
+fpga_pwr_exit:
+	spi_release_bus(slave);
+	return ret;
 }
 
 static void ec702_fpga_set_ctrl(struct fpga_ctrl *fpga)
