@@ -263,13 +263,39 @@ static int spi_flash_cmd(uchar cmd, uchar *dout, size_t len)
 static int ec702_fpga_init_spi_flash(struct fpga_ctrl *fpga)
 {
 	uchar hold_disable_mask = 0xef;
+	uchar twelve_dummy_bits_mask = 0xcb;
 	int ret = 0;
 
 	(void)fpga;
 	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
 	ret += spi_flash_cmd(SPINOR_OP_WD_EVCR, &hold_disable_mask, 1);
 	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_MT_WR_ANY_REG, &twelve_dummy_bits_mask, 1);
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
 	ret += spi_flash_cmd(SPINOR_OP_EN4B, NULL, 0);
+
+	return ret;
+}
+
+/**
+ * @brief Revert (some) flash chip settings
+ * Use 16 dummy bits after FAST READ
+ * Disable 4B mode
+ *
+ * @return int negative on error
+ */
+static int ec702_fpga_uninit_spi_flash(struct fpga_ctrl *fpga)
+{
+	u8 sixteen_dummy_bits_mask = 0xfb;
+	int ret = 0;
+
+	(void)fpga;
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_MT_WR_ANY_REG, &sixteen_dummy_bits_mask, 1);
+	ret += spi_flash_cmd(SPINOR_OP_WREN, NULL, 0);
+	ret += spi_flash_cmd(SPINOR_OP_EX4B, NULL, 0);
+	if (ret)
+		log_err("Failed to de-configure the SPI Flash\n");
 
 	return ret;
 }
@@ -280,6 +306,7 @@ static void fpga_set_board_ops(struct fpga_board_ops *ops)
 	ops->fpga_release_flash_spi = ec702_fpga_release_flash_spi;
 	ops->fpga_enable_power = ec702_fpga_enable_power;
 	ops->fpga_init_spi_flash = ec702_fpga_init_spi_flash;
+	ops->fpga_uninit_spi_flash = ec702_fpga_uninit_spi_flash;
 }
 
 void fpga_init_ctrl(struct fpga_ctrl *fpga)
