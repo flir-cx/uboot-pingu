@@ -198,6 +198,10 @@ static int platform_setup_pmic_voltages(void)
 	if (pmic_write_reg(DA9063_REG_LDO5_CONT, 1))
 		printf("Could not configure DA9063_REG_LDO5_CONT to on\n");
 #endif
+	// Disable OTP-enabled LDO4. Not connected in ec702
+	if (pmic_write_bitfield(DA9063_REG_LDO4_CONT, DA9063_LDO_EN, 0))
+		log_err("Failed to disable LDO4\n");
+
 	spi_release_bus(slave);
 	return 0;
 }
