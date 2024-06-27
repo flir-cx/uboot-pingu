@@ -109,31 +109,6 @@ static iomux_v3_cfg_t const ecspi4_pads[] = {
 	MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
-static int platform_check_pmic_boot_reason(void)
-{
-	spi_claim_bus(slave);
-
-	unsigned char fault_log;
-
-	// Check PMIC FAULT register for boot reason.
-	pmic_read_reg(DA9063_REG_FAULT_LOG,&fault_log);
-	pmic_write_reg(DA9063_REG_FAULT_LOG,fault_log);
-
-	//Don't boot on Long press on-key button or watchdog timeout
-	if (fault_log & (DA9063_KEY_RESET | DA9063_TWD_ERROR)) {
-		printf("Powering off....\n");
-
-		// Power off using GPIO.
-		gpio_request(IMX_GPIO_NR(2, 30), "PWR_OFF");
-		gpio_direction_output(IMX_GPIO_NR(2, 30),1);
-
-		while(1) {}
-	}
-
-	spi_release_bus(slave);
-	return 0;
-}
-
 static int platform_setup_pmic_voltages(void)
 {
 	unsigned char dev_id, var_id, cust_id, conf_id;
@@ -300,43 +275,6 @@ void board_late_mmc_env_init(void)
 	sprintf(cmd, "mmc dev %d", dev_no);
 	run_command(cmd, 0);
 }
-#endif
-
-#ifdef CONFIG_DM_I2C
-
-int platform_check_fuelgauge(void)
-{
-	int ret;
-	unsigned char battery_level;
-	struct udevice *bus, *dev;
-
-	ret = uclass_get_device_by_seq(UCLASS_I2C, BQ40Z50_I2C_BUS, &bus);
-	if (ret != 0) {
-		printf("uclass_get_device_by_seq() error!\n");
-		return ret;
-	}
-
-	ret = dm_i2c_probe(bus, BQ40Z50_I2C_ADDR, 0, &dev);
-	if (ret == 0) {
-		ret = dm_i2c_read(dev, BQ40Z50_REG_STATE_OF_CHARGE, &battery_level, 1);
-		if (ret == 0) {
-			printf("Battery: charge level %d%%\n", battery_level);
-			if (battery_level <= BQ40Z50_BATT_CRITICAL_LEVEL) {
-				printf("Battery level critical. Shuting down.\n");
-				// Power off using GPIO.
-				gpio_request(IMX_GPIO_NR(2, 30), "PWR_OFF");
-				gpio_direction_output(IMX_GPIO_NR(2, 30), 1);
-			}
-		} else {
-			printf("Battery read level failed.\n");
-		}
-	} else {
-		printf("Battery missing, running on DC.\n");
-	}
-
-	return ret;
-}
-
 #endif
 
 iomux_v3_cfg_t const di0_pads[] = {
@@ -693,12 +631,13 @@ int board_init(void)
 
 #ifdef CONFIG_MXC_SPI
 	platform_setup_pmic_voltages();
-	platform_check_pmic_boot_reason();
 #endif
 	platform_viewfinder_power_set(true);
 
-#ifdef CONFIG_DM_I2C
-	platform_check_fuelgauge();
+#ifdef CONFIG_FLIR_USBCHARGE
+	usb_charge_setup();
+#else
+	log_info("FLIR_USBCHARGE is not configured\n");
 #endif
 
 #ifdef CONFIG_FEC_MXC
