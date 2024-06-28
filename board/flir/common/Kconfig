@@ -149,13 +149,39 @@ config FLIR_COMMAND_LOADFPGA
 	help
 	  Command 'flir_loadfpga' for loading FPGA from flash device.
 
+config FLIR_BQ27XXX
+	bool "BQ27xxx battery fuelgauge module"
+	default n
+	help
+	  Texas Instruments Fuelgauge family BQ27
+	  Supports BQ27520 and BQ27542
+
+config FLIR_BQ27XXX_I2C_BUS
+	int "Fuelgauge I2C bus"
+	depends on FLIR_BQ27XXX
+	default 3
+	help
+	  I2C bus ID for the system fuelgauge
+	  Bus indexes start at zero
+
+config FLIR_BQ27XXX_I2C_ADDR
+	hex "Fuelgauge I2C address"
+	depends on FLIR_BQ27XXX
+	default 0xAA
+	help
+	  I2C chip address for the system fuelgauge
+	  Address is given in 8-bit format
+
 config FLIR_USBCHARGE
 	bool "USB charger state (chargeState)"
 	depends on FLIR_COMMANDS
 	depends on CMD_I2C
+	select FLIR_BQ27XXX
 	default n
 	help
-	  Command 'chargeState' for controlling the USB charger state
+	  Command 'chargeState' for controlling the USB charger state.
+	  PMIC and fuelgauge information is combined, so the proper
+	  decision on how to proceed can be made.
 
 config FLIR_COMMAND_SHOWCHARGE
 	bool "Charge visualizer (chargeapp)"
