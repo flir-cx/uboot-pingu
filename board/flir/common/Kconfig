@@ -172,6 +172,14 @@ config FLIR_BQ27XXX_I2C_ADDR
 	  I2C chip address for the system fuelgauge
 	  Address is given in 8-bit format
 
+config FLIR_COMMAND_BQ27
+	bool "BQ27xxx fuelgauge test command (bq27)"
+	depends on FLIR_BQ27XXX
+	default n
+	help
+	  Test command 'bq27' for TI BQ27xxx fuelgauges
+	  Implements some commonly used bq27 commands
+
 config FLIR_USBCHARGE
 	bool "USB charger state (chargeState)"
 	depends on FLIR_COMMANDS
