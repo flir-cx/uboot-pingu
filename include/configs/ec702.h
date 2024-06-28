@@ -35,12 +35,6 @@
 
 #define CONFIG_IMX6_LDO_BYPASS
 
-/* FUELGAUGE BQ40Z50 */
-#define BQ40Z50_I2C_ADDR 0x0b
-#define BQ40Z50_I2C_BUS 1
-#define BQ40Z50_REG_STATE_OF_CHARGE 0x0d
-#define BQ40Z50_BATT_CRITICAL_LEVEL 0x0
-
 // Config main EEPROM here, unless the entire EEPROM driver is used
 #define CONFIG_SYS_I2C_EEPROM_BUS      0
 #define CONFIG_SYS_I2C_EEPROM_ADDR     0xae
