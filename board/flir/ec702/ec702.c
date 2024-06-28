@@ -27,14 +27,9 @@
 #include <i2c.h>
 #include <fdt_support.h>
 #include <input.h>
-//#include "../../../drivers/video/mxc_mipi_dsi.h"
-//#include "../../../drivers/video/mxcfb_st7703.h"
 #include <usb.h>
 #include <usb/ehci-ci.h>
 #include <power/regulator.h>
-#include <pwm.h>
-#include "../../../drivers/video/mxc_mipi_dsi.h"
-#include "../../../drivers/video/mxcfb_st7703.h"
 #include "../common/da9063.h"
 #include "../common/da9063_regs.h"
 #include "../common/fpga_ctrl.h"
@@ -128,9 +123,9 @@ static int platform_setup_pmic_voltages(void)
 
 	/* Read and print PMIC identification */
 	if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
-            pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+	    pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
 		printf("Could not read PMIC ID registers\n");
 		spi_release_bus(slave);
 		return -1;
@@ -186,7 +181,7 @@ static int platform_setup_pmic_voltages(void)
 
 /*
  * Platform function to modify the FDT as needed
- * Invokation triggered by CONFIG_OF_BOARD_SETUP
+ * Invocation triggered by CONFIG_OF_BOARD_SETUP
  */
 int ft_board_setup(void *blob, struct bd_info *bd)
 {
@@ -194,9 +189,9 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 		int temp[2];
 
 		temp[0] = cpu_to_fdt32(gd->fb_base);
-		temp[1] = cpu_to_fdt32(640 * 480 * 2);
+		temp[1] = cpu_to_fdt32(1024 * 768 * 2);
 		printf("%s base=%i, size=%i\n", __func__, temp[0], temp[1]);
-		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
+		do_fixup_by_path(blob, "/fb@1", "bootlogo", temp, sizeof(temp), 0);
 	}
 
 #if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
@@ -440,58 +435,6 @@ int board_phy_config(struct phy_device *phydev)
 }
 
 #if defined(CONFIG_VIDEO_IPUV3)
-static int detect_truly(struct display_info_t const *dev)
-{
-	return 1;
-}
-
-static void enable_truly_backlight(struct display_info_t const *dev)
-{
-	struct udevice *pwm_dev;
-	int ret;
-
-	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
-	if (ret) {
-		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
-		return;
-	}
-
-	// Set to 50% duty cycle
-	ret = pwm_set_config(pwm_dev, 0, 500000, 250000);
-	if (ret) {
-		log_err("%s: pwm_set_config failed '%d'\n", __func__, ret);
-		return;
-	}
-
-	pwm_set_enable(pwm_dev, 0, 1);
-}
-struct display_info_t const displays[] = {{
-		.bus	= 1,
-		.addr	= 0,
-		.pixfmt	= IPU_PIX_FMT_RGB24,
-		.di = 0,
-		.detect	= detect_truly,
-		.enable	= enable_truly_backlight,
-		.mode	= {
-			.name           = "TRULY-VGA",
-			.refresh        = 60,
-			.xres           = 640,
-			.yres           = 480,
-			.pixclock       = 33000,
-			.left_margin    = 150,
-			.right_margin   = 100,
-			.upper_margin   = 16,
-			.lower_margin   = 16,
-			.hsync_len      = 90,
-			.vsync_len      = 4,
-			.sync           = 0,
-			.vmode          = FB_VMODE_NONINTERLACED,
-			.flag           = 0
-		} }
-};
-
-size_t display_count = ARRAY_SIZE(displays);
-
 static void setup_display(void)
 {
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
@@ -583,22 +526,6 @@ void ldo_mode_set(int ldo_bypass)
 }
 #endif
 
-#if defined(CONFIG_VIDEO_BACKLIGHT_OFF_HANDOVER)
-void set_backlight_off()
-{
-	struct udevice *pwm_dev;
-	int ret;
-
-	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
-	if (ret) {
-		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
-		return;
-	}
-
-	pwm_set_enable(pwm_dev, 0, 0);
-}
-#endif
-
 static void platform_viewfinder_power_set(bool enable)
 {
 	struct gpio_desc disp_pwr_en_desc;
@@ -645,14 +572,7 @@ int board_init(void)
 #endif
 
 	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
-		struct mipi_dsi_ops ops;
-
 		setup_display();
-		if (detect_truly(NULL)) {
-			ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
-			ops.lcd_setup = mipid_st7703_lcd_setup;
-		}
-		mxc_mipi_dsi_enable(&ops);
 	}
 
 	return 0;

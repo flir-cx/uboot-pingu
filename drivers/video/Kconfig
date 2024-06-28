@@ -430,6 +430,14 @@ config VIDEO_LCD_RAYDIUM_RM68200
 	Say Y here if you want to enable support for Raydium RM68200
 	720x1280 DSI video mode panel.
 
+config VIDEO_LCD_BOE_VX039
+	bool "BOE vx039 LCD panel support"
+	depends on DM_VIDEO
+	default n
+	help
+	Say Y here if you want to enable support for BOE tiny oled lcd
+	viewfinder 1024x768.
+
 config VIDEO_LCD_OTM1287
 	bool "OTM 1287 DSI LCD panel support"
 	depends on DM_VIDEO
