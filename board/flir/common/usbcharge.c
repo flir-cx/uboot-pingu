@@ -36,6 +36,7 @@
 #include "da9063.h"
 #include "da9063_regs.h"
 #include "board_support.h"
+#include "bq27xxx.h"
 #include "usbcharge.h"
 
 extern struct spi_slave *slave;
@@ -86,8 +87,6 @@ static struct boot_state
 #define LOW_BATTERY_LEVEL 3
 
 #define charge_state_cmd "fad.power_state=3 systemd.unit=charge.target"
-#define BQ27542_I2C_ADDR 0x55
-#define BQ27542_REG_STATE_OF_CHARGE 0x2C
 
 static void print_boot_event(void)
 {
@@ -199,44 +198,33 @@ int get_boot_reason(void)
 /*
  * Read fuel gauge cell and set state.battery_level
  * Return charge level, or <0 on error
+ *
+ * In case a Golden Image has not been flashed, StateOfCharge
+ * will be 0. If SoC is 0, check this corner case by testing
+ * DesignCapacity, which is known in an unflashed device.
  */
 int get_battery_level(void)
 {
 	int ret;
-#if !CONFIG_IS_ENABLED(DM_I2C)
+	u16 soc, dcap;
 
-	i2c_set_bus_num(3);
-	ret = i2c_read(BQ27542_I2C_ADDR, BQ27542_REG_STATE_OF_CHARGE, 1, &state.battery_level, 1);
+	ret = bq27_read(BQ_STATE_OF_CHARGE, &soc);
 	if (ret < 0)
-		debug("Battery: missing\n");
-	else
-		ret = ((int)state.battery_level) & 0x000000ff;
-
-#else // CONFIG_IS_ENABLED(DM_I2C)
-	struct udevice *bus, *dev;
-
-	state.battery_level = 0;
-	ret = uclass_get_device_by_seq(UCLASS_I2C, 3, &bus);
-	if (ret != 0) {
-		debug("uclass_get_device_by_seq() error!\n");
 		return ret;
+	state.battery_level = soc & 0xff;
+
+	if (soc == 0) {
+		ret = bq27_read(BQ_DESIGN_CAPACITY, &dcap);
+		if (ret < 0)
+			return ret;
+
+		if (dcap == BQ27_DEFAULT_DESIGN_CAPACITY) {
+			log_info("Fuelgauge: Unflashed device, fake a level\n");
+			state.battery_level = FAKE_BATTERY_LEVEL;
+		}
 	}
 
-	ret = dm_i2c_probe(bus, BQ27542_I2C_ADDR, 0, &dev);
-	if (ret != 0) {
-		debug("Battery: dm_i2c_probe() Battery gauge missing? Returning %d\n", ret);
-		return ret;
-	}
-
-	ret = dm_i2c_read(dev, BQ27542_REG_STATE_OF_CHARGE, &state.battery_level, 1);
-	if (ret == 0)
-		ret = ((int)state.battery_level) & 0x000000ff;
-	else
-		debug("Battery: dm_i2c_read() Read error. Returning %d\n", ret);
-
-#endif // !CONFIG_IS_ENABLED(DM_I2C)
-
-	return ret;
+	return state.battery_level;
 }
 
 void set_boot_logo(void)
