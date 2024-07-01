@@ -208,13 +208,14 @@ int get_battery_level(void)
 	int ret;
 	u16 soc, dcap;
 
-	ret = bq27_read(BQ_STATE_OF_CHARGE, &soc);
+	ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &soc);
 	if (ret < 0)
 		return ret;
-	state.battery_level = soc & 0xff;
+	// 0-100 is expected, sanitize response
+	state.battery_level = (unsigned char)(soc & 0xff);
 
 	if (soc == 0) {
-		ret = bq27_read(BQ_DESIGN_CAPACITY, &dcap);
+		ret = bq27_read_cmd(BQ_DESIGN_CAPACITY, &dcap);
 		if (ret < 0)
 			return ret;
 

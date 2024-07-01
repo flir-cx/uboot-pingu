@@ -26,13 +26,13 @@ enum bq27_command {
 #define BQ27_DEFAULT_DESIGN_CAPACITY (1000)
 
 /**
- * bq27_read - Read a device register pair
+ * bq27_read_cmd - Read a device command
  * @cmd: Command ID
  * @rval: Return value storage
  *
  * Return: 0 on success
  */
-int bq27_read(const enum bq27_command cmd, u16 *rval);
+int bq27_read_cmd(const enum bq27_command cmd, u16 *rval);
 
 #endif // _BQ27XXX_H
 
