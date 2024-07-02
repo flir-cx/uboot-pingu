@@ -26,25 +26,25 @@
 		 * But PWR_ON_SW_n and Front are still swapped and need HW changes.
 		 */
 		pb_left {
-			label = "Rocker Left";
+			label = "L";
 			gpio-key;
 			gpios = <&plwi_pca9534_0x42 3 GPIO_ACTIVE_LOW>; /* Should be 1 */
 			linux,code = <KEY_LEFT>;
 		};
 		pb_right {
-			label = "Rocker Right";
+			label = "R";
 			gpio-key;
 			gpios = <&plwi_pca9534_0x42 2 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_RIGHT>;
 		};
 		pb_front {
-			label = "Button Front";
+			label = "F";
 			gpio-key;
 			gpios = <&plwi_pca9534_0x42 1 GPIO_ACTIVE_LOW>; /* Should be 3 */
 			linux,code = <KEY_ENTER>;
 		};
 		pb_trigger {
-			label = "Button Trig";
+			label = "T";
 			gpio-key;
 			gpios = <&plwi_pca9534_0x42 4 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_F6>;

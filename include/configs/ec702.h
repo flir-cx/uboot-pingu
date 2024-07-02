@@ -26,7 +26,8 @@
 #if CONFIG_FLIR_MFG == 0 /* Normal boot */
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND \
-	"if recoverykey; then run recoveryboot;" \
+	"if recoverykey && kbd_secret; then " \
+	"run recoveryboot;" \
 	"else run mmcbootflir;" \
 	"fi;" \
 	"echo Fallback to recovery boot!....;" \
