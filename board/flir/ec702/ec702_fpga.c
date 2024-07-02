@@ -108,6 +108,10 @@ static int ec702_fpga_power(bool enable)
 		goto fpga_pwr_exit;
 	}
 
+	// Power needs some time to stabilize, or subsequent
+	// configuration will fail
+	mdelay(30);
+
 fpga_pwr_exit:
 	spi_release_bus(slave);
 	return ret;
