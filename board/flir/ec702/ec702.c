@@ -191,7 +191,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 		temp[0] = cpu_to_fdt32(gd->fb_base);
 		temp[1] = cpu_to_fdt32(1024 * 768 * 2);
 		printf("%s base=%i, size=%i\n", __func__, temp[0], temp[1]);
-		do_fixup_by_path(blob, "/fb@1", "bootlogo", temp, sizeof(temp), 0);
+		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
 	}
 
 #if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
