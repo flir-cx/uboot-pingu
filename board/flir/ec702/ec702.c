@@ -36,6 +36,7 @@
 #include "../common/cmd_loadfpga.h"
 #include "../common/usbcharge.h"
 #include "../common/cmd_updatefdteeprom.h"
+#include "../common/flir_generic.h"
 #include "ec702.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -513,8 +514,27 @@ int board_ehci_hcd_init(int port)
 }
 #endif
 
+// Initialize boot timer
+void board_setup_timer(void)
+{
+	struct epit *epit_regs = (struct epit *)EPIT1_BASE_ADDR;
+	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+	int reg;
+
+	clrbits_le32(&epit_regs->cr, 0x00000001);   // Disable
+	// Root clock is 49.5 MHz. 0x30 is a prescaler of 49.
+	// 49.5 MHz / 49 = 1.01 MHz. This is the closest we can get to 1 MHz
+	setbits_le32(&epit_regs->cr, 0x012C0302);   // 1 MHz free running no output
+	setbits_le32(&epit_regs->cr, 0x00000001);   // Enable
+
+	reg = readl(&mxc_ccm->CCGR1);
+	reg |= MXC_CCM_CCGR1_EPIT1S_MASK;
+	writel(reg, &mxc_ccm->CCGR1);
+}
+
 int board_early_init_f(void)
 {
+	board_setup_timer();
 	setup_iomux_uart();
 
 	return 0;
