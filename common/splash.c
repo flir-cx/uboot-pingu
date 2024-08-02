@@ -80,12 +80,6 @@ static int splash_video_logo_load(void)
 static inline int splash_video_logo_load(void) { return -ENOSYS; }
 #endif
 
-/*
- * FLIR modifications in splash_screen_prepare:
- * Splash location is selected based on system_active.
- * system1 => MMC partition 2
- * system2 => MMC partition 3
- */
 __weak int splash_screen_prepare(void)
 {
 	if (CONFIG_IS_ENABLED(SPLASH_SOURCE))
