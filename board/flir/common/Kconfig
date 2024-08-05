@@ -262,6 +262,11 @@ config FLIR_BOOTSTATE
 	help
 	  Command 'bootstate', for running booting sequence.
 
+config FLIR_BOOTSPLASH
+	bool "Bootplash"
+	default n
+	help
+	  Adds common code for splash screen.
 
 
 

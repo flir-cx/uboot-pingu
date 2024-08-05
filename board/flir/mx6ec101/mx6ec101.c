@@ -150,44 +150,6 @@ static struct hw_support hardware = {
 	.name = "Unknown Camera"
 };
 
-
-
-/**
- * @brief Overrides the (weak) splash_screen_prepare in splash.c
- *
- * @return int non zero on error
- */
-int splash_screen_prepare(void)
-{
-	char *env_loadsplash;
-
-	// IF_DEFINED(CONFIG_FLIR_USBCHARGE) >>>> NOT POPSSIBLE <<<<,
-	// this is a compile time issue and not a run time one!!
-#ifdef CONFIG_FLIR_USBCHARGE
-	set_boot_logo();
-#else
-	log_info("Cannot set boot logo!\n");
-	log_info("This u-boot was not built with CONFIG_FLIR_USBCHARGE=y!\n");
-#endif
-
-	if (!env_get("splashimage")) {
-		log_err("Environment variable splashimage not found!\n");
-		return -EINVAL;
-	}
-
-	env_loadsplash = env_get("loadsplash");
-	if (env_loadsplash == NULL) {
-		log_err("Environment variable loadsplash not found!\n");
-		return -EINVAL;
-	}
-
-	if (run_command_list(env_loadsplash, -1, 0)) {
-		log_err("Failed to run loadsplash %s\n\n", env_loadsplash);
-		return -ENOSYS;
-	}
-	return 0;
-}
-
 int dram_init(void)
 {
 	gd->ram_size = imx_ddr_size();

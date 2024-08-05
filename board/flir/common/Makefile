@@ -22,6 +22,7 @@ obj-$(CONFIG_FLIR_CHARGEAPP)  += chargeapp.o
 obj-$(CONFIG_FLIR_DISPLAY_UTILS)  += display_utils.o
 obj-$(CONFIG_FLIR_RECOVERY_TRIGGER)  += cmd_recoverytrigger.o
 obj-$(CONFIG_FLIR_BOOTSTATE)  += bootstate.o
+obj-$(CONFIG_FLIR_BOOTSPLASH)  += bootsplash.o
 obj-$(CONFIG_FLIR_LED_UTILS)  += led_utils.o
 obj-$(CONFIG_FPGA_XILINX) += fpga_ctrl.o fpga_ctrl_xilinx.o
 obj-$(CONFIG_FPGA_LATTICE) += fpga_ctrl.o fpga_ctrl_lattice.o
