@@ -644,7 +644,7 @@ int board_late_init(void)
 {
 
 #ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
-	env_set("board_name", "EC702");
+	env_set("board_name", "EC701");
 
 	if (is_mx6dqp())
 		env_set("board_rev", "MX6QP");
