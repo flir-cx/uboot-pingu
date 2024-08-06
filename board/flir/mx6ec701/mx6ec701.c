@@ -3,50 +3,55 @@
  * Copyright (C) 2024 FLIR Automation
  */
 
+#include <asm/arch/clock.h>
+#include <asm/arch/crm_regs.h>
+#include <asm/arch/imx-regs.h>
+#include <asm/arch/mxc_hdmi.h>
+#include <asm/arch/sys_proto.h>
+#include <asm/global_data.h>
+#include <asm/gpio.h>
+#include <asm/io.h>
+#include <asm/mach-imx/boot_mode.h>
+#include <asm/mach-imx/spi.h>
+#include <asm/mach-imx/video.h>
+#include <env.h>
+#include <fdt_support.h>
+#include <fsl_esdhc_imx.h>
+#include <i2c.h>
 #include <image.h>
 #include <init.h>
-#include <net.h>
-#include <asm/arch/clock.h>
-#include <asm/arch/imx-regs.h>
-#include <asm/global_data.h>
-#include <asm/mach-imx/spi.h>
-#include <spi.h>
-#include <env.h>
-#include <linux/errno.h>
-#include <linux/delay.h>
-#include <asm/gpio.h>
-#include <asm/mach-imx/boot_mode.h>
-#include <asm/mach-imx/video.h>
-#include <mmc.h>
-#include <fsl_esdhc_imx.h>
-#include <miiphy.h>
-#include <asm/arch/mxc_hdmi.h>
-#include <asm/arch/crm_regs.h>
-#include <asm/io.h>
-#include <asm/arch/sys_proto.h>
-#include <i2c.h>
-#include <fdt_support.h>
 #include <input.h>
+#include <linux/delay.h>
+#include <linux/errno.h>
+#include <miiphy.h>
+#include <mmc.h>
+#include <net.h>
+#include <power/regulator.h>
+#include <pwm.h>
+#include <spi.h>
 #include <usb.h>
 #include <usb/ehci-ci.h>
-#include <power/regulator.h>
-#include "../common/da9063.h"
-#include "../common/da9063_regs.h"
-#include "../common/fpga_ctrl.h"
+
+#include "../../../drivers/video/mxc_mipi_dsi.h"
+#include "../../../drivers/video/mxcfb_st7703.h"
 #include "../common/cmd_loadfpga.h"
-#include "../common/usbcharge.h"
 #include "../common/cmd_updatefdteeprom.h"
+#include "../common/da9063_regs.h"
+#include "../common/da9063.h"
 #include "../common/flir_generic.h"
-#include "ec702.h"
+#include "../common/fpga_ctrl.h"
+#include "../common/usbcharge.h"
+
+#include "ec701.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
 #define EPDC_PAD_CTRL    (PAD_CTL_PKE | PAD_CTL_SPEED_MED |	\
-			  PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+	PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
-#define OTG_ID_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |			\
-			 PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |	\
-			 PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
+#define OTG_ID_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |		\
+	PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |		\
+	PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
 struct spi_slave *slave; // Extern
 
@@ -161,7 +166,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 		int temp[2];
 
 		temp[0] = cpu_to_fdt32(gd->fb_base);
-		temp[1] = cpu_to_fdt32(1024 * 768 * 2);
+		temp[1] = cpu_to_fdt32(640 * 480 * 2);
 		printf("%s base=%i, size=%i\n", __func__, temp[0], temp[1]);
 		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
 	}
@@ -254,7 +259,6 @@ static void setup_iomux_uart(void)
 {
 	SETUP_IOMUX_PADS(uart1_pads);
 }
-
 
 #ifdef CONFIG_FSL_ESDHC_IMX
 #if !CONFIG_IS_ENABLED(DM_MMC)
@@ -407,6 +411,66 @@ int board_phy_config(struct phy_device *phydev)
 }
 
 #if defined(CONFIG_VIDEO_IPUV3)
+
+static int detect_truly(struct display_info_t const *dev)
+{
+	return 1;
+}
+
+static void backlight_on(bool on)
+{
+	struct udevice *pwm_dev;
+	int ret;
+
+	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
+	if (ret) {
+		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
+		return;
+	}
+
+	/* Set to 70% duty cycle as in linux */
+	ret = pwm_set_config(pwm_dev, 0, 500000, 350000);
+	if (ret) {
+		log_err("%s: pwm_set_config failed '%d'\n", __func__, ret);
+		return;
+	}
+
+	pwm_set_enable(pwm_dev, 0, on);
+}
+
+static void enable_backlight(struct display_info_t const *dev)
+{
+	backlight_on(true);
+}
+
+struct display_info_t const displays[] = {{
+	.bus	= 1,
+	.addr	= 0,
+	.pixfmt	= IPU_PIX_FMT_RGB24,
+	.di = 0,
+	.detect	= detect_truly,
+	.enable	= enable_backlight,
+	.mode	= {
+		.name           = "TRULY-VGA",
+		.refresh        = 60,
+		.xres           = 640,
+		.yres           = 480,
+		.pixclock       = 33000,
+		.left_margin    = 150,
+		.right_margin   = 100,
+		.upper_margin   = 16,
+		.lower_margin   = 16,
+		.hsync_len      = 90,
+		.vsync_len      = 4,
+		.sync           = 0,
+		.vmode          = FB_VMODE_NONINTERLACED,
+		.flag           = 0
+		}
+	}
+};
+
+size_t display_count = ARRAY_SIZE(displays);
+
 static void setup_display(void)
 {
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
@@ -421,10 +485,10 @@ static void setup_display(void)
 
 	/* set LDB0, LDB1 clk select to 011/011 */
 	reg = readl(&mxc_ccm->cs2cdr);
-	reg &= ~(MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK
-		 | MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK);
-	reg |= (3 << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET)
-		| (3 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET);
+	reg &= ~(MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK |
+		 MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK);
+	reg |= (3 << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET) |
+	       (3 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET);
 	writel(reg, &mxc_ccm->cs2cdr);
 
 	reg = readl(&mxc_ccm->cscmr2);
@@ -563,7 +627,13 @@ int board_init(void)
 #endif
 
 	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		struct mipi_dsi_ops ops;
+
 		setup_display();
+		ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
+		ops.lcd_setup = mipid_st7703_lcd_setup;
+
+		mxc_mipi_dsi_enable(&ops);
 	}
 
 	return 0;
