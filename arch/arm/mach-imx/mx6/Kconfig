@@ -286,7 +286,7 @@ config TARGET_MX6EC101
 config TARGET_MX6EC701
 	bool "mx6ec701"
 	select TARGET_MX6SABRESD_COMMON
-	depends on MX6S
+	depends on MX6QP
 	select FSL_CAAM
 	select FSL_BLOB
 	select MISC
