@@ -195,7 +195,7 @@ config FLIR_COMMAND_SHOWCHARGE
 	bool "Charge visualizer (chargeapp)"
 	depends on FLIR_COMMANDS
 	depends on FLIR_USBCHARGE
-	depends on FLIR_PLATFORM_EC101
+	depends on ARCH_MX6
 	default n
 	help
 	  Command 'chargeapp', in a version that does not manage charging.
@@ -204,7 +204,7 @@ config FLIR_COMMAND_SHOWCHARGE
 config FLIR_CHARGEAPP
 	bool "Chargeapp"
 	depends on FLIR_COMMANDS
-	depends on !FLIR_PLATFORM_EC101
+	depends on !ARCH_MX6
 	default n
 	help
 	  Command 'chargeapp', for charging in u-boot.
