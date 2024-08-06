@@ -1,9 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) 2012-2016 Freescale Semiconductor, Inc.
- * Copyright 2017-2018 NXP
- *
- * Author: Fabio Estevam <fabio.estevam@freescale.com>
+ * Copyright (C) 2024 FLIR Automation
  */
 
 #include <image.h>
@@ -11,8 +8,6 @@
 #include <net.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx-regs.h>
-#include <asm/arch/iomux.h>
-#include <asm/arch/mx6-pins.h>
 #include <asm/global_data.h>
 #include <asm/mach-imx/spi.h>
 #include <spi.h>
@@ -20,194 +15,193 @@
 #include <linux/errno.h>
 #include <linux/delay.h>
 #include <asm/gpio.h>
-#include <asm/mach-imx/mxc_i2c.h>
-#include <asm/mach-imx/iomux-v3.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/mach-imx/video.h>
 #include <mmc.h>
 #include <fsl_esdhc_imx.h>
 #include <miiphy.h>
+#include <asm/arch/mxc_hdmi.h>
 #include <asm/arch/crm_regs.h>
 #include <asm/io.h>
 #include <asm/arch/sys_proto.h>
-#include <fdt_support.h>
 #include <i2c.h>
+#include <fdt_support.h>
 #include <input.h>
-#include <power/pmic.h>
-#include <power/pfuze100_pmic.h>
-#include <pwm.h>
-#include "../../freescale/common/pfuze.h"
 #include <usb.h>
 #include <usb/ehci-ci.h>
-#include <asm/arch/mx6-ddr.h>
 #include <power/regulator.h>
-#include <spi.h>
-#include <splash.h>
-#include "../../../drivers/video/mxc_mipi_dsi.h"
-#include "../../../drivers/video/mxcfb_otm1287.h"
-#include "../../../drivers/video/mxcfb_st7703.h"
-#if defined(CONFIG_MX6DL) && defined(CONFIG_MXC_EPDC)
-#include <lcd.h>
-#include <mxc_epdc_fb.h>
-#endif
-#ifdef CONFIG_FSL_FASTBOOT
-#include <fb_fsl.h>
-#ifdef CONFIG_ANDROID_RECOVERY
-#include <recovery.h>
-#endif
-#endif /*CONFIG_FSL_FASTBOOT*/
-
-#include "../common/cmd_loadfpga.h"
 #include "../common/da9063.h"
 #include "../common/da9063_regs.h"
-#include "../common/board_support.h"
-#include "../common/usbcharge.h"
 #include "../common/fpga_ctrl.h"
+#include "../common/cmd_loadfpga.h"
+#include "../common/usbcharge.h"
+#include "../common/cmd_updatefdteeprom.h"
+#include "../common/flir_generic.h"
+#include "ec702.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 
-struct spi_slave *slave;
-
-#if defined(CONFIG_IMX6_LDO_BYPASS)
-void imx_bypass_ldo(void);
-#endif
-static int setup_pmic_voltages(void);
-static int platform_setup_pmic_voltages(void);
-int fpga_power(bool enable);
-
-static void setup_mipi_mux_i2c(void);
-
-#define UART_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
-	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm |			\
-	PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
-
-#define USDHC_PAD_CTRL (PAD_CTL_PUS_47K_UP |			\
-	PAD_CTL_SPEED_LOW | PAD_CTL_DSE_80ohm |			\
-	PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
-
-#define SPI_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_SPEED_MED | \
-		      PAD_CTL_DSE_40ohm | PAD_CTL_SRE_FAST)
-
-#define I2C_PAD_CTRL  (PAD_CTL_PUS_100K_UP |			\
-	PAD_CTL_SPEED_MED | PAD_CTL_DSE_40ohm | PAD_CTL_HYS |	\
-	PAD_CTL_ODE | PAD_CTL_SRE_FAST)
-
 #define EPDC_PAD_CTRL    (PAD_CTL_PKE | PAD_CTL_SPEED_MED |	\
-	PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
+			  PAD_CTL_DSE_40ohm | PAD_CTL_HYS)
 
-#define OTG_ID_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |		\
-	PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |		\
-	PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
+#define OTG_ID_PAD_CTRL (PAD_CTL_PKE | PAD_CTL_PUE |			\
+			 PAD_CTL_PUS_47K_UP  | PAD_CTL_SPEED_LOW |	\
+			 PAD_CTL_DSE_80ohm   | PAD_CTL_SRE_FAST  | PAD_CTL_HYS)
 
-#define I2C_PMIC	1
+struct spi_slave *slave; // Extern
 
-#define I2C_PAD MUX_PAD_CTRL(I2C_PAD_CTRL)
+/*
+ * Setup DRAM size. Invoked by init_sequence_f
+ */
+int dram_init(void)
+{
+	/* Since imx_ddr_size does not know about interleaved multiply by 2 */
+	/* It calculates only on one mem capsule */
+	gd->ram_size = imx_ddr_size() * 2;
 
-#define KEY_VOL_UP	IMX_GPIO_NR(1, 4)
+	return 0;
+}
 
-#define LEIF_PCA9534_ADDRESS (0x4a >> 1)
-#define PWM1 0
-
-#define GPIO_SPI1_SCLK     IMX_GPIO_NR(5, 22)
-#define GPIO_SPI1_MOSI     IMX_GPIO_NR(5, 23)
-#define GPIO_SPI1_MISO     IMX_GPIO_NR(5, 24)
-#define GPIO_SPI1_CS       IMX_GPIO_NR(5, 28)
-
-iomux_v3_cfg_t const uart1_pads[] = {
-	MX6_PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
-	MX6_PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL),
+static iomux_v3_cfg_t const uart1_pads[] = {
+	IOMUX_PADS(PAD_SD3_DAT7__UART1_TX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
+	IOMUX_PADS(PAD_SD3_DAT6__UART1_RX_DATA | MUX_PAD_CTRL(UART_PAD_CTRL)),
 };
 
-iomux_v3_cfg_t const ecspi4_pads[] = {
+
+#ifdef CONFIG_MXC_SPI
+
+static iomux_v3_cfg_t const ecspi4_pads[] = {
 	MX6_PAD_EIM_D28__ECSPI4_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D22__ECSPI4_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D21__ECSPI4_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
 	MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
-iomux_v3_cfg_t const no_ecspi1_pads[] = {
-	MX6_PAD_CSI0_DAT4__GPIO5_IO22  | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_CSI0_DAT5__GPIO5_IO23  | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_CSI0_DAT6__GPIO5_IO24  | MUX_PAD_CTRL(NO_PAD_CTRL),
-	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
-};
-
-//default hw support
-static struct hw_support hardware = {
-	.mipi_mux = false,
-	.display = true,
-	.usb_charge = IS_ENABLED(CONFIG_FLIR_USBCHARGE),
-	.name = "Unknown Camera"
-};
-
-int dram_init(void)
+static int platform_setup_pmic_voltages(void)
 {
-	gd->ram_size = imx_ddr_size();
+	unsigned char dev_id, var_id, cust_id, conf_id;
+	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
+
+	gpio_request(IMX_GPIO_NR(3, 20), "CS SPI4");
+	gpio_direction_output(IMX_GPIO_NR(3, 20), 1);
+
+	imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
+					 ARRAY_SIZE(ecspi4_pads));
+	// enable ecspi4_clk
+	setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
+	slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
+	if (!slave)
+		return -1;
+	spi_claim_bus(slave);
+
+	/* Read and print PMIC identification */
+	if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
+	    pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
+		printf("Could not read PMIC ID registers\n");
+		spi_release_bus(slave);
+		return -1;
+	}
+	printf("PMIC:  DA9063, Device: 0x%02x, Variant: 0x%02x, Customer: 0x%02x, Config: 0x%02x\n",
+	       dev_id, var_id, cust_id, conf_id);
+	if (dev_id != 0x61 ||
+	    var_id != 0x63) {
+		printf("PMIC DA90631 detected wrong device");
+		spi_release_bus(slave);
+		return -1;
+	}
+
+	//turn on nONKEY_PIN to port mode, e.g. power switch reacts
+	//to button press, instead of button release!
+	pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
+
+	//disable comparator
+	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
+	//disable watchdog
+	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
+
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+	/* 1V3 is highest allowable voltage when LDO is bypassed */
+	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
+	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
+		printf("Could not configure VBCORE1 voltage to 1V3\n");
+	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
+	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
+		printf("Could not configure VBCORE2 voltage to 1V3\n");
+
+	/* 1V2 is an acceptable level up to 800 MHz */
+	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
+	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
+		printf("Could not configure VBCORE1 voltage to 1V2\n");
+	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
+	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
+		printf("Could not configure VBCORE2 voltage to 1V2\n");
+	if (pmic_write_reg(DA9063_REG_LDO5_CONT, 1))
+		printf("Could not configure DA9063_REG_LDO5_CONT to on\n");
+#endif
+	// Disable OTP-enabled LDO4. Not connected in ec702
+	if (pmic_write_bitfield(DA9063_REG_LDO4_CONT, DA9063_LDO_EN, 0))
+		log_err("Failed to disable LDO4\n");
+
+	spi_release_bus(slave);
 	return 0;
-}
-
-#ifdef CONFIG_MXC_SPI
-static iomux_v3_cfg_t const ecspi1_pads[] = {
-	MX6_PAD_CSI0_DAT4__ECSPI1_SCLK | MUX_PAD_CTRL(SPI_PAD_CTRL),
-	MX6_PAD_CSI0_DAT5__ECSPI1_MOSI | MUX_PAD_CTRL(SPI_PAD_CTRL),
-	MX6_PAD_CSI0_DAT6__ECSPI1_MISO | MUX_PAD_CTRL(SPI_PAD_CTRL),
-	MX6_PAD_CSI0_DAT10__GPIO5_IO28 | MUX_PAD_CTRL(NO_PAD_CTRL),
-};
-
-static void setup_spi(void)
-{
-	SETUP_IOMUX_PADS(ecspi1_pads);
 }
 #endif
 
-int board_spi_cs_gpio(unsigned int bus, unsigned int cs)
-{
-	if (bus == 1) {
-		if (cs == 0)
-			return IMX_GPIO_NR(5, 28); //SPI1_CS0_n
-		else if (cs == 1)
-			return IMX_GPIO_NR(5, 29); //SPI1_CS1_n
-	} else if (bus == 3)
-		if (cs == 0)
-			return IMX_GPIO_NR(3, 20); //DA9063 CS
+#if defined(CONFIG_OF_BOARD_SETUP)
 
+/*
+ * Platform function to modify the FDT as needed
+ * Invocation triggered by CONFIG_OF_BOARD_SETUP
+ */
+int ft_board_setup(void *blob, struct bd_info *bd)
+{
+	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
+		int temp[2];
+
+		temp[0] = cpu_to_fdt32(gd->fb_base);
+		temp[1] = cpu_to_fdt32(1024 * 768 * 2);
+		printf("%s base=%i, size=%i\n", __func__, temp[0], temp[1]);
+		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
+	}
+
+#if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
+	patch_fdt_eeprom(blob);
+#endif
+	return 0;
+}
+#endif /* CONFIG_OF_BOARD_SETUP */
+
+/*
+ * Override for the weak definition in mxc_spi
+ * Note: bus is 0-indexed, in schematic it is 1-indexed
+ */
+int board_spi_cs_gpio(unsigned bus, unsigned cs)
+{
+	switch (bus) {
+	case 0:
+		if (cs == 0)
+			return IMX_GPIO_NR(5, 28); // SPI1_CS1_n
+		else if (cs == 1)
+			return IMX_GPIO_NR(5, 29); // SPI1_IRDM_CS_n
+		break;
+	case 3:
+		if (cs == 0)
+			return IMX_GPIO_NR(3, 20); // DA9063 CS
+		break;
+	default:
+		log_err("%s: Invalid bus (%u)\n", __func__, bus);
+		return -1;
+	}
+	log_err("%s: Invalid CS (%u)\n", __func__, cs);
 	return -1;
 }
 
-
-
-static int detect_truly(struct display_info_t const *dev)
-{
-	return 1;
-}
-
-void backlight_on(bool on)
-{
-	struct udevice *pwm_dev;
-	int ret;
-
-	ret = uclass_get_device_by_name(UCLASS_PWM, "pwm@2080000", &pwm_dev);
-	if (ret) {
-		log_err("%s: pwm_init failed '%d'\n", __func__, ret);
-		return;
-	}
-
-	/* Set to 70% duty cycle as in linux */
-	ret = pwm_set_config(pwm_dev, 0, 500000, 350000);
-	if (ret) {
-		log_err("%s: pwm_set_config failed '%d'\n", __func__, ret);
-		return;
-	}
-
-	pwm_set_enable(pwm_dev, 0, on);
-}
-
-static void enable_backlight(struct display_info_t const *dev)
-{
-	backlight_on(true);
-}
-
 #ifdef CONFIG_ENV_IS_IN_MMC
+/*
+ * Override for weak platform function
+ */
 int board_mmc_get_env_dev(int devno)
 {
 	return CONFIG_SYS_MMC_ENV_DEV;
@@ -250,35 +244,6 @@ void board_late_mmc_env_init(void)
 }
 #endif
 
-#ifdef CONFIG_SYS_I2C
-static struct i2c_pads_info i2c_pad_info1 = {
-	.scl = {
-		.i2c_mode = MX6_PAD_KEY_COL3__I2C2_SCL | I2C_PAD,
-		.gpio_mode = MX6_PAD_KEY_COL3__GPIO4_IO12 | I2C_PAD,
-		.gp = IMX_GPIO_NR(4, 12)
-	},
-	.sda = {
-		.i2c_mode = MX6_PAD_KEY_ROW3__I2C2_SDA | I2C_PAD,
-		.gpio_mode = MX6_PAD_KEY_ROW3__GPIO4_IO13 | I2C_PAD,
-		.gp = IMX_GPIO_NR(4, 13)
-	}
-};
-#endif
-
-#if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
-iomux_v3_cfg_t const pcie_pads[] = {
-	IOMUX_PADS(PAD_EIM_D19__GPIO3_IO19 | MUX_PAD_CTRL(NO_PAD_CTRL)),	/* POWER */
-	IOMUX_PADS(PAD_GPIO_17__GPIO7_IO12 | MUX_PAD_CTRL(NO_PAD_CTRL)),	/* RESET */
-};
-
-static void setup_pcie(void)
-{
-	SETUP_IOMUX_PADS(pcie_pads);
-	gpio_request(CONFIG_PCIE_IMX_POWER_GPIO, "PCIE Power Enable");
-	gpio_request(CONFIG_PCIE_IMX_PERST_GPIO, "PCIE Reset");
-}
-#endif
-
 iomux_v3_cfg_t const di0_pads[] = {
 	IOMUX_PADS(PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK),	/* DISP0_CLK */
 	IOMUX_PADS(PAD_DI0_PIN2__IPU1_DI0_PIN02),		/* DISP0_HSYNC */
@@ -290,53 +255,6 @@ static void setup_iomux_uart(void)
 	SETUP_IOMUX_PADS(uart1_pads);
 }
 
-#if defined(CONFIG_MX6DL) && defined(CONFIG_MXC_EPDC)
-static iomux_v3_cfg_t const epdc_enable_pads[] = {
-	IOMUX_PADS(PAD_EIM_A16__EPDC_DATA00	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA10__EPDC_DATA01	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA12__EPDC_DATA02	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA11__EPDC_DATA03	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_LBA__EPDC_DATA04	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_EB2__EPDC_DATA05	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_CS0__EPDC_DATA06	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_RW__EPDC_DATA07	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_A21__EPDC_GDCLK	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_A22__EPDC_GDSP	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_A23__EPDC_GDOE	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_A24__EPDC_GDRL	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_D31__EPDC_SDCLK_P	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_D27__EPDC_SDOE	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA1__EPDC_SDLE	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_EB1__EPDC_SDSHR	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA2__EPDC_BDR0	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA4__EPDC_SDCE0	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA5__EPDC_SDCE1	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_DA6__EPDC_SDCE2	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-};
-
-static iomux_v3_cfg_t const epdc_disable_pads[] = {
-	IOMUX_PADS(PAD_EIM_A16__GPIO2_IO22),
-	IOMUX_PADS(PAD_EIM_DA10__GPIO3_IO10),
-	IOMUX_PADS(PAD_EIM_DA12__GPIO3_IO12),
-	IOMUX_PADS(PAD_EIM_DA11__GPIO3_IO11),
-	IOMUX_PADS(PAD_EIM_LBA__GPIO2_IO27),
-	IOMUX_PADS(PAD_EIM_EB2__GPIO2_IO30),
-	IOMUX_PADS(PAD_EIM_CS0__GPIO2_IO23),
-	IOMUX_PADS(PAD_EIM_RW__GPIO2_IO26),
-	IOMUX_PADS(PAD_EIM_A21__GPIO2_IO17),
-	IOMUX_PADS(PAD_EIM_A22__GPIO2_IO16),
-	IOMUX_PADS(PAD_EIM_A23__GPIO6_IO06),
-	IOMUX_PADS(PAD_EIM_A24__GPIO5_IO04),
-	IOMUX_PADS(PAD_EIM_D31__GPIO3_IO31),
-	IOMUX_PADS(PAD_EIM_D27__GPIO3_IO27),
-	IOMUX_PADS(PAD_EIM_DA1__GPIO3_IO01),
-	IOMUX_PADS(PAD_EIM_EB1__GPIO2_IO29),
-	IOMUX_PADS(PAD_EIM_DA2__GPIO3_IO02),
-	IOMUX_PADS(PAD_EIM_DA4__GPIO3_IO04),
-	IOMUX_PADS(PAD_EIM_DA5__GPIO3_IO05),
-	IOMUX_PADS(PAD_EIM_DA6__GPIO3_IO06),
-};
-#endif
 
 #ifdef CONFIG_FSL_ESDHC_IMX
 #if !CONFIG_IS_ENABLED(DM_MMC)
@@ -488,265 +406,11 @@ int board_phy_config(struct phy_device *phydev)
 	return 0;
 }
 
-#if defined(CONFIG_MX6DL) && defined(CONFIG_MXC_EPDC)
-vidinfo_t panel_info = {
-	.vl_refresh = 85,
-	.vl_col = 800,
-	.vl_row = 600,
-	.vl_pixclock = 26666667,
-	.vl_left_margin = 8,
-	.vl_right_margin = 100,
-	.vl_upper_margin = 4,
-	.vl_lower_margin = 8,
-	.vl_hsync = 4,
-	.vl_vsync = 1,
-	.vl_sync = 0,
-	.vl_mode = 0,
-	.vl_flag = 0,
-	.vl_bpix = 3,
-	.cmap = 0,
-};
-
-struct epdc_timing_params panel_timings = {
-	.vscan_holdoff = 4,
-	.sdoed_width = 10,
-	.sdoed_delay = 20,
-	.sdoez_width = 10,
-	.sdoez_delay = 20,
-	.gdclk_hp_offs = 419,
-	.gdsp_offs = 20,
-	.gdoe_offs = 0,
-	.gdclk_offs = 5,
-	.num_ce = 1,
-};
-
-static iomux_v3_cfg_t const epdc_pwr_ctrl_pads[] = {
-	IOMUX_PADS(PAD_EIM_A17__GPIO2_IO21	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_D17__GPIO3_IO17	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_D20__GPIO3_IO20	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-	IOMUX_PADS(PAD_EIM_A18__GPIO2_IO20	| MUX_PAD_CTRL(EPDC_PAD_CTRL)),
-};
-
-struct gpio_desc epd_pwrstat_desc;
-struct gpio_desc epd_vcom_desc;
-struct gpio_desc epd_wakeup_desc;
-struct gpio_desc epd_pwr_ctl0_desc;
-
-static void setup_epdc_power(void)
-{
-	int ret;
-
-	SETUP_IOMUX_PADS(epdc_pwr_ctrl_pads);
-
-	/* Setup epdc voltage */
-
-	/* EIM_A17 - GPIO2[21] for PWR_GOOD status */
-	/* Set as input */
-	ret = dm_gpio_lookup_name("GPIO2_21", &epd_pwrstat_desc);
-	if (ret) {
-		printf("%s lookup GPIO2_21 failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	ret = dm_gpio_request(&epd_pwrstat_desc, "EPDC PWRSTAT");
-	if (ret) {
-		printf("%s request EPDC PWRSTAT failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	dm_gpio_set_dir_flags(&epd_pwrstat_desc, GPIOD_IS_IN);
-
-	/* EIM_D17 - GPIO3[17] for VCOM control */
-	/* Set as output */
-	ret = dm_gpio_lookup_name("GPIO3_17", &epd_vcom_desc);
-	if (ret) {
-		printf("%s lookup GPIO3_17 failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	ret = dm_gpio_request(&epd_vcom_desc, "EPDC VCOM0");
-	if (ret) {
-		printf("%s request EPDC VCOM0 failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	dm_gpio_set_dir_flags(&epd_vcom_desc, GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
-
-	/* EIM_D20 - GPIO3[20] for EPD PMIC WAKEUP */
-	/* Set as output */
-	ret = dm_gpio_lookup_name("GPIO3_20", &epd_wakeup_desc);
-	if (ret) {
-		printf("%s lookup GPIO3_20 failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	ret = dm_gpio_request(&epd_wakeup_desc, "EPDC PWR WAKEUP");
-	if (ret) {
-		printf("%s request EPDC PWR WAKEUP failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	dm_gpio_set_dir_flags(&epd_wakeup_desc, GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
-
-	/* EIM_A18 - GPIO2[20] for EPD PWR CTL0 */
-	/* Set as output */
-	ret = dm_gpio_lookup_name("GPIO2_20", &epd_pwr_ctl0_desc);
-	if (ret) {
-		printf("%s lookup GPIO2_20 failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	ret = dm_gpio_request(&epd_pwr_ctl0_desc, "EPDC PWR CTRL0");
-	if (ret) {
-		printf("%s request EPDC PWR CTRL0 failed ret = %d\n", __func__, ret);
-		return;
-	}
-
-	dm_gpio_set_dir_flags(&epd_pwr_ctl0_desc, GPIOD_IS_OUT | GPIOD_IS_OUT_ACTIVE);
-}
-
-static void epdc_enable_pins(void)
-{
-	/* epdc iomux settings */
-	SETUP_IOMUX_PADS(epdc_enable_pads);
-}
-
-static void epdc_disable_pins(void)
-{
-	/* Configure MUX settings for EPDC pins to GPIO */
-	SETUP_IOMUX_PADS(epdc_disable_pads);
-}
-
-static void setup_epdc(void)
-{
-	unsigned int reg;
-	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-
-	/*** Set pixel clock rates for EPDC ***/
-
-	/* EPDC AXI clk (IPU2_CLK) from PFD_400M, set to 396/2 = 198MHz */
-	reg = readl(&ccm_regs->cscdr3);
-	reg &= ~0x7C000;
-	reg |= (1 << 16) | (1 << 14);
-	writel(reg, &ccm_regs->cscdr3);
-
-	/* EPDC AXI clk enable */
-	reg = readl(&ccm_regs->CCGR3);
-	reg |= 0x00C0;
-	writel(reg, &ccm_regs->CCGR3);
-
-	/* EPDC PIX clk (IPU2_DI1_CLK) from PLL5, set to 650/4/6 = ~27MHz */
-	reg = readl(&ccm_regs->cscdr2);
-	reg &= ~0x3FE00;
-	reg |= (2 << 15) | (5 << 12);
-	writel(reg, &ccm_regs->cscdr2);
-
-	/* PLL5 enable (defaults to 650) */
-	reg = readl(&ccm_regs->analog_pll_video);
-	reg &= ~((1 << 16) | (1 << 12));
-	reg |= (1 << 13);
-	writel(reg, &ccm_regs->analog_pll_video);
-
-	/* EPDC PIX clk enable */
-	reg = readl(&ccm_regs->CCGR3);
-	reg |= 0x0C00;
-	writel(reg, &ccm_regs->CCGR3);
-
-	panel_info.epdc_data.wv_modes.mode_init = 0;
-	panel_info.epdc_data.wv_modes.mode_du = 1;
-	panel_info.epdc_data.wv_modes.mode_gc4 = 3;
-	panel_info.epdc_data.wv_modes.mode_gc8 = 2;
-	panel_info.epdc_data.wv_modes.mode_gc16 = 2;
-	panel_info.epdc_data.wv_modes.mode_gc32 = 2;
-
-	panel_info.epdc_data.epdc_timings = panel_timings;
-
-	setup_epdc_power();
-}
-
-void epdc_power_on(void)
-{
-	unsigned int reg;
-	struct gpio_regs *gpio_regs = (struct gpio_regs *)GPIO2_BASE_ADDR;
-
-	/* Set EPD_PWR_CTL0 to high - enable EINK_VDD (3.15) */
-	dm_gpio_set_value(&epd_pwr_ctl0_desc, 1);
-	udelay(1000);
-
-	/* Enable epdc signal pin */
-	epdc_enable_pins();
-
-	/* Set PMIC Wakeup to high - enable Display power */
-	dm_gpio_set_value(&epd_wakeup_desc, 1);
-
-	/* Wait for PWRGOOD == 1 */
-	while (1) {
-		reg = readl(&gpio_regs->gpio_psr);
-		if (!(reg & (1 << 21)))
-			break;
-
-		udelay(100);
-	}
-
-	/* Enable VCOM */
-	dm_gpio_set_value(&epd_vcom_desc, 1);
-
-	udelay(500);
-}
-
-void epdc_power_off(void)
-{
-	/* Set PMIC Wakeup to low - disable Display power */
-	dm_gpio_set_value(&epd_wakeup_desc, 0);
-
-	/* Disable VCOM */
-	dm_gpio_set_value(&epd_vcom_desc, 0);
-
-	epdc_disable_pins();
-
-	/* Set EPD_PWR_CTL0 to low - disable EINK_VDD (3.15) */
-	dm_gpio_set_value(&epd_pwr_ctl0_desc, 0);
-}
-#endif
-
 #if defined(CONFIG_VIDEO_IPUV3)
-
-struct display_info_t const displays[] = {{
-	.bus	= 1,
-	.addr	= 0,
-	.pixfmt	= IPU_PIX_FMT_RGB24,
-	.di = 0,
-	.detect	= detect_truly,
-	.enable	= enable_backlight,
-	.mode	= {
-		.name           = "TRULY-VGA",
-		.refresh        = 60,
-		.xres           = 640,
-		.yres           = 480,
-		.pixclock       = 33000,
-		.left_margin    = 150,
-		.right_margin   = 100,
-		.upper_margin   = 16,
-		.lower_margin   = 16,
-		.hsync_len      = 90,
-		.vsync_len      = 4,
-		.sync           = 0,
-		.vmode          = FB_VMODE_NONINTERLACED,
-		.flag           = 0
-		}
-	}
-};
-
-size_t display_count = ARRAY_SIZE(displays);
-
 static void setup_display(void)
 {
 	struct mxc_ccm_reg *mxc_ccm = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-	struct iomuxc *iomux = (struct iomuxc *)IOMUXC_BASE_ADDR;
 	int reg;
-
-	/* Setup HSYNC, VSYNC, DISP_CLK for debugging purposes */
-	SETUP_IOMUX_PADS(di0_pads);
 
 	enable_ipu_clock();
 
@@ -760,7 +424,7 @@ static void setup_display(void)
 	reg &= ~(MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_MASK
 		 | MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_MASK);
 	reg |= (3 << MXC_CCM_CS2CDR_LDB_DI0_CLK_SEL_OFFSET)
-	      | (3 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET);
+		| (3 << MXC_CCM_CS2CDR_LDB_DI1_CLK_SEL_OFFSET);
 	writel(reg, &mxc_ccm->cs2cdr);
 
 	reg = readl(&mxc_ccm->cscmr2);
@@ -773,24 +437,6 @@ static void setup_display(void)
 	reg |= (CHSCCDR_CLK_SEL_LDB_DI0
 		<< MXC_CCM_CHSCCDR_IPU1_DI1_CLK_SEL_OFFSET);
 	writel(reg, &mxc_ccm->chsccdr);
-
-	reg = IOMUXC_GPR2_BGREF_RRMODE_EXTERNAL_RES
-	     | IOMUXC_GPR2_DI1_VS_POLARITY_ACTIVE_LOW
-	     | IOMUXC_GPR2_DI0_VS_POLARITY_ACTIVE_LOW
-	     | IOMUXC_GPR2_BIT_MAPPING_CH1_SPWG
-	     | IOMUXC_GPR2_DATA_WIDTH_CH1_18BIT
-	     | IOMUXC_GPR2_BIT_MAPPING_CH0_SPWG
-	     | IOMUXC_GPR2_DATA_WIDTH_CH0_18BIT
-	     | IOMUXC_GPR2_LVDS_CH0_MODE_DISABLED
-	     | IOMUXC_GPR2_LVDS_CH1_MODE_ENABLED_DI0;
-	writel(reg, &iomux->gpr[2]);
-
-	reg = readl(&iomux->gpr[3]);
-	reg = (reg & ~(IOMUXC_GPR3_LVDS1_MUX_CTL_MASK
-			| IOMUXC_GPR3_HDMI_MUX_CTL_MASK))
-	    | (IOMUXC_GPR3_MUX_SRC_IPU1_DI0
-	       << IOMUXC_GPR3_LVDS1_MUX_CTL_OFFSET);
-	writel(reg, &iomux->gpr[3]);
 }
 #endif /* CONFIG_VIDEO_IPUV3 */
 
@@ -803,6 +449,7 @@ int overwrite_console(void)
 	return 1;
 }
 
+#ifdef CONFIG_FEC_MXC
 static void setup_fec(void)
 {
 	if (is_mx6dqp()) {
@@ -815,6 +462,7 @@ static void setup_fec(void)
 			printf("Error fec anatop clock settings!\n");
 	}
 }
+#endif
 
 #ifdef CONFIG_USB_EHCI_MX6
 int board_ehci_hcd_init(int port)
@@ -845,7 +493,9 @@ void board_setup_timer(void)
 	int reg;
 
 	clrbits_le32(&epit_regs->cr, 0x00000001);   // Disable
-	setbits_le32(&epit_regs->cr, 0x012C0412);   // 1 MHz free running no output
+	// Root clock is 49.5 MHz. 0x30 is a prescaler of 49.
+	// 49.5 MHz / 49 = 1.01 MHz. This is the closest we can get to 1 MHz
+	setbits_le32(&epit_regs->cr, 0x012C0302);   // 1 MHz free running no output
 	setbits_le32(&epit_regs->cr, 0x00000001);   // Enable
 
 	reg = readl(&mxc_ccm->CCGR1);
@@ -853,48 +503,10 @@ void board_setup_timer(void)
 	writel(reg, &mxc_ccm->CCGR1);
 }
 
-static void setup_mipi_mux_i2c(void)
-{
-	const struct dm_i2c_ops *i2c_ops = NULL;
-	struct udevice *i2c_devp = NULL;
-
-	if (hardware.mipi_mux) {
-		unsigned char buf[2];
-		struct i2c_msg msg;
-
-		if (uclass_get_device_by_name(UCLASS_I2C, "i2c@21f8000", &i2c_devp) == -ENODEV) {
-			printf("%s, %s, %d: dev i2c@21f8000 not found!\n",
-			       __FILE__, __func__, __LINE__);
-			return;
-		}
-		i2c_ops = device_get_ops(i2c_devp);
-		if (!i2c_ops) {
-			log_err("Failed to get i2c_ops from device at i2c@21f8000\n");
-			return;
-		}
-
-		msg.addr  = LEIF_PCA9534_ADDRESS;
-		msg.flags = 0; // Write
-		msg.len   = 1;
-
-		//set LCD_MIPI_SEL=1 and LCD_MIPI_EN=0
-		buf[0] = 0xbf;
-		msg.buf = buf;
-		i2c_ops->xfer(i2c_devp, &msg, 1);
-
-		buf[0] = 0x9f;
-		msg.buf = buf;
-		i2c_ops->xfer(i2c_devp, &msg, 1);
-	}
-}
-
 int board_early_init_f(void)
 {
 	board_setup_timer();
 	setup_iomux_uart();
-#if defined(CONFIG_VIDEO_IPUV3)
-	setup_display();
-#endif
 
 	return 0;
 }
@@ -905,750 +517,80 @@ void ldo_mode_set(int ldo_bypass)
 }
 #endif
 
-int checkboard(void)
+static void platform_viewfinder_power_set(bool enable)
 {
-	printf("Board: %s - %s\n", CONFIG_BOARD_DESCRIPTION, hardware.name);
-	return 0;
+	struct gpio_desc disp_pwr_en_desc;
+	int ret;
+
+	ret = dm_gpio_lookup_name("gpio@23_6", &disp_pwr_en_desc);
+	if (ret) {
+		log_err("%s lookup gpio@23_6 failed with status %d\n", __func__, ret);
+		return;
+	}
+
+	ret = dm_gpio_request(&disp_pwr_en_desc, "DISP_PWR_EN");
+	if (ret) {
+		log_err("%s request DISP_PWR_EN failed with status %d\n", __func__, ret);
+		return;
+	}
+
+	dm_gpio_set_dir_flags(&disp_pwr_en_desc, GPIOD_IS_OUT);
+	dm_gpio_set_value(&disp_pwr_en_desc, enable);
 }
 
 int board_init(void)
 {
-	int ret = 0;
-
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
-	if (IS_ENABLED(CONFIG_DM_REGULATOR))
-		regulators_enable_boot_on(false);
-
-	if (IS_ENABLED(CONFIG_MXC_SPI)) {
-		ret = platform_setup_pmic_voltages();
-		// ret = setup_pmic_voltages();
-		if (ret)
-			return -1;
-		setup_spi();
-	}
-
-#ifdef CONFIG_SYS_I2C
-	setup_i2c(1, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
-	/* Setup I2C4  */
-	ret = setup_i2c(3, CONFIG_SYS_I2C_SPEED,
-			CONFIG_SYS_I2C_SLAVE, &i2c_pad_info1);
-	/* Setup I2C3 */
-	ret = setup_i2c(2, CONFIG_SYS_I2C_SPEED,
-			CONFIG_SYS_I2C_SLAVE, &i2c_pad_info2);
+#if defined(CONFIG_DM_REGULATOR)
+	regulators_enable_boot_on(false);
 #endif
 
-#ifndef CONFIG_SYS_I2C_MXC
-	assert("CONFIG_SYS_I2C_MXC needs to be defined for EC101")
+#ifdef CONFIG_MXC_SPI
+	platform_setup_pmic_voltages();
 #endif
-	ret = setup_pmic_voltages();
-	if (ret)
-		return ret;
+	platform_viewfinder_power_set(true);
 
-	struct hw_version ioboard;
-	ret = board_support_setup(&ioboard, &hardware);
-	if (ret < 0) {
-		printf("IO Board either missing or is not functioning!!\n");
-	} else {
-		if (hardware.usb_charge)
-			usb_charge_setup();
-	}
-
-#if defined(CONFIG_PCIE_IMX) && !defined(CONFIG_DM_PCI)
-	setup_pcie();
+#ifdef CONFIG_FLIR_USBCHARGE
+	usb_charge_setup();
+#else
+	log_info("FLIR_USBCHARGE is not configured\n");
 #endif
 
-#if defined(CONFIG_MX6DL) && defined(CONFIG_MXC_EPDC)
-	setup_epdc();
+#ifdef CONFIG_FEC_MXC
+	setup_fec();
 #endif
-
-	if (IS_ENABLED(CONFIG_FEC_MXC))
-		setup_fec();
 
 	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
-		struct mipi_dsi_ops ops;
-
-		ops.get_lcd_videomode = mipid_st7703_get_lcd_videomode;
-		ops.lcd_setup = mipid_st7703_lcd_setup;
-
-		setup_mipi_mux_i2c();
-		mxc_mipi_dsi_enable(&ops);
+		setup_display();
 	}
 
 	return 0;
 }
 
-#ifdef CONFIG_POWER
-int power_init_board(void)
-{
-	struct pmic *pfuze;
-	unsigned int reg;
-	int ret;
-
-	pfuze = pfuze_common_init(I2C_PMIC);
-	if (!pfuze)
-		return -ENODEV;
-
-	if (is_mx6dqp())
-		ret = pfuze_mode_init(pfuze, APS_APS);
-	else
-		ret = pfuze_mode_init(pfuze, APS_PFM);
-
-	if (ret < 0)
-		return ret;
-	/* VGEN3 and VGEN5 corrected on i.mx6qp board */
-	if (!is_mx6dqp()) {
-		/* Increase VGEN3 from 2.5 to 2.8V */
-		pmic_reg_read(pfuze, PFUZE100_VGEN3VOL, &reg);
-		reg &= ~LDO_VOL_MASK;
-		reg |= LDOB_2_80V;
-		pmic_reg_write(pfuze, PFUZE100_VGEN3VOL, reg);
-
-		/* Increase VGEN5 from 2.8 to 3V */
-		pmic_reg_read(pfuze, PFUZE100_VGEN5VOL, &reg);
-		reg &= ~LDO_VOL_MASK;
-		reg |= LDOB_3_00V;
-		pmic_reg_write(pfuze, PFUZE100_VGEN5VOL, reg);
-	}
-
-	if (is_mx6dqp()) {
-		/* set SW1C staby volatage 1.075V*/
-		pmic_reg_read(pfuze, PFUZE100_SW1CSTBY, &reg);
-		reg &= ~0x3f;
-		reg |= 0x1f;
-		pmic_reg_write(pfuze, PFUZE100_SW1CSTBY, reg);
-
-		/* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
-		pmic_reg_read(pfuze, PFUZE100_SW1CCONF, &reg);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(pfuze, PFUZE100_SW1CCONF, reg);
-
-		/* set SW2/VDDARM staby volatage 0.975V*/
-		pmic_reg_read(pfuze, PFUZE100_SW2STBY, &reg);
-		reg &= ~0x3f;
-		reg |= 0x17;
-		pmic_reg_write(pfuze, PFUZE100_SW2STBY, reg);
-
-		/* set SW2/VDDARM step ramp up time to from 16us to 4us/25mV */
-		pmic_reg_read(pfuze, PFUZE100_SW2CONF, &reg);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(pfuze, PFUZE100_SW2CONF, reg);
-	} else {
-		/* set SW1AB staby volatage 0.975V*/
-		pmic_reg_read(pfuze, PFUZE100_SW1ABSTBY, &reg);
-		reg &= ~0x3f;
-		reg |= 0x1b;
-		pmic_reg_write(pfuze, PFUZE100_SW1ABSTBY, reg);
-
-		/* set SW1AB/VDDARM step ramp up time from 16us to 4us/25mV */
-		pmic_reg_read(pfuze, PFUZE100_SW1ABCONF, &reg);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(pfuze, PFUZE100_SW1ABCONF, reg);
-
-		/* set SW1C staby volatage 0.975V*/
-		pmic_reg_read(pfuze, PFUZE100_SW1CSTBY, &reg);
-		reg &= ~0x3f;
-		reg |= 0x1b;
-		pmic_reg_write(pfuze, PFUZE100_SW1CSTBY, reg);
-
-		/* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
-		pmic_reg_read(pfuze, PFUZE100_SW1CCONF, &reg);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(pfuze, PFUZE100_SW1CCONF, reg);
-	}
-
-	return 0;
-}
-
-#elif defined(CONFIG_DM_PMIC_PFUZE100)
-int power_init_board(void)
-{
-	struct udevice *dev;
-	unsigned int reg;
-	int ret;
-
-	dev = pfuze_common_init();
-	if (!dev)
-		return -ENODEV;
-
-	if (is_mx6dqp())
-		ret = pfuze_mode_init(dev, APS_APS);
-	else
-		ret = pfuze_mode_init(dev, APS_PFM);
-	if (ret < 0)
-		return ret;
-
-	/* VGEN3 and VGEN5 corrected on i.mx6qp board */
-	if (!is_mx6dqp()) {
-		/* Increase VGEN3 from 2.5 to 2.8V */
-		reg = pmic_reg_read(dev, PFUZE100_VGEN3VOL);
-		reg &= ~LDO_VOL_MASK;
-		reg |= LDOB_2_80V;
-		pmic_reg_write(dev, PFUZE100_VGEN3VOL, reg);
-
-		/* Increase VGEN5 from 2.8 to 3V */
-		reg = pmic_reg_read(dev, PFUZE100_VGEN5VOL);
-		reg &= ~LDO_VOL_MASK;
-		reg |= LDOB_3_00V;
-		pmic_reg_write(dev, PFUZE100_VGEN5VOL, reg);
-	}
-
-	if (is_mx6dqp()) {
-		/* set SW1C staby volatage 1.075V*/
-		reg = pmic_reg_read(dev, PFUZE100_SW1CSTBY);
-		reg &= ~0x3f;
-		reg |= 0x1f;
-		pmic_reg_write(dev, PFUZE100_SW1CSTBY, reg);
-
-		/* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
-		reg = pmic_reg_read(dev, PFUZE100_SW1CCONF);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(dev, PFUZE100_SW1CCONF, reg);
-
-		/* set SW2/VDDARM staby volatage 0.975V*/
-		reg = pmic_reg_read(dev, PFUZE100_SW2STBY);
-		reg &= ~0x3f;
-		reg |= 0x17;
-		pmic_reg_write(dev, PFUZE100_SW2STBY, reg);
-
-		/* set SW2/VDDARM step ramp up time to from 16us to 4us/25mV */
-		reg = pmic_reg_read(dev, PFUZE100_SW2CONF);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(dev, PFUZE100_SW2CONF, reg);
-	} else {
-		/* set SW1AB staby volatage 0.975V*/
-		reg = pmic_reg_read(dev, PFUZE100_SW1ABSTBY);
-		reg &= ~0x3f;
-		reg |= 0x1b;
-		pmic_reg_write(dev, PFUZE100_SW1ABSTBY, reg);
-
-		/* set SW1AB/VDDARM step ramp up time from 16us to 4us/25mV */
-		reg = pmic_reg_read(dev, PFUZE100_SW1ABCONF);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(dev, PFUZE100_SW1ABCONF, reg);
-
-		/* set SW1C staby volatage 0.975V*/
-		reg = pmic_reg_read(dev, PFUZE100_SW1CSTBY);
-		reg &= ~0x3f;
-		reg |= 0x1b;
-		pmic_reg_write(dev, PFUZE100_SW1CSTBY, reg);
-
-		/* set SW1C/VDDSOC step ramp up time to from 16us to 4us/25mV */
-		reg = pmic_reg_read(dev, PFUZE100_SW1CCONF);
-		reg &= ~0xc0;
-		reg |= 0x40;
-		pmic_reg_write(dev, PFUZE100_SW1CCONF, reg);
-	}
-
-	return 0;
-}
-#endif
-
-#ifdef CONFIG_LDO_BYPASS_CHECK
-#ifdef CONFIG_POWER
-void ldo_mode_set(int ldo_bypass)
-{
-	unsigned int value;
-	int is_400M;
-	unsigned char vddarm;
-	struct pmic *p = pmic_get("PFUZE100");
-
-	if (!p) {
-		printf("No PMIC found!\n");
-		return;
-	}
-
-	/* increase VDDARM/VDDSOC to support 1.2G chip */
-	if (check_1_2G()) {
-		ldo_bypass = 0;	/* ldo_enable on 1.2G chip */
-		printf("1.2G chip, increase VDDARM_IN/VDDSOC_IN\n");
-		if (is_mx6dqp()) {
-			/* increase VDDARM to 1.425V */
-			pmic_reg_read(p, PFUZE100_SW2VOL, &value);
-			value &= ~0x3f;
-			value |= 0x29;
-			pmic_reg_write(p, PFUZE100_SW2VOL, value);
-		} else {
-			/* increase VDDARM to 1.425V */
-			pmic_reg_read(p, PFUZE100_SW1ABVOL, &value);
-			value &= ~0x3f;
-			value |= 0x2d;
-			pmic_reg_write(p, PFUZE100_SW1ABVOL, value);
-		}
-		/* increase VDDSOC to 1.425V */
-		pmic_reg_read(p, PFUZE100_SW1CVOL, &value);
-		value &= ~0x3f;
-		value |= 0x2d;
-		pmic_reg_write(p, PFUZE100_SW1CVOL, value);
-	}
-	/* switch to ldo_bypass mode , boot on 800Mhz */
-	if (ldo_bypass) {
-		prep_anatop_bypass();
-		if (is_mx6dqp()) {
-			/* decrease VDDARM for 400Mhz DQP:1.1V*/
-			pmic_reg_read(p, PFUZE100_SW2VOL, &value);
-			value &= ~0x3f;
-			value |= 0x1c;
-			pmic_reg_write(p, PFUZE100_SW2VOL, value);
-		} else {
-			/* decrease VDDARM for 400Mhz DQ:1.1V, DL:1.275V */
-			pmic_reg_read(p, PFUZE100_SW1ABVOL, &value);
-			value &= ~0x3f;
-			if (is_mx6dl())
-				value |= 0x27;
-			else
-				value |= 0x20;
-
-			pmic_reg_write(p, PFUZE100_SW1ABVOL, value);
-		}
-		/* increase VDDSOC to 1.3V */
-		pmic_reg_read(p, PFUZE100_SW1CVOL, &value);
-		value &= ~0x3f;
-		value |= 0x28;
-		pmic_reg_write(p, PFUZE100_SW1CVOL, value);
-
-		/*
-		 * MX6Q/DQP:
-		 * VDDARM:1.15V@800M; VDDSOC:1.175V@800M
-		 * VDDARM:0.975V@400M; VDDSOC:1.175V@400M
-		 * MX6DL:
-		 * VDDARM:1.175V@800M; VDDSOC:1.175V@800M
-		 * VDDARM:1.15V@400M; VDDSOC:1.175V@400M
-		 */
-		is_400M = set_anatop_bypass(2);
-		if (is_mx6dqp()) {
-			pmic_reg_read(p, PFUZE100_SW2VOL, &value);
-			value &= ~0x3f;
-			if (is_400M)
-				value |= 0x17;
-			else
-				value |= 0x1e;
-			pmic_reg_write(p, PFUZE100_SW2VOL, value);
-		}
-
-		if (is_400M) {
-			if (is_mx6dl())
-				vddarm = 0x22;
-			else
-				vddarm = 0x1b;
-		} else {
-			if (is_mx6dl())
-				vddarm = 0x23;
-			else
-				vddarm = 0x22;
-		}
-		pmic_reg_read(p, PFUZE100_SW1ABVOL, &value);
-		value &= ~0x3f;
-		value |= vddarm;
-		pmic_reg_write(p, PFUZE100_SW1ABVOL, value);
-
-		/* decrease VDDSOC to 1.175V */
-		pmic_reg_read(p, PFUZE100_SW1CVOL, &value);
-		value &= ~0x3f;
-		value |= 0x23;
-		pmic_reg_write(p, PFUZE100_SW1CVOL, value);
-
-		finish_anatop_bypass();
-		printf("switch to ldo_bypass mode!\n");
-	}
-}
-#elif defined(CONFIG_DM_PMIC_PFUZE100)
-void ldo_mode_set(int ldo_bypass)
-{
-	int is_400M;
-	unsigned char vddarm;
-	struct udevice *dev;
-	int ret;
-
-	ret = pmic_get("pfuze100@8", &dev);
-	if (ret == -ENODEV) {
-		printf("No PMIC found!\n");
-		return;
-	}
-
-	/* increase VDDARM/VDDSOC to support 1.2G chip */
-	if (check_1_2G()) {
-		ldo_bypass = 0; /* ldo_enable on 1.2G chip */
-		printf("1.2G chip, increase VDDARM_IN/VDDSOC_IN\n");
-		if (is_mx6dqp()) {
-			/* increase VDDARM to 1.425V */
-			pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x29);
-		} else {
-			/* increase VDDARM to 1.425V */
-			pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x2d);
-		}
-		/* increase VDDSOC to 1.425V */
-		pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x2d);
-	}
-	/* switch to ldo_bypass mode , boot on 800Mhz */
-	if (ldo_bypass) {
-		prep_anatop_bypass();
-		if (is_mx6dqp()) {
-			/* decrease VDDARM for 400Mhz DQP:1.1V*/
-			pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x1c);
-		} else {
-			/* decrease VDDARM for 400Mhz DQ:1.1V, DL:1.275V */
-			if (is_mx6dl())
-				pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x27);
-			else
-				pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, 0x20);
-		}
-		/* increase VDDSOC to 1.3V */
-		pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x28);
-
-		/*
-		 * MX6Q/DQP:
-		 * VDDARM:1.15V@800M; VDDSOC:1.175V@800M
-		 * VDDARM:0.975V@400M; VDDSOC:1.175V@400M
-		 * MX6DL:
-		 * VDDARM:1.175V@800M; VDDSOC:1.175V@800M
-		 * VDDARM:1.15V@400M; VDDSOC:1.175V@400M
-		 */
-		is_400M = set_anatop_bypass(2);
-		if (is_mx6dqp()) {
-			if (is_400M)
-				pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x17);
-			else
-				pmic_clrsetbits(dev, PFUZE100_SW2VOL, 0x3f, 0x1e);
-		}
-
-		if (is_400M) {
-			if (is_mx6dl())
-				vddarm = 0x22;
-			else
-				vddarm = 0x1b;
-		} else {
-			if (is_mx6dl())
-				vddarm = 0x23;
-			else
-				vddarm = 0x22;
-		}
-		pmic_clrsetbits(dev, PFUZE100_SW1ABVOL, 0x3f, vddarm);
-
-		/* decrease VDDSOC to 1.175V */
-		pmic_clrsetbits(dev, PFUZE100_SW1CVOL, 0x3f, 0x23);
-
-		finish_anatop_bypass();
-		printf("switch to ldo_bypass mode!\n");
-	}
-}
-#endif
-#endif
-
-#ifdef CONFIG_CMD_BMODE
-static const struct boot_mode board_boot_modes[] = {
-	/* 4 bit bus width */
-	{"sd2",	 MAKE_CFGVAL(0x40, 0x28, 0x00, 0x00)},
-	{"sd3",	 MAKE_CFGVAL(0x40, 0x30, 0x00, 0x00)},
-	/* 8 bit bus width */
-	{"emmc", MAKE_CFGVAL(0x60, 0x58, 0x00, 0x00)},
-	{NULL,	 0},
-};
-#endif
 
 int board_late_init(void)
 {
 
-	if (IS_ENABLED(CONFIG_CMD_BMODE))
-		add_board_boot_modes(board_boot_modes);
+#ifdef CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG
+	env_set("board_name", "EC702");
+
+	if (is_mx6dqp())
+		env_set("board_rev", "MX6QP");
+	else if (is_mx6dq())
+		env_set("board_rev", "MX6Q");
+	else if (is_mx6sdl())
+		env_set("board_rev", "MX6DL");
+#endif
+
+	run_command("mw.l 20e0154 5 1", 0); //set pinmux for GPIO5.0 to gpio pin
+
+#ifdef CONFIG_ENV_IS_IN_MMC
+	board_late_mmc_env_init();
+#endif
 
 	setup_spinor();
-
-	env_set("tee", "no");
-	if (IS_ENABLED(CONFIG_IMX_OPTEE))
-		env_set("tee", "yes");
-
-	if (IS_ENABLED(CONFIG_ENV_VARS_UBOOT_RUNTIME_CONFIG)) {
-		env_set("board_name", "EVCO");
-
-		if (is_mx6dqp())
-			env_set("board_rev", "MX6QP");
-		else if (is_mx6dq())
-			env_set("board_rev", "MX6Q");
-		else if (is_mx6sdl())
-			env_set("board_rev", "MX6DL");
-	}
-
-	if (IS_ENABLED(CONFIG_ENV_IS_IN_MMC))
-		board_late_mmc_env_init();
-
 	return 0;
 }
 
-#if defined(CONFIG_OF_BOARD_SETUP)
-
-/* Platform function to modify the FDT as needed */
-int ft_board_setup(void *blob, struct bd_info *bd)
-{
-	uchar enetaddr[6];
-	//fix ethernet mac-address using direct path to node
-	eth_env_get_enetaddr("ethaddr", enetaddr);
-	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000",
-			 "mac-address", &enetaddr, 6, 1);
-	do_fixup_by_path(blob, "/soc/aips-bus@02100000/ethernet@02188000",
-			 "local-mac-address", &enetaddr, 6, 1);
-
-	/* do_fixup_by_path_string(blob, "/u-boot", "version", U_BOOT_VERSION_STRING); */
-	/* do_fixup_by_path_string(blob, "/u-boot", "reset-cause", get_last_reset_cause()); */
-
-	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
-		int temp[2];
-
-		temp[0] = cpu_to_fdt32(gd->fb_base);
-		temp[1] = cpu_to_fdt32(640 * 480 * 2);
-		do_fixup_by_path(blob, "/fb@0", "bootlogo", temp, sizeof(temp), 0);
-	}
-
-#if defined(CONFIG_CMD_UPDATE_FDT_EEPROM)
-		patch_fdt_eeprom(blob);
-#endif
-	return 0;
-}
-#endif /* CONFIG_OF_BOARD_SETUP */
-
-#ifdef CONFIG_MXC_SPI
-int platform_setup_pmic_voltages(void)
-{
-	unsigned char dev_id, var_id, cust_id, conf_id;
-	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-
-	gpio_request(IMX_GPIO_NR(3, 20), "CS SPI4");
-	gpio_direction_output(IMX_GPIO_NR(3, 20), 1);
-	imx_iomux_v3_setup_multiple_pads(ecspi4_pads,
-					 ARRAY_SIZE(ecspi4_pads));
-	// enable ecspi4_clk
-	setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
-	slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
-	if (!slave)
-		return -1;
-	spi_claim_bus(slave);
-
-	/* Read and print PMIC identification */
-	if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
-	    pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
-	    pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
-	    pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-		printf("Could not read PMIC ID registers\n");
-		spi_release_bus(slave);
-		return -1;
-	}
-	printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, Customer: 0x%02x, Config: 0x%02x\n",
-	       __func__, dev_id, var_id, cust_id, conf_id);
-	if (dev_id != 0x61 || var_id != 0x63) {
-		printf("PMIC DA90631 detected wrong device");
-		spi_release_bus(slave);
-		return -1;
-	}
-
-	//turn on nONKEY_PIN to port mode, e.g. power switch reacts
-	//to button press, instead of button release!
-	pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
-
-	//disable comparator
-	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
-	//disable watchdog
-	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
-
-	if (IS_ENABLED(CONFIG_IMX6_LDO_BYPASS)) {
-		/* 1V3 is highest allowable voltage when LDO is bypassed */
-		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
-		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
-			printf("Could not configure VBCORE1 voltage to 1V3\n");
-		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
-		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
-			printf("Could not configure VBCORE2 voltage to 1V3\n");
-		//    imx_bypass_ldo();
-		/* 1V2 is an acceptable level up to 800 MHz */
-		if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
-		    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
-			printf("Could not configure VBCORE1 voltage to 1V2\n");
-		if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
-		    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
-			printf("Could not configure VBCORE2 voltage to 1V2\n");
-	}
-	/* gpio_free(IMX_GPIO_NR(3,20)); */
-
-	spi_release_bus(slave);
-	setup_spi();
-	return 0;
-}
-#endif /* CONFIG_MXC_SPI */
-
-#ifdef CONFIG_SYS_I2C_MXC
-int setup_pmic_voltages(void)
-{
-	unsigned char dev_id, var_id, cust_id, conf_id;
-	struct mxc_ccm_reg *ccm_regs = (struct mxc_ccm_reg *)CCM_BASE_ADDR;
-
-	imx_iomux_v3_setup_multiple_pads(ecspi4_pads, ARRAY_SIZE(ecspi4_pads));
-	// enable ecspi4_clk
-	setbits_le32(&ccm_regs->CCGR1, MXC_CCM_CCGR1_ECSPI4S_MASK);
-	slave = spi_setup_slave(DA9063_SPI_BUS, DA9063_SPI_CS, 1000000, SPI_MODE_0);
-	if (!slave)
-		return -1;
-	spi_claim_bus(slave);
-
-	/* Read and print PMIC identification */
-	if (pmic_read_reg(DA9063_REG_CHIP_ID, &dev_id) ||
-	    pmic_read_reg(DA9063_REG_CHIP_VARIANT, &var_id) ||
-	    pmic_read_reg(DA9063_REG_CHIP_CUSTOMER, &cust_id) ||
-	    pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-		printf("Could not read PMIC ID registers\n");
-		spi_release_bus(slave);
-		return -1;
-	}
-	printf("PMIC (%s):  DA9063, Device: 0x%02x, Variant: 0x%02x, Customer: 0x%02x, Config: 0x%02x\n",
-	       __func__, dev_id, var_id, cust_id, conf_id);
-
-	//turn on nONKEY_PIN to port mode, e.g. power switch reacts
-	//to button press, instead of button release!
-	pmic_write_bitfield(DA9063_REG_CONFIG_I, DA9063_NONKEY_PIN_MASK, DA9063_NONKEY_PIN_PORT);
-
-	//disable comparator
-	pmic_write_bitfield(DA9063_REG_ADC_CONT, DA9063_COMP1V2_EN, 0);
-	//disable watchdog
-	pmic_write_bitfield(DA9063_REG_CONTROL_D, DA9063_TWDSCALE_MASK, 0);
-
-#if defined(CONFIG_IMX6_LDO_BYPASS)
-	/* 1V3 is highest allowable voltage when LDO is bypassed */
-	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x64) ||
-	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x64))
-		printf("Could not configure VBCORE1 voltage to 1V3\n");
-	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
-	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
-		printf("Could not configure VBCORE2 voltage to 1V3\n");
-
-	imx_bypass_ldo();
-
-	/* 1V2 is an acceptable level up to 800 MHz */
-	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
-	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
-		printf("Could not configure VBCORE1 voltage to 1V2\n");
-	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x5A) ||
-	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x5A))
-		printf("Could not configure VBCORE2 voltage to 1V2\n");
-#endif
-
-	spi_release_bus(slave);
-	return 0;
-}
-#endif /* CONFIG_SYS_I2C_MXC */
-int fpga_power(bool enable)
-{
-	unsigned char conf_id;
-
-	if (pmic_read_reg(DA9063_REG_CHIP_CONFIG, &conf_id)) {
-		printf("Could not read PMIC ID registers\n");
-		spi_release_bus(slave);
-		return -1;
-	}
-
-	spi_claim_bus(slave);
-	// BPRO_EN (1V0_FPGA)
-	pmic_write_bitfield(DA9063_REG_BPRO_CONT, DA9063_BUCK_EN,
-			    enable ? DA9063_BUCK_EN : 0);
-	// CORE_SW_EN  (1V8_FPGA)
-	pmic_write_bitfield(DA9063_REG_BCORE1_CONT, DA9063_CORE_SW_EN,
-			    enable ? DA9063_CORE_SW_EN : 0);
-	// PERI_SW_EN    (1V2_FPGA)
-	pmic_write_bitfield(DA9063_REG_BPERI_CONT, DA9063_PERI_SW_EN,
-			    enable ? DA9063_PERI_SW_EN : 0);
-	// BMEM_EN         (1V1_FPGA)
-	pmic_write_bitfield(DA9063_REG_BMEM_CONT, DA9063_BUCK_EN,
-			    enable ? DA9063_BUCK_EN : 0);
-	// LDO08            (3V15_FPGA)
-	pmic_write_bitfield(DA9063_REG_LDO8_CONT, DA9063_LDO_EN,
-			    enable ? DA9063_LDO_EN : 0);
-	spi_release_bus(slave);
-	return 0;
-}
-
-static void ec701_fpga_set_ctrl(struct fpga_ctrl *fpga)
-{
-#if ! IS_ENABLED(CONFIG_FPGA_LATTICE)
-#error "ec701 needs to have CONFIG_FPGA_LATTICE set"
-#endif
-
-	fpga->pins.program_n = IMX_GPIO_NR(5, 25);
-	fpga->pins.init_n = IMX_GPIO_NR(5, 26);
-	fpga->pins.done = IMX_GPIO_NR(5, 27);
-
-	fpga_set_ops(fpga);
-}
-
-static int ec701_fpga_enable_power(struct fpga_ctrl *fpga)
-{
-	return fpga_power(true);
-}
-
-static int ec701_fpga_request_flash_spi(struct fpga_ctrl *fpga)
-{
-	int ret = 0;
-
-	debug("%s\n",  __func__);
-
-	//Use as cpu spi bus
-	ret = gpio_request(GPIO_SPI1_CS, "spi-1-cs");
-	if (ret)
-		log_err("%s: gpio request failure %d\n",  __func__, ret);
-
-	imx_iomux_v3_setup_multiple_pads(ecspi1_pads,
-					 ARRAY_SIZE(ecspi1_pads));
-
-	ret = gpio_direction_output(GPIO_SPI1_CS, 1);
-	if (ret)
-		log_err("%s: gpio dir failure %d\n",  __func__, ret);
-
-	return ret;
-}
-
-static int ec701_fpga_release_flash_spi(struct fpga_ctrl *fpga)
-{
-	int ret = 0;
-
-	debug("%s\n",  __func__);
-
-	//cpu spi bus conflicts with fpga spi bus, disable cpu bus
-	imx_iomux_v3_setup_multiple_pads(no_ecspi1_pads,
-					 ARRAY_SIZE(no_ecspi1_pads));
-
-	ret += gpio_request(GPIO_SPI1_SCLK, "spi-1-clk");
-	ret += gpio_request(GPIO_SPI1_MOSI, "spi-1-mosi");
-	ret += gpio_request(GPIO_SPI1_MISO, "spi-1-miso");
-	ret += gpio_direction_input(GPIO_SPI1_SCLK);
-	ret += gpio_direction_input(GPIO_SPI1_MOSI);
-	ret += gpio_direction_input(GPIO_SPI1_MISO);
-	ret += gpio_direction_input(GPIO_SPI1_CS);
-
-	ret += gpio_free(GPIO_SPI1_SCLK);
-	ret += gpio_free(GPIO_SPI1_MOSI);
-	ret += gpio_free(GPIO_SPI1_MISO);
-	ret += gpio_free(GPIO_SPI1_CS);
-
-	if (ret)
-		log_err("%s: gpio failure\n",  __func__);
-
-	return 0;
-}
-
-static void fpga_set_board_ops(struct fpga_board_ops *ops)
-{
-	ops->fpga_request_flash_spi = ec701_fpga_request_flash_spi;
-	ops->fpga_release_flash_spi = ec701_fpga_release_flash_spi;
-	ops->fpga_enable_power = ec701_fpga_enable_power;
-}
-
-void fpga_init_ctrl(struct fpga_ctrl *fpga)
-{
-	ec701_fpga_set_ctrl(fpga);
-
-	fpga_set_board_ops(&fpga->board_ops);
-}

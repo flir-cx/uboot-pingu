@@ -4,4 +4,4 @@
 # SPDX-License-Identifier:	GPL-2.0
 #
 
-obj-y  := mx6ec701.o
+obj-y  := mx6ec701.o ec701_fpga.o
