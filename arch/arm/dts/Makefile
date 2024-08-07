@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0+
 dtb-$(CONFIG_TARGET_MX6EC101) += imx6dl-ec101.dtb
-dtb-$(CONFIG_TARGET_MX6EC701) += imx6dp-ec701.dtb
-dtb-$(CONFIG_TARGET_EC702) += imx6dp-ec702.dtb
-dtb-$(CONFIG_TARGET_EOCO) += imx6dp-eoco.dtb
+dtb-$(CONFIG_TARGET_MX6EC701) += imx6qp-ec701.dtb
+dtb-$(CONFIG_TARGET_EC702) += imx6qp-ec702.dtb
+dtb-$(CONFIG_TARGET_EOCO) += imx6qp-eoco.dtb
 dtb-$(CONFIG_TARGET_EC501) += imx6dl-ec501.dtb
 
 dtb-$(CONFIG_TARGET_SMARTWEB) += at91sam9260-smartweb.dtb

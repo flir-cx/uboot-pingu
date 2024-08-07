@@ -13,8 +13,8 @@
 /dts-v1/;
 
 #include "imx6qp.dtsi"
-#include "imx6dp-ec702.dtsi"
-#include "imx6dp-plwi.dtsi"
+#include "imx6qp-ec702.dtsi"
+#include "imx6qp-plwi.dtsi"
 
 / {
 	model = "FLIR i.MX6 Dual Plus ec702 board";

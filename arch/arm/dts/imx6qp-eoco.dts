@@ -5,7 +5,7 @@
 /dts-v1/;
 
 #include "imx6qp.dtsi"
-#include "imx6dp-eoco.dtsi"
+#include "imx6qp-eoco.dtsi"
 
 / {
 	model = "FLIR i.MX6 dual plus eoco Board";
