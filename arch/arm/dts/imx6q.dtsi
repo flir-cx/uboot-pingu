@@ -57,7 +57,7 @@
 			soc-supply = <&reg_soc>;
 		};
 
-		cpu@1 {
+		cpu1: cpu@1 {
 			compatible = "arm,cortex-a9";
 			device_type = "cpu";
 			reg = <1>;
