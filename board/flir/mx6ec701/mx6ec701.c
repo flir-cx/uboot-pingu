@@ -581,27 +581,6 @@ void ldo_mode_set(int ldo_bypass)
 }
 #endif
 
-static void platform_viewfinder_power_set(bool enable)
-{
-	struct gpio_desc disp_pwr_en_desc;
-	int ret;
-
-	ret = dm_gpio_lookup_name("gpio@23_6", &disp_pwr_en_desc);
-	if (ret) {
-		log_err("%s lookup gpio@23_6 failed with status %d\n", __func__, ret);
-		return;
-	}
-
-	ret = dm_gpio_request(&disp_pwr_en_desc, "DISP_PWR_EN");
-	if (ret) {
-		log_err("%s request DISP_PWR_EN failed with status %d\n", __func__, ret);
-		return;
-	}
-
-	dm_gpio_set_dir_flags(&disp_pwr_en_desc, GPIOD_IS_OUT);
-	dm_gpio_set_value(&disp_pwr_en_desc, enable);
-}
-
 int board_init(void)
 {
 	/* address of boot parameters */
@@ -614,7 +593,6 @@ int board_init(void)
 #ifdef CONFIG_MXC_SPI
 	platform_setup_pmic_voltages();
 #endif
-	platform_viewfinder_power_set(true);
 
 #ifdef CONFIG_FLIR_USBCHARGE
 	usb_charge_setup();
