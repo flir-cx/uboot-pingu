@@ -1,28 +1,5 @@
 menu FLIR
 
-choice
-	prompt "FPGA type"
-
-config FLIR_FPGA_XILINX
-	bool "XILINX"
-	imply FPGA_XILINX
-	help
-	  Platform has XILINX FPGA
-
-config FLIR_FPGA_ALTERA
-	bool "ALTERA"
-	imply FPGA_ALTERA
-	help
-	  Platform has ALTERA FPGA
-
-config FLIR_FPGA_LATTICE
-	bool "LATTICE"
-	imply FPGA_LATTICE
-	help
-	  Platform has LATTICE FPGA
-
-endchoice
-
 source "board/flir/common/Kconfig"
 
 endmenu

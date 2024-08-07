@@ -1,3 +1,11 @@
+config FLIR_FPGA_IF
+	bool "Flir FPGA interface"
+	depends on FPGA_XILINX || FPGA_ALTERA || FPGA_LATTICE
+	help
+	  FPGA interface for Flir boards. This will only be visible if
+	  the FPGA_XILINX, FPGA_ALTERA or FPGA_LATTICE is enabled.
+	  If you have a Flir board with an FPGA, you should enable this.
+
 config FLIR_EEPROM
 	bool "EEPROM commons"
 	default n
