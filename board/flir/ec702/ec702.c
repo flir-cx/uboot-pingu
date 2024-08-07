@@ -540,15 +540,6 @@ static void gpio_lookup_request(const char *name, struct gpio_desc *desc, const 
 	}
 }
 
-static void platform_viewfinder_power_set(void)
-{
-	struct gpio_desc disp_pwr_en_desc;
-
-	gpio_lookup_request("gpio@23_6", &disp_pwr_en_desc, "DISP_PWR_EN");
-	dm_gpio_set_dir_flags(&disp_pwr_en_desc, GPIOD_IS_OUT);
-	dm_gpio_set_value(&disp_pwr_en_desc, 1);
-}
-
 static void setup_disp_reset(void)
 {
 	struct gpio_desc disp_reset_desc;
@@ -573,7 +564,7 @@ int board_init(void)
 #if defined(CONFIG_DM_REGULATOR)
 	regulators_enable_boot_on(false);
 #endif
-	platform_viewfinder_power_set();
+
 #ifdef CONFIG_MXC_SPI
 	platform_setup_pmic_voltages();
 #endif
