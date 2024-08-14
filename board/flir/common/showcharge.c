@@ -162,7 +162,7 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 			int xx, yy;
 			// Draw box
 			for (yy = 0; yy < height; yy++) {
-				ppix = priv->fb + (640 * 2) * (start_line + yy) + (left_margin * 2);
+				ppix = priv->fb + (priv->xsize * 2) * (start_line + yy) + (left_margin * 2);
 				if (yy == 0 || yy == 1 || yy == 2 ||
 				    yy == (height - 3) || yy == (height - 2) ||
 				    yy == (height - 1)) {
@@ -200,7 +200,7 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 				fuel_width -= 6;
 
 			for (yy = 0; yy < (height - 6); yy++) {
-				ppix = priv->fb + (640 * 2) * (start_line + 3 + yy) +
+				ppix = priv->fb + (priv->xsize * 2) * (start_line + 3 + yy) +
 					((left_margin + 3) * 2);
 				for (xx = 0; xx < (fuel_width); xx++) {
 					*ppix++ = color_code;
@@ -246,19 +246,13 @@ static int charge_progress(struct udevice *dev, uint16_t *old_color_code)
 	return 0;
 }
 
-static int do_chargeapp(void)
+static int do_chargeapp(struct udevice *dev)
 {
 	u16 exit = 0;
-	struct udevice *dev;
 	u16 old_color_code = 0;
 	int ret = 0;
 
 	old_color_code = get_color((last_battery_level > 0 ? last_battery_level : 1));
-
-	// Create video device
-	ret = uclass_first_device_err(UCLASS_VIDEO, &dev);
-	if (ret)
-		return ret;
 
 	ret = video_clear(dev);
 	if (ret)
@@ -369,14 +363,22 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 {
 	int ret = -1;
 	u16 old_color_code = 0;
+	struct udevice *dev;
+	struct video_priv *priv;
+
+	// Create video device
+	ret = uclass_first_device_err(UCLASS_VIDEO, &dev);
+	if (ret)
+		return ret;
+	priv = dev_get_uclass_priv(dev);
 
 	// Set default values
 	color_test = false;
 	columns = 0;
-	start_line = 200;
-	left_margin = 240;
-	width = 150;
-	height = 86;
+	start_line = priv->ysize * 5 / 12;
+	left_margin = priv->xsize * 3 / 8;
+	width = priv->xsize * 15 / 64;
+	height = priv->xsize * 86 / 480;
 	cmd_line_color = 0x2F2D;
 
 	if (get_gauge_state())
@@ -392,7 +394,7 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 	// Ignore extra arguments, n.b.
 	switch (chargeapp_mode) {
 	case MODE_AUTOBOOT:
-		do_chargeapp();
+		do_chargeapp(dev);
 		return 0;
 
 	case MODE_FB_TEST:
@@ -427,7 +429,7 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 		log_info("chargeapp: start_line '%d', left_margin '%d', width '%d', height '%d'\n",
 			 start_line, left_margin, width, height);
 		log_info("chargeapp: last_battery_level '%d%%'\n", last_battery_level);
-		if (do_chargeapp())
+		if (do_chargeapp(dev))
 			log_err("do_chargeapp not successful!\n");
 	}
 
