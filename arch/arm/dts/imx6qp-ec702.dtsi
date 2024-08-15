@@ -76,18 +76,20 @@
 		pinctrl-1 = <&pinctrl_ecspi1>;
 		pinctrl-2 = <&pinctrl_ecspi1_idle>;
 
-		/* _n low signals are interpreted by fvdk driver */
-		fpga_status_n = <&gpio1 2 GPIO_ACTIVE_HIGH>;
-		fpga_config_n = <&gpio1 7 GPIO_ACTIVE_HIGH>;
+		fpga_status_n = <&gpio1 2 GPIO_ACTIVE_LOW>;
+		fpga_config_n = <&gpio1 7 GPIO_ACTIVE_LOW>;
 		fpga_conf_done = <&gpio1 8 GPIO_ACTIVE_HIGH>;
-		fpga_ce_n = <&gpio5 25 GPIO_ACTIVE_HIGH>;
+		fpga_ce_n = <&gpio5 25 GPIO_ACTIVE_LOW>;
 		fpga-ready-gpio = <&gpio3 19 GPIO_ACTIVE_HIGH>;
 
 		spi-sclk-gpio = <&gpio5 22 GPIO_ACTIVE_HIGH>;
 		spi-mosi-gpio = <&gpio5 23 GPIO_ACTIVE_HIGH>;
 		spi-miso-gpio = <&gpio5 24 GPIO_ACTIVE_HIGH>;
-		spi-cs-gpio = <&gpio5 28 GPIO_ACTIVE_HIGH>;
+		spi-cs-gpio = <&gpio5 28 GPIO_ACTIVE_LOW>;
 
+		// The fvdk driver needs to find the SPI device
+		// via this phandle to prepare flash during FPGA programming
+		spi_fpga_flash = <&qspi_flash>;
 		vin-supply = <&DA9063_BMEM>, <&DA9063_BPRO>, <&DA9063_PERI_SW>, <&DA9063_CORE_SW>, <&DA9063_LDO8>;
 	};
 
@@ -127,7 +129,6 @@
 			regulator-max-microvolt = <1800000>;
 			gpio = <&ec702_pca9534_0x46 6 GPIO_ACTIVE_HIGH>;
 			regulator-boot-on;
-			startup-delay-us = <10000>;
 			enable-active-high;
 		};
 
@@ -139,17 +140,6 @@
 
 	mxcfb1: fb@0 {
 		compatible = "fsl,mxc_sdc_fb";
-		disp_dev = "hdmi";
-		interface_pix_fmt = "RGB24";
-		mode_str ="1024x768M@60";
-		default_bpp = <32>;
-		int_clk = <1>;
-		late_init = <0>;
-		status = "okay";
-	};
-
-	mxcfb2: fb@1 {
-		compatible = "fsl,mxc_sdc_fb";
 		interface_pix_fmt = "RGB24";
 		default_bpp = <32>;
 		int_clk = <0>;
@@ -157,6 +147,18 @@
 		disp_dev = "lcd-i2c";
 		mode_str ="BOE-XGA";
 		backlight_lcd = <&backlight_lcd>;
+		bootlogo = <0x0 0x0>;
+		status = "okay";
+	};
+
+	mxcfb2: fb@1 {
+		compatible = "fsl,mxc_sdc_fb";
+		disp_dev = "hdmi";
+		interface_pix_fmt = "RGB24";
+		mode_str ="1024x768M@60";
+		default_bpp = <32>;
+		int_clk = <1>;
+		late_init = <0>;
 		status = "okay";
 	};
 
@@ -190,10 +192,12 @@
 		ipu_id = <0>;
 		disp_id = <0>;
 		default_ifmt = "RGB24";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_ipu1_di0>;
+		pinctrl-names = "default", "disabled";
+		pinctrl-0 = <&pinctrl_ipu1_di0_enabled>;
+		pinctrl-1 = <&pinctrl_ipu1_di0_disabled>;
 		i2c_bus = <0x00>;
 		i2c_addr = <0x4c>;
+		power-supply = <&reg_disp_pwr_en>;
 		status = "okay";
 	};
 };
@@ -204,7 +208,7 @@
 	// pinctrl-names = "default";
 	// pinctrl-0 = <&pinctrl_ecspi1>;
 	fsl,spi-num-chipselects = <2>;
-	cs-gpios = <&gpio5 28 0>, <&gpio5 29 0>;
+	cs-gpios = <&gpio5 28 GPIO_ACTIVE_LOW>, <&gpio5 29 GPIO_ACTIVE_LOW>;
 	status = "okay";
 
 	qspi_flash: mt25ql128aba@0 {
@@ -525,7 +529,7 @@
 		status = "okay";
 	};
 
-	ec702_acc_kxtj3: ec702_acc_kxtj3_0x1c@0e {
+	ec702_acc_kxtj3: ec702_acc_kxtj3_0x1c@e {
 		compatible = "kionix,kxtj3";
 		reg = <0x0e>;
 		// TODO Remap axes for appcore
@@ -692,7 +696,7 @@
 			>;
 	};
 
-	pinctrl_ipu1_di0: ipu1di0grp {
+	pinctrl_ipu1_di0_enabled: ipu1di0_enabled_grp {
 		fsl,pins = <
 			MX6QDL_PAD_DI0_DISP_CLK__IPU1_DI0_DISP_CLK	0xA8
 			MX6QDL_PAD_DI0_PIN2__IPU1_DI0_PIN02		0xA8
@@ -723,6 +727,50 @@
 			MX6QDL_PAD_DISP0_DAT21__IPU1_DISP0_DATA21	0xA8
 			MX6QDL_PAD_DISP0_DAT22__IPU1_DISP0_DATA22	0xA8
 			MX6QDL_PAD_DISP0_DAT23__IPU1_DISP0_DATA23	0xA8
+		>;
+	};
+	pinctrl_ipu1_di0_disabled: ipu1di0_disabled_grp {
+		fsl,pins = <
+		/*
+		 * Reserved [15 bit]
+		 * HYS [1 bit] = 0, Disabled, CMOS input
+		 * PUS [2 bit] = 00, 100K PD
+		 * PUE [1 bit] = 0, Keeper Enabled
+		 * PKE [1 bit] 0, Disabled, Pull/Keeper disabled
+		 * ODE [1 bit] = 0, Disabled, Output is CMOS
+		 * Reserved [3 bit]
+		 * Speed [2 bit] = 00 = Slow
+		 * DSE [3 bit] = 000 = Hi Z
+		 * Reserved [2 bit]
+		 * SRE [1 bit] = 0 Slow Slew Rate
+		 */
+			MX6QDL_PAD_DI0_DISP_CLK__GPIO4_IO16	0x0
+			MX6QDL_PAD_DI0_PIN2__GPIO4_IO18		0x0
+			MX6QDL_PAD_DI0_PIN3__GPIO4_IO19		0x0
+			MX6QDL_PAD_DISP0_DAT0__GPIO4_IO21	0x0
+			MX6QDL_PAD_DISP0_DAT1__GPIO4_IO22	0x0
+			MX6QDL_PAD_DISP0_DAT2__GPIO4_IO23	0x0
+			MX6QDL_PAD_DISP0_DAT3__GPIO4_IO24	0x0
+			MX6QDL_PAD_DISP0_DAT4__GPIO4_IO25	0x0
+			MX6QDL_PAD_DISP0_DAT5__GPIO4_IO26	0x0
+			MX6QDL_PAD_DISP0_DAT6__GPIO4_IO27	0x0
+			MX6QDL_PAD_DISP0_DAT7__GPIO4_IO28	0x0
+			MX6QDL_PAD_DISP0_DAT8__GPIO4_IO29	0x0
+			MX6QDL_PAD_DISP0_DAT9__GPIO4_IO30	0x0
+			MX6QDL_PAD_DISP0_DAT10__GPIO4_IO31	0x0
+			MX6QDL_PAD_DISP0_DAT11__GPIO5_IO05	0x0
+			MX6QDL_PAD_DISP0_DAT12__GPIO5_IO06	0x0
+			MX6QDL_PAD_DISP0_DAT13__GPIO5_IO07	0x0
+			MX6QDL_PAD_DISP0_DAT14__GPIO5_IO08	0x0
+			MX6QDL_PAD_DISP0_DAT15__GPIO5_IO09	0x0
+			MX6QDL_PAD_DISP0_DAT16__GPIO5_IO10	0x0
+			MX6QDL_PAD_DISP0_DAT17__GPIO5_IO11	0x0
+			MX6QDL_PAD_DISP0_DAT18__GPIO5_IO12	0x0
+			MX6QDL_PAD_DISP0_DAT19__GPIO5_IO13	0x0
+			MX6QDL_PAD_DISP0_DAT20__GPIO5_IO14	0x0
+			MX6QDL_PAD_DISP0_DAT21__GPIO5_IO15	0x0
+			MX6QDL_PAD_DISP0_DAT22__GPIO5_IO16	0x0
+			MX6QDL_PAD_DISP0_DAT23__GPIO5_IO17	0x0
 		>;
 	};
 
@@ -802,13 +850,40 @@
 	axi-id = <&gpr 0x1C 0x00040004>;
 };
 
-&reg_arm {
-	vin-supply = <&DA9063_BCORE1>;
+&cpu0{
+	arm-supply = <&DA9063_BCORE1>;
+	soc-supply = <&DA9063_BCORE2>;
+	operating-points = <
+		/* kHz	 uV */
+		996000 1280000
+		768000 1180000
+		420000 1150000
+	>;
+	fsl,soc-operating-points = <
+		/* ARM kHz SOC-PU uV */
+		996000 1200000
+		768000 1200000
+		420000 1200000
+	>;
 };
 
-&reg_soc {
-	vin-supply = <&DA9063_BCORE2>;
+&cpu1{
+	arm-supply = <&DA9063_BCORE1>;
+	soc-supply = <&DA9063_BCORE2>;
+	operating-points = <
+		/* kHz	 uV */
+		996000 1280000
+		768000 1180000
+		420000 1150000
+	>;
+	fsl,soc-operating-points = <
+		/* ARM kHz SOC-PU uV */
+		996000 1200000
+		768000 1200000
+		420000 1200000
+	>;
 };
+
 
 // OCRAM usage improvements
 &vpu {
@@ -836,7 +911,8 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usbotg>;
 	disable-over-current;
-//	imx6-usb-charger-detection;
+	imx6-usb-charger-detection;
+	fsl,anatop = <&anatop>;
 //	dr_mode = "host";
 	dr_mode = "peripheral";
 //	dr_mode = "otg";
