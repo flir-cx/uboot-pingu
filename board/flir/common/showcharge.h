@@ -20,7 +20,6 @@
 void power_off(bool comparator_enable);
 void get_pmic_regs(unsigned char *event_a, unsigned char *status_a);
 int ctrlc(void);
-int video_clear(struct udevice *dev);
 void backlight_on(bool on);
 
 #endif	/* __SHOWCHARGE_H */

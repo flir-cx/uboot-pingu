@@ -19,14 +19,18 @@
 #include <command.h>
 #include <stdio_dev.h>
 #include <dm.h>
+#include <asm/mach-imx/video.h>
 #include <video.h>
 #include <video_font.h>
+#include <cpu_func.h>
 #include <linux/delay.h>
 #include <linux/time.h>
 #include <log.h>
 #include "da9063_regs.h"
 #include "usbcharge.h"
 #include "showcharge.h"
+
+DECLARE_GLOBAL_DATA_PTR;
 
 #define ESC "\x1b"
 #define CSI "\x1b["
@@ -58,6 +62,16 @@ enum chargeapp_arg {
 	MODE_COLOR_TEST
 };
 
+struct panel_data {
+	void *fb;
+	u32 fb_size;
+	u16 bpp;
+	u32 xres;
+	u32 yres;
+	u32 rows;
+	u32 cols;
+} panel;
+
 static enum chargeapp_arg chargeapp_mode;
 static int columns;
 static u32 last_battery_level;
@@ -66,6 +80,52 @@ static bool color_test;
 static u16 cmd_line_color;
 
 void __weak backlight_on(bool on) {}
+
+/**
+ * Extract video configuration, using the display array.
+ * If the display is a PANEL instead of a VIDEO device,
+ * it is not possible to go via the video uclass.
+ */
+static int display_read_config(void)
+{
+	int ret = 0;
+	int i;
+	struct display_info_t const *dev;
+
+	for (i = 0; i < display_count; i++) {
+		dev = displays + i;
+		if (displays[i].detect && displays[i].detect(dev))
+			break;
+	}
+	if (i == display_count) {
+		log_err("Failed to find display device\n");
+		ret = -ENODEV;
+	} else {
+		panel.fb = (u16 *)gd->fb_base;
+		panel.bpp = VIDEO_BPP16; // The only one implemented at the moment
+		panel.xres = displays[i].mode.xres;
+		panel.yres = displays[i].mode.yres;
+		panel.fb_size = 2 * panel.xres * panel.yres;
+		panel.rows = displays[i].mode.yres / VIDEO_FONT_HEIGHT;
+		panel.cols = displays[i].mode.xres / VIDEO_FONT_WIDTH;
+	}
+
+	return ret;
+}
+
+static inline void display_sync(void)
+{
+	flush_dcache_range((ulong)panel.fb,
+			   ALIGN((ulong)panel.fb + panel.fb_size,
+				 CONFIG_SYS_CACHELINE_SIZE));
+}
+
+static int display_clear(void)
+{
+	memset(panel.fb, 0, panel.fb_size);
+	display_sync();
+	return 0;
+}
 
 static void print_display(char *s)
 {
@@ -78,40 +138,19 @@ static void print_display(char *s)
 	dev->puts(dev, s);
 }
 
-static int video_get_win_dimensions(int *rows, int *cols)
-{
-	int ret;
-	struct udevice *udev;
-
-	ret = uclass_get_device_by_seq(UCLASS_VIDEO, 0, &udev);
-	if (!ret) {
-		*rows = video_get_ysize(udev) / VIDEO_FONT_HEIGHT;
-		*cols = video_get_xsize(udev) / VIDEO_FONT_WIDTH;
-		columns = *cols;
-	} else {
-		log_err("Call of 'uclass_get_device_by_seq()' not successful!!");
-		*rows = 0;
-		*cols = 0;
-		columns = 0;
-	}
-
-	return ret;
-}
-
 static void print_charge(int c)
 {
 	char buf[10];
-	int y, x;
+	int row, col;
 
-	video_get_win_dimensions(&x, &y);
-	y = y / 2;
-	x = x / 2 + 6;
+	row = panel.rows / 2 + 6;
+	col = panel.cols / 2 - 2;
 
 	print_display(CSI "l");
-	snprintf(buf, 10, CSI "%d;%dH", x, y);
+	snprintf(buf, 10, CSI "%d;%dH", row, col); // cursorpos(v,h)
 	print_display(buf);
 
-	snprintf(buf, 10, "%d%%", c);
+	snprintf(buf, 10, "%3d%%", c);
 	print_display(buf);
 }
 
@@ -145,24 +184,20 @@ static void turn_off_display(void)
 	display_state = DISPLAY_OFF;
 }
 
-static int draw_box(struct udevice *dev, uint16_t color_code)
+static int draw_box(uint16_t color_code)
 {
-	struct video_priv *priv = dev_get_uclass_priv(dev);
-	int ret;
-
-	switch (priv->bpix) {
+	switch (panel.bpp) {
 	case VIDEO_BPP16:
 		if (IS_ENABLED(CONFIG_VIDEO_BPP16)) {
 			u16 *ppix;
-			u16 *end = priv->fb + priv->fb_size;
+			u16 *end = panel.fb + panel.fb_size;
 			int fuel_width = 0;
-			// 640 x 2 x 480 = 614400
-			// printf("priv->fb_size = %d\n", priv->fb_size);
+			int stride = panel.xres * VNBYTES(panel.bpp);
 
 			int xx, yy;
 			// Draw box
 			for (yy = 0; yy < height; yy++) {
-				ppix = priv->fb + (priv->xsize * 2) * (start_line + yy) + (left_margin * 2);
+				ppix = panel.fb + stride * (start_line + yy) + (left_margin * 2);
 				if (yy == 0 || yy == 1 || yy == 2 ||
 				    yy == (height - 3) || yy == (height - 2) ||
 				    yy == (height - 1)) {
@@ -200,7 +235,7 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 				fuel_width -= 6;
 
 			for (yy = 0; yy < (height - 6); yy++) {
-				ppix = priv->fb + (priv->xsize * 2) * (start_line + 3 + yy) +
+				ppix = panel.fb + stride * (start_line + 3 + yy) +
 					((left_margin + 3) * 2);
 				for (xx = 0; xx < (fuel_width); xx++) {
 					*ppix++ = color_code;
@@ -212,27 +247,25 @@ static int draw_box(struct udevice *dev, uint16_t color_code)
 		}
 	case VIDEO_BPP32: // Not implemented
 		if (IS_ENABLED(CONFIG_VIDEO_BPP32)) {
-			u32 *ppix = priv->fb;
-			u32 *end = priv->fb + priv->fb_size;
+			u32 *ppix = panel.fb;
+			u32 *end = panel.fb + panel.fb_size;
 
 			while (ppix < end)
 				*ppix++ = COLOR_GREEN_BPP32;
 			break;
 		}
 	default:
-		memset(priv->fb, COLOR_YELLOW_BPP16, priv->fb_size);
+		memset(panel.fb, COLOR_YELLOW_BPP16, panel.fb_size);
 		break;
 	}
-	ret = video_sync_copy(dev, priv->fb, priv->fb + priv->fb_size);
-	if (ret)
-		return ret;
 
 	print_charge(last_battery_level);
 
-	return video_sync(dev, false);
+	display_sync();
+	return 0;
 }
 
-static int charge_progress(struct udevice *dev, uint16_t *old_color_code)
+static int charge_progress(uint16_t *old_color_code)
 {
 	u16 new_color_code = get_color(last_battery_level);
 
@@ -241,12 +274,12 @@ static int charge_progress(struct udevice *dev, uint16_t *old_color_code)
 			 new_color_code, *old_color_code);
 		*old_color_code = new_color_code;
 	}
-	if (draw_box(dev, new_color_code))
+	if (draw_box(new_color_code))
 		return -1;
 	return 0;
 }
 
-static int do_chargeapp(struct udevice *dev)
+static int do_chargeapp(void)
 {
 	u16 exit = 0;
 	u16 old_color_code = 0;
@@ -254,11 +287,11 @@ static int do_chargeapp(struct udevice *dev)
 
 	old_color_code = get_color((last_battery_level > 0 ? last_battery_level : 1));
 
-	ret = video_clear(dev);
+	ret = display_clear();
 	if (ret)
 		return ret;
 
-	ret = draw_box(dev, old_color_code);
+	ret = draw_box(old_color_code);
 	if (ret)
 		return ret;
 
@@ -296,7 +329,7 @@ static int do_chargeapp(struct udevice *dev)
 			// Test mode
 			if (display_state == DISPLAY_ON) {
 				if (get_timer(display_timer) >= DISPLAY_ON_TIME_TEST) {
-					ret = video_clear(dev);
+					ret = display_clear();
 					if (ret)
 						return ret;
 					turn_off_display();
@@ -308,7 +341,7 @@ static int do_chargeapp(struct udevice *dev)
 				log_info("chargeapp: last_battery_level '%d%%'\n",
 					 last_battery_level);
 				if (display_state == DISPLAY_ON) {
-					ret = charge_progress(dev, &old_color_code);
+					ret = charge_progress(&old_color_code);
 					if (ret)
 						return ret;
 				}
@@ -321,7 +354,7 @@ static int do_chargeapp(struct udevice *dev)
 				} else {
 					turn_on_display();
 					old_color_code = get_color(last_battery_level);
-					ret = draw_box(dev, old_color_code);
+					ret = draw_box(old_color_code);
 					if (ret)
 						return ret;
 				}
@@ -329,7 +362,7 @@ static int do_chargeapp(struct udevice *dev)
 
 			//exit if ctrlc is pressed
 			if (ctrlc()) {
-				ret = video_clear(dev);
+				ret = display_clear();
 				if (ret)
 					return ret;
 
@@ -350,12 +383,10 @@ static int do_chargeapp(struct udevice *dev)
 	return ret;
 
 cam_power_off:
-	video_clear(dev);
-	ret = video_clear(dev);
-	if (!ret) {
-		turn_off_display();
-		power_off(true);
-	}
+	display_clear();
+	turn_off_display();
+	power_off(true);
+
 	return ret;
 }
 
@@ -363,22 +394,16 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 {
 	int ret = -1;
 	u16 old_color_code = 0;
-	struct udevice *dev;
-	struct video_priv *priv;
 
-	// Create video device
-	ret = uclass_first_device_err(UCLASS_VIDEO, &dev);
-	if (ret)
-		return ret;
-	priv = dev_get_uclass_priv(dev);
+	display_read_config();
 
 	// Set default values
 	color_test = false;
 	columns = 0;
-	start_line = priv->ysize * 5 / 12;
-	left_margin = priv->xsize * 3 / 8;
-	width = priv->xsize * 15 / 64;
-	height = priv->xsize * 86 / 480;
+	start_line = panel.yres * 5 / 12;
+	left_margin = panel.xres * 3 / 8;
+	width = panel.xres * 15 / 64;
+	height = panel.yres * 86 / 480;
 	cmd_line_color = 0x2F2D;
 
 	if (get_gauge_state())
@@ -394,7 +419,7 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 	// Ignore extra arguments, n.b.
 	switch (chargeapp_mode) {
 	case MODE_AUTOBOOT:
-		do_chargeapp(dev);
+		do_chargeapp();
 		return 0;
 
 	case MODE_FB_TEST:
@@ -429,7 +454,7 @@ static int do_chargeapp_cmd(struct cmd_tbl *cmdtp, int flag, int argc, char * co
 		log_info("chargeapp: start_line '%d', left_margin '%d', width '%d', height '%d'\n",
 			 start_line, left_margin, width, height);
 		log_info("chargeapp: last_battery_level '%d%%'\n", last_battery_level);
-		if (do_chargeapp(dev))
+		if (do_chargeapp())
 			log_err("do_chargeapp not successful!\n");
 	}
 
