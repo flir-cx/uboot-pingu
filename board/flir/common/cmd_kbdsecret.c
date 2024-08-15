@@ -5,6 +5,7 @@
 #include <errno.h>
 #include <vsprintf.h>
 #include <stdio_dev.h>
+#include <asm/mach-imx/video.h>
 #include <video.h>
 #include <video_font.h>
 #include <dm/uclass.h>
@@ -52,18 +53,21 @@ static int init_stdio(void)
 
 static int compute_stdio_dimensions(void)
 {
-	int ret;
-	struct udevice *udev;
+	int i;
+	struct display_info_t const *dev;
 
-	// 'vidconsole' will always have id 0, n.b., see stdio.c
-	ret = uclass_get_device_by_seq(UCLASS_VIDEO, 0, &udev);
-	if (ret != 0) {
+	for (i = 0; i < display_count; i++) {
+		dev = displays + i;
+		if (displays[i].detect && displays[i].detect(dev))
+			break;
+	}
+	if (i == display_count) {
 		printf("Did not find a console video device\n");
-		return ret;
+		return -ENODEV;
 	}
 
-	sdim.rows = video_get_ysize(udev) / VIDEO_FONT_HEIGHT;
-	sdim.cols = video_get_xsize(udev) / VIDEO_FONT_WIDTH;
+	sdim.rows = displays[i].mode.yres / VIDEO_FONT_HEIGHT;
+	sdim.cols = displays[i].mode.xres / VIDEO_FONT_WIDTH;
 
 	return 0;
 }
