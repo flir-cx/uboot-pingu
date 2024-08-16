@@ -26,7 +26,7 @@
 #define CONFIG_IMX6_LDO_BYPASS
 
 // Config main EEPROM here, unless the entire EEPROM driver is used
-#define CONFIG_SYS_I2C_EEPROM_BUS      0
+#define CONFIG_SYS_I2C_EEPROM_BUS      2
 #define CONFIG_SYS_I2C_EEPROM_ADDR     0xae
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN 1
 
