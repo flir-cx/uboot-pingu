@@ -18,21 +18,10 @@
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
 	CONFIG_FLIR_DEFAULT_DTB \
 	"console=" CONSOLE_DEV "\0" \
-	"hw_start=loadFPGA t\0" \
+	"hw_start=checkCharger; loadFPGA t\0" \
 	"" /* EOL */
 
 #include "flir_mx6_common_post.h"
-
-#if CONFIG_FLIR_MFG == 0 /* Normal boot */
-#undef CONFIG_BOOTCOMMAND
-#define CONFIG_BOOTCOMMAND \
-	"if recoverykey && kbd_secret; then " \
-	"run recoveryboot;" \
-	"else run mmcbootflir;" \
-	"fi;" \
-	"echo Fallback to recovery boot!....;" \
-	"run recoveryboot;"
-#endif
 
 #define CONFIG_IMX6_LDO_BYPASS
 

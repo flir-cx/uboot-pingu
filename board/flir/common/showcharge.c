@@ -65,6 +65,8 @@ static int start_line, left_margin, width, height;
 static bool color_test;
 static u16 cmd_line_color;
 
+void __weak backlight_on(bool on) {}
+
 static void print_display(char *s)
 {
 	struct stdio_dev *dev = NULL;
