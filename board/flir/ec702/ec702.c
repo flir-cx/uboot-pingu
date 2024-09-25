@@ -517,26 +517,46 @@ void ldo_mode_set(int ldo_bypass)
 {
 }
 #endif
-
-static void platform_viewfinder_power_set(bool enable)
+static void gpio_lookup_request(const char *name, struct gpio_desc *desc, const char *desc_name)
 {
-	struct gpio_desc disp_pwr_en_desc;
 	int ret;
 
-	ret = dm_gpio_lookup_name("gpio@23_6", &disp_pwr_en_desc);
+	ret = dm_gpio_lookup_name(name, desc);
 	if (ret) {
-		log_err("%s lookup gpio@23_6 failed with status %d\n", __func__, ret);
+		log_err("%s lookup %s failed with status %d\n", __func__, name, ret);
 		return;
 	}
 
-	ret = dm_gpio_request(&disp_pwr_en_desc, "DISP_PWR_EN");
+	ret = dm_gpio_request(desc, desc_name);
 	if (ret) {
-		log_err("%s request DISP_PWR_EN failed with status %d\n", __func__, ret);
+		log_err("%s request %s failed with status %d\n", __func__, name, ret);
 		return;
 	}
+}
 
+static void platform_viewfinder_power_set(void)
+{
+	struct gpio_desc disp_pwr_en_desc;
+
+	gpio_lookup_request("gpio@23_6", &disp_pwr_en_desc, "DISP_PWR_EN");
 	dm_gpio_set_dir_flags(&disp_pwr_en_desc, GPIOD_IS_OUT);
-	dm_gpio_set_value(&disp_pwr_en_desc, enable);
+	dm_gpio_set_value(&disp_pwr_en_desc, 1);
+}
+
+static void setup_disp_reset(void)
+{
+	struct gpio_desc disp_reset_desc;
+
+	gpio_lookup_request("GPIO4_20", &disp_reset_desc, "DISP_RESET");
+	dm_gpio_set_dir_flags(&disp_reset_desc, GPIOD_IS_OUT);
+	dm_gpio_set_value(&disp_reset_desc, 0);
+
+	// vddi is on 10ms after enable, vin after 20ms due to our sequencer,
+	// MTP reload done after 21ms after vin according to datasheet
+	// We run pmic setup and some other stuff inbetween so we may shave
+	// those 41ms to 18.5ms, meassured to 21ms after vin going high
+	udelay(18500);
+	dm_gpio_set_value(&disp_reset_desc, 1);
 }
 
 int board_init(void)
@@ -547,11 +567,10 @@ int board_init(void)
 #if defined(CONFIG_DM_REGULATOR)
 	regulators_enable_boot_on(false);
 #endif
-
+	platform_viewfinder_power_set();
 #ifdef CONFIG_MXC_SPI
 	platform_setup_pmic_voltages();
 #endif
-	platform_viewfinder_power_set(true);
 
 #ifdef CONFIG_FLIR_USBCHARGE
 	usb_charge_setup();
@@ -562,7 +581,7 @@ int board_init(void)
 #ifdef CONFIG_FEC_MXC
 	setup_fec();
 #endif
-
+	setup_disp_reset();
 	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
 		setup_display();
 	}
