@@ -77,6 +77,10 @@ static iomux_v3_cfg_t const ecspi4_pads[] = {
 	MX6_PAD_EIM_D20__GPIO3_IO20  | MUX_PAD_CTRL(NO_PAD_CTRL),
 };
 
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+void imx_bypass_ldo(void);
+#endif
+
 static int platform_setup_pmic_voltages(void)
 {
 	unsigned char dev_id, var_id, cust_id, conf_id;
@@ -130,6 +134,8 @@ static int platform_setup_pmic_voltages(void)
 	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
 	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
 		printf("Could not configure VBCORE2 voltage to 1V3\n");
+
+    imx_bypass_ldo();
 
 	/* 1V2 is an acceptable level up to 800 MHz */
 	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
