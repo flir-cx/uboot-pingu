@@ -26,6 +26,7 @@
 #include <asm/arch/crm_regs.h>
 #include <asm/mach-imx/mxc_i2c.h>
 #include <asm/arch-imx/cpu.h>
+#include <linux/delay.h>
 #include <env.h>
 #include <i2c.h>
 #include <linux/delay.h>
@@ -85,7 +86,8 @@ static struct boot_state
 
 //do not boot camera if battery level is below
 #define LOW_BATTERY_LEVEL 3
-
+#define GAUGE_POWERUP_WAIT_INC_ms     100
+#define GAUGE_POWERUP_WAIT_ITERATIONS 20
 #define charge_state_cmd "fad.power_state=3 systemd.unit=charge.target"
 
 static void print_boot_event(void)
@@ -207,10 +209,23 @@ int get_battery_level(void)
 {
 	int ret;
 	u16 soc, dcap;
+	int retries = 0;
 
-	ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &soc);
-	if (ret < 0)
-		return ret;
+	do {
+		ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &soc);
+		if (ret < 0)
+			return ret;
+		if (soc)
+			break;
+		if (retries++ < GAUGE_POWERUP_WAIT_ITERATIONS)
+			mdelay(GAUGE_POWERUP_WAIT_INC_ms);
+		else
+			log_info("Fuelgauge: Battery is reeeally empty!\n");
+	} while (!soc && retries <= GAUGE_POWERUP_WAIT_ITERATIONS);
+	if (soc && retries)
+		log_info("Fuelgauge: Waited %d ms for a gauge value\n",
+			 retries * GAUGE_POWERUP_WAIT_INC_ms);
+
 	// 0-100 is expected, sanitize response
 	state.battery_level = (unsigned char)(soc & 0xff);
 
