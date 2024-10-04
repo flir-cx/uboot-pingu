@@ -3,7 +3,7 @@
 #include <errno.h>
 #include "eeprom.h"
 
-#define SUPP_BRD_STR "main, ec101, ec201, ec302, ec401w, ec501, eoco, evio"
+#define SUPP_BRD_STR "main, ec101, ec201, ec202, ec302, ec401w, ec501, eoco, evio"
 
 static int do_board(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 {

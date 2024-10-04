@@ -9,7 +9,7 @@
 #include <i2c.h>
 #include <command.h>
 #include <linux/delay.h>
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 #include <splash.h>
 #include "display_utils.h"
 #endif
@@ -125,7 +125,7 @@ static u8 get_wake_event(struct udevice *dev)
 	return wake_event;
 }
 
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 static void set_boot_logo(void)
 {
 	switch (state.boot_state) {
@@ -344,7 +344,7 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	case USB_CHARGE:
 		printf("Camera: charge state\n");
 		run_command("chargeapp", 0);
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 		state.boot_state = NORMAL_BOOT;
 		splash_screen_prepare();
 		splash_display();

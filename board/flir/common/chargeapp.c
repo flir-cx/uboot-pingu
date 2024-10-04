@@ -13,7 +13,7 @@
 
 #if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 #include "led_utils.h"
-#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 #include "display_utils.h"
 #endif
 
@@ -27,7 +27,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 static void test_charge_levels(void)
 {
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 	for (int i = 0; i <= 100; i++) {
 		display_update_charge(i);
 		mdelay(400);
@@ -51,7 +51,7 @@ static void update_charge(void)
 	if (soc == soc_last)
 		return;
 
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 	display_update_charge(soc);
 #elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC401W))
 	leds_charge(soc);
@@ -65,7 +65,7 @@ static bool check_button(void)
 	if (!get_onoff_key())
 		return false;
 
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 	if (!display_is_on()) {
 		display_on();
 		return false;
@@ -99,7 +99,7 @@ static void check_cable(void)
 
 static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 	display_init();
 	display_timer_reset();
 	display_set_text_color();
@@ -130,7 +130,7 @@ static int do_chargeapp(struct cmd_tbl *cmdtp, int flag, int argc, char * const 
 			break;
 
 		/* Turn off screen when timer expires */
-#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302))
+#if (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC302) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 		if (display_is_on())
 			display_check_timer();
 #endif

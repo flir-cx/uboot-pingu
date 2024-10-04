@@ -97,9 +97,9 @@ struct sup_info {
  */
 static struct sup_info boards[] = {
 	{"main", PROD_INFO}, {"ec101", PROD_INFO},
-	{"ec201", PROD_INFO}, {"ec302", PROD_INFO},
-	{"ec401w", PROD_INFO}, {"ec501", PROD_INFO},
-	{"eoco", PROD_INFO},
+	{"ec201", PROD_INFO}, {"ec202", PROD_INFO},
+	{"ec302", PROD_INFO}, {"ec401w", PROD_INFO},
+	{"ec501", PROD_INFO}, {"eoco", PROD_INFO},
 	{"evio", .bus = 2, .address = 0xaa, true}
 };
 

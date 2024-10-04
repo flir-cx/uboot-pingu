@@ -229,7 +229,7 @@ int fuelgauge_init(void)
 	fuelgauge_write_reg(LC709204_CHG_TERM_CURR, 0x03, 0x00);
 	/* Empty Cell Voltage. 0 will disable ITE offset update. */
 	fuelgauge_write_reg(LC709204_EMPTY_VOLT, 0x00, 0x00);
-#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201))
+#elif (CONFIG_IS_ENABLED(TARGET_MX7ULP_EC201) || CONFIG_IS_ENABLED(TARGET_MX7ULP_EC202))
 	/* Check if battery profile already is selected
 	 * Every write to this register will recalibrate the fuelgauge,
 	 * which we only want to do once. */
