@@ -17,6 +17,8 @@
 #define CMD_DEVICE_TYPE    (0x0001)
 #define CMD_FW_VERSION     (0x0002)
 #define CMD_CHEM_ID        (0x0008)
+#define CMD_SET_HIBERNATE  (0x0011)
+#define CMD_CLEAR_HIBERNATE (0x0012)
 
 // Device-specific Control Subcommands
 #define BQ27520_CMD_DF_VERSION (0x1f)
@@ -164,6 +166,16 @@ int bq27_read_cmd(const enum bq27_command cmd, u16 *rval)
 		break;
 	case BQ_CHEM_ID:
 		ret = bq_write_regpair(REG_CONTROL, CMD_CHEM_ID);
+		if (!ret)
+			ret = bq_read_regpair(REG_CONTROL, rval);
+		break;
+	case BQ_SET_HIBERNATE:
+		ret = bq_write_regpair(REG_CONTROL, CMD_SET_HIBERNATE);
+		if (!ret)
+			ret = bq_read_regpair(REG_CONTROL, rval);
+		break;
+	case BQ_CLEAR_HIBERNATE:
+		ret = bq_write_regpair(REG_CONTROL, CMD_CLEAR_HIBERNATE);
 		if (!ret)
 			ret = bq_read_regpair(REG_CONTROL, rval);
 		break;

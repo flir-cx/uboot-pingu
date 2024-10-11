@@ -25,6 +25,10 @@ int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 		ret = bq27_read_cmd(BQ_DF_VERSION, &value);
 	} else if (!strcmp(argv[1], "chemid")) {
 		ret = bq27_read_cmd(BQ_CHEM_ID, &value);
+	} else if (!strcmp(argv[1], "set_hiber")) {
+		ret = bq27_read_cmd(BQ_SET_HIBERNATE, &value);
+	} else if (!strcmp(argv[1], "clr_hiber")) {
+		ret = bq27_read_cmd(BQ_CLEAR_HIBERNATE, &value);
 	} else if (!strcmp(argv[1], "volt")) {
 		ret = bq27_read_cmd(BQ_VOLTAGE, &value);
 	} else if (!strcmp(argv[1], "soc")) {
@@ -52,6 +56,8 @@ U_BOOT_CMD(bq27, 3, 0, do_bq27,
 	   "bq27 fwver   - Control(FW_VERSION)\n"
 	   "bq27 dfver   - Control(DF_VERSION)\n"
 	   "bq27 chemid  - Control(CHEM_ID)\n"
+	   "bq27 set_hiber  - Control(SET_HIBERNATE_ID)\n"
+	   "bq27 clr_hiber  - Control(CLEAR_HIBERNATE_ID)\n"
 	   "bq27 volt    - Voltage()\n"
 	   "bq27 soc     - StateOfCharge()\n"
 	   "bq27 dcap    - DesignCapacity()\n"
