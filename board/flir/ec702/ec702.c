@@ -540,19 +540,26 @@ static void gpio_lookup_request(const char *name, struct gpio_desc *desc, const 
 	}
 }
 
-static void setup_disp_reset(void)
+static void hold_disp_reset(void)
+{
+	struct gpio_desc disp_reset_desc;
+
+	// vddi is on 10ms after enable, vin after 20ms due to our sequencer,
+	// MTP reload done after 21ms after vin according to datasheet
+	// We run pmic setup and some other stuff inbetween so we
+	// don't have to wait at all.
+	// Reset should be held for 1 ms mininum
+	gpio_lookup_request("GPIO4_20", &disp_reset_desc, "DISP_RESET");
+	dm_gpio_set_dir_flags(&disp_reset_desc, GPIOD_IS_OUT);
+	dm_gpio_set_value(&disp_reset_desc, 0);
+}
+
+static void release_disp_reset(void)
 {
 	struct gpio_desc disp_reset_desc;
 
 	gpio_lookup_request("GPIO4_20", &disp_reset_desc, "DISP_RESET");
 	dm_gpio_set_dir_flags(&disp_reset_desc, GPIOD_IS_OUT);
-	dm_gpio_set_value(&disp_reset_desc, 0);
-
-	// vddi is on 10ms after enable, vin after 20ms due to our sequencer,
-	// MTP reload done after 21ms after vin according to datasheet
-	// We run pmic setup and some other stuff inbetween so we may shave
-	// those 41ms to 18.5ms, meassured to 21ms after vin going high
-	udelay(18500);
 	dm_gpio_set_value(&disp_reset_desc, 1);
 }
 
@@ -561,6 +568,7 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
+	hold_disp_reset();
 #if defined(CONFIG_DM_REGULATOR)
 	regulators_enable_boot_on(false);
 #endif
@@ -578,11 +586,10 @@ int board_init(void)
 #ifdef CONFIG_FEC_MXC
 	setup_fec();
 #endif
-	setup_disp_reset();
 	if (IS_ENABLED(CONFIG_VIDEO_IPUV3)) {
 		setup_display();
 	}
-
+	release_disp_reset();
 	return 0;
 }
 
