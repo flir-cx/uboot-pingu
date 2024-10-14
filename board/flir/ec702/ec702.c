@@ -35,8 +35,10 @@
 #include "../common/fpga_ctrl.h"
 #include "../common/cmd_loadfpga.h"
 #include "../common/usbcharge.h"
+#include "../common/cmd_kbdsecret.h"
 #include "../common/cmd_updatefdteeprom.h"
 #include "../common/flir_generic.h"
+#include "../common/bq27xxx.h"
 #include "ec702.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -618,3 +620,68 @@ int board_late_init(void)
 	return 0;
 }
 
+#define BQ24_BUS    2
+#define BQ24_ADDR   (u8)0xD6
+#define OFFS_LEN    1
+#define BQ24_REG07  (u8)0x07
+#define BQ24_REG05  (u8)0x05
+#define BQ24_DISABLE_BATFET_MASK   (u8)0x20
+#define BQ24_DISABLE_WATCHDOG_MASK (u8)0xcf
+void kbdsecret_custom_callback(void)
+{
+	u16 rval;
+	int ret;
+	u8 data;
+	struct udevice *dev;
+	int countdown = 8;
+
+	// fuelgauge enable hibernation
+	ret = bq27_read_cmd(BQ_SET_HIBERNATE, &rval);
+	if (ret)
+		log_err("Fuelgauge failed to enter hibernation\n");
+
+	ret = i2c_get_chip_for_busnum(BQ24_BUS, (BQ24_ADDR >> 1), OFFS_LEN, &dev);
+	if (ret) {
+		log_err("EEPROM chip not found\n\n");
+		return;
+	}
+
+	// charger disable battery FET
+	ret = dm_i2c_read(dev, BQ24_REG07, &data, 1);
+	if (ret)
+		log_err("Failed to read REG07\n");
+
+	data |= BQ24_DISABLE_BATFET_MASK;
+	if (!ret) {
+		ret = dm_i2c_write(dev, BQ24_REG07, &data, 1);
+		if (ret)
+			log_err("Disable BATFET failed\n");
+	}
+
+	// charger disable watchdog timer
+	ret = dm_i2c_read(dev, BQ24_REG05, &data, 1);
+	if (ret)
+		log_err("Failed to read REG05\n");
+
+	data &= BQ24_DISABLE_WATCHDOG_MASK;
+	if (!ret) {
+		ret = dm_i2c_write(dev, BQ24_REG05, &data, 1);
+		if (ret)
+			log_err("Disable BQ24 watchdog failed\n");
+	}
+
+	if (!ret) {
+		char msg[32];
+		while (countdown) {
+			sprintf(msg, "Entering shipping mode in %ds ...\n", countdown);
+			log_info(msg);
+			print_custom_banner(msg);
+			countdown--;
+			mdelay(1000);
+		}
+	} else {
+		log_info("Failed to enter shipping mode");
+		print_custom_banner("Failed to enter shipping mode");
+	}
+	mdelay(5000);
+}
