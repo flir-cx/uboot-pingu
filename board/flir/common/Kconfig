@@ -141,6 +141,18 @@ config FLIR_RECOVERY_SEQUENCE
 	  in the device tree.
 	  The current version only supports single-character labels.
 
+config FLIR_CUSTOM_CB_SEQUENCE
+	string "Key string to trigger custom callback"
+	depends on FLIR_COMMAND_KBDSECRET
+	default "FT"
+	help
+	  Key sequence used by the kbd_secret command.
+	  Entering this sequence will a trigger target-specific routine.
+	  The kbd_secret command returns as if the recovery secret
+	  was not entered.
+	  Note that delay after the final keypress is a little longer when
+	  RECOVERY_SEQUENCE and CUSTOM_CB_SEQUENCE differ in length.
+
 config FLIR_COMMAND_CHECKCHARGER
 	bool "Charger check (flir_checkcharger)"
 	depends on FLIR_COMMANDS

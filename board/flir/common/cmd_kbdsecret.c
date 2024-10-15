@@ -11,11 +11,15 @@
 #include <dm/uclass.h>
 #include "cmd_kbd.h"
 #include "cmd_recoverykey.h"
+#include "cmd_kbdsecret.h"
 #include "eeprom.h"
 
 #define ESC "\x1b"
 #define CSI "\x1b["
 #define CLR_LINE CSI "2K"
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
+static bool has_console = false;
 
 #ifndef CONFIG_DM_VIDEO
 
@@ -24,6 +28,7 @@ static int compute_stdio_dimensions(void) { return -ENODEV; }
 static inline void print_display(char *s) {}
 static int set_cursor_pos(unsigned int row, unsigned int col) { return 0; }
 static int print_recovery_banner(void) { return 0; }
+void print_custom_banner(const char *message) { printf("%s\n", message); }
 
 #else
 
@@ -35,7 +40,7 @@ struct stdio_dim {
 
 static struct stdio_dim sdim;
 
-static inline void print_display(char *s)
+static inline void print_display(const char *s)
 {
 	if (sdev)
 		sdev->puts(sdev, s);
@@ -124,22 +129,48 @@ bail_out:
 	print_display(CLR_LINE "\r:..Recovery");
 	return 0;
 }
+
+void print_custom_banner(const char *message)
+{
+	unsigned int row;
+	unsigned int col;
+	unsigned int mlen = strlen(message);
+
+	if (!sdim.rows || !sdim.cols) {
+		print_display(message);
+		return;
+	}
+
+	set_cursor_pos(1, 1);
+	print_display(CLR_LINE);
+	row = sdim.rows * 2 / 3;
+	col = (sdim.cols - mlen) / 2;
+	if (set_cursor_pos(row, col))
+		print_display(CLR_LINE);
+	print_display(message);
+}
+
 #endif // CONFIG_DM_VIDEO
 
 /*
- * Poll keyboard for 'secret' button presses.
+ * read_one_key() - Read one key from the keypad
  *
- * Return  0 when nothing pressed after 3s timeout.
- *        >0 when key-press detected
- *        <0 on error
+ * @param rc: Returned key label, or 0
+ * Return: 0 When nothing pressed after 3s
+ *         >0 when keypress detected
+ *         <0 on error
  */
-static int poll_key(char k)
+static int read_one_key(char *rc)
 {
 	int numpressed;
 	int timeout = 300;
 	int key_down = 0;
 	char *keybuf;
 
+	if (!rc)
+		return -EINVAL;
+
+	*rc = 0;
 	while (--timeout) {
 		numpressed = read_keys(&keybuf);
 		if (numpressed < 0) {
@@ -147,11 +178,14 @@ static int poll_key(char k)
 			return numpressed;
 		}
 
-		if (!key_down && numpressed && strrchr(keybuf, k))
+		if (!key_down && numpressed) {
+			*rc = keybuf[0];
 			key_down = 1;
+		}
 
 		if (key_down && !numpressed)
 			break;
+
 		mdelay(10);
 	}
 
@@ -169,8 +203,12 @@ static int poll_key(char k)
 
 static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
-	char *chp = CONFIG_FLIR_RECOVERY_SEQUENCE "";
-	bool has_console = false;
+	char *recovery_string = CONFIG_FLIR_RECOVERY_SEQUENCE;
+	char *callback_string = CONFIG_FLIR_CUSTOM_CB_SEQUENCE;
+	char rbuf[16];
+	int pos = 0;
+	int max_string_length;
+	int ret = 0;
 
 	//MSD_LOAD button overrides security check
 	if (flir_get_safe_boot())
@@ -190,11 +228,16 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		print_display(CLR_LINE ":");
 	}
 
-	if (!*chp)
-		log_warning("Recovery sequence is undefined, will boot recovery\n");
+	max_string_length = MAX(strlen(recovery_string), strlen(callback_string));
+	if (max_string_length >= sizeof(rbuf)) {
+		log_err("Key sequences must contain less than %d characters\n", sizeof(rbuf));
+		max_string_length = sizeof(rbuf) - 1;
+	}
+	if (max_string_length == 0)
+		log_err("Recovery-key sequence is empty. Always boot to recovery\n");
 
-	while (*chp) {
-		int keypressed = poll_key(*chp);
+	while (pos < max_string_length) {
+		int keypressed = read_one_key(&rbuf[pos]);
 
 		if (keypressed < 0) {
 			if (has_console)
@@ -203,22 +246,36 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 			break;
 		}
 
-		if (keypressed == 0) {
-			printf("Timeout reading kbd secret\n");
+		if (!keypressed)
 			break;
-		}
 
 		if (has_console)
 			print_display(".");
-		chp++;
+
+		pos++;
+	};
+	rbuf[pos] = 0;
+
+	if (!strncmp(rbuf, recovery_string, sizeof(rbuf))) {
+		if (has_console)
+			print_recovery_banner();
+		else
+			print_display("Recovery boot");
+	} else if (!strncmp(rbuf, callback_string, sizeof(rbuf))) {
+		kbdsecret_custom_callback();
+		ret = 1;
+	} else {
+		print_display("boot");
+		printf("Secret didn't match anything\n");
+		ret = 1;
 	}
 
-	if (has_console && *chp)
-		print_display("boot");
-	else
-		print_recovery_banner();
+	return ret;
+}
 
-	return '\0' != *chp;
+__weak void kbdsecret_custom_callback(void)
+{
+	print_custom_banner("Custom function invoked");
 }
 
 U_BOOT_CMD(kbd_secret, 1, 1, do_kbd_secret,
