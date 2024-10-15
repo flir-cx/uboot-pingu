@@ -61,6 +61,8 @@
 	/* Radio switch */
 	radio_switch {
 		compatible = "gpio-keys";
+		/* Disable in uboot, or it will interfere with recovery keys */
+		status = "disabled";
 		radio_on {
 			label = "3V8_BW_sense";
 			gpios = <&ec702_pca9534_0x46 4 GPIO_ACTIVE_HIGH>;
