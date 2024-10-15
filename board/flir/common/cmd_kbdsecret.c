@@ -192,6 +192,33 @@ static int read_one_key(char *rc)
 	return timeout;
 }
 
+static int wait_if_key_already_pressed(void)
+{
+	int timeout = 500;
+	int numpressed;
+	char *keybuf;
+	bool message_was_written = false;
+
+	while (--timeout) {
+		numpressed = read_keys(&keybuf);
+		if (numpressed < 0) {
+			printf("Failed to read keyboard\n");
+			return numpressed;
+		}
+		if (numpressed == 0) {
+			set_cursor_pos(1, 1);
+			print_display(CLR_LINE ":");
+			return 1;
+		}
+		if (!message_was_written) {
+			print_display("Release pressed keys:");
+			message_was_written = true;
+		}
+		mdelay(10);
+	}
+	return 0;
+}
+
 /*
  * Security check for entering recovery mode.
  * Will poll each secret key for 3 seconds.
@@ -227,6 +254,9 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		set_cursor_pos(1, 1);
 		print_display(CLR_LINE ":");
 	}
+	ret = wait_if_key_already_pressed();
+	if (ret == 0)
+		return 1;
 
 	max_string_length = MAX(strlen(recovery_string), strlen(callback_string));
 	if (max_string_length >= sizeof(rbuf)) {
