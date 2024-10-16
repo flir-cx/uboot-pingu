@@ -291,6 +291,7 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 			print_recovery_banner();
 		else
 			print_display("Recovery boot");
+		ret = 0;
 	} else if (!strncmp(rbuf, callback_string, sizeof(rbuf))) {
 		kbdsecret_custom_callback();
 		ret = 1;
