@@ -52,6 +52,7 @@ DECLARE_GLOBAL_DATA_PTR;
 
 struct spi_slave *slave; // Extern
 
+static struct gpio_desc disp_reset_desc;
 /*
  * Setup DRAM size. Invoked by init_sequence_f
  */
@@ -544,23 +545,17 @@ static void gpio_lookup_request(const char *name, struct gpio_desc *desc, const 
 
 static void hold_disp_reset(void)
 {
-	struct gpio_desc disp_reset_desc;
-
 	// vddi is on 10ms after enable, vin after 20ms due to our sequencer,
 	// MTP reload done after 21ms after vin according to datasheet
 	// We run pmic setup and some other stuff inbetween so we
 	// don't have to wait at all.
 	// Reset should be held for 1 ms mininum
-	gpio_lookup_request("GPIO4_20", &disp_reset_desc, "DISP_RESET");
 	dm_gpio_set_dir_flags(&disp_reset_desc, GPIOD_IS_OUT);
 	dm_gpio_set_value(&disp_reset_desc, 0);
 }
 
 static void release_disp_reset(void)
 {
-	struct gpio_desc disp_reset_desc;
-
-	gpio_lookup_request("GPIO4_20", &disp_reset_desc, "DISP_RESET");
 	dm_gpio_set_dir_flags(&disp_reset_desc, GPIOD_IS_OUT);
 	dm_gpio_set_value(&disp_reset_desc, 1);
 }
@@ -570,6 +565,7 @@ int board_init(void)
 	/* address of boot parameters */
 	gd->bd->bi_boot_params = PHYS_SDRAM + 0x100;
 
+	gpio_lookup_request("GPIO4_20", &disp_reset_desc, "DISP_RESET");
 	hold_disp_reset();
 #if defined(CONFIG_DM_REGULATOR)
 	regulators_enable_boot_on(false);

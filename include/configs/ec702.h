@@ -18,7 +18,7 @@
 	"fdt_file=" CONFIG_DEFAULT_FDT_FILE "\0" \
 	CONFIG_FLIR_DEFAULT_DTB \
 	"console=" CONSOLE_DEV "\0" \
-	"hw_start=checkCharger; loadFPGA t\0" \
+	"hw_start=checkCharger\0" \
 	"" /* EOL */
 
 #include "flir_mx6_common_post.h"
