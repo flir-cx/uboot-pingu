@@ -183,8 +183,10 @@ static int read_one_key(char *rc)
 			key_down = 1;
 		}
 
-		if (key_down && !numpressed)
+		if (key_down && !numpressed) {
+			log_info("Detected key: %c\n", *rc);
 			break;
+		}
 
 		mdelay(10);
 	}
@@ -292,12 +294,14 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 		else
 			print_display("Recovery boot");
 		ret = 0;
+		log_info("Detected sequence: recovery\n");
 	} else if (!strncmp(rbuf, callback_string, sizeof(rbuf))) {
+		log_info("Detected sequence: custom\n");
 		kbdsecret_custom_callback();
 		ret = 1;
 	} else {
 		print_display("boot");
-		printf("Secret didn't match anything\n");
+		log_info("Detected sequence: invalid\n");
 		ret = 1;
 	}
 

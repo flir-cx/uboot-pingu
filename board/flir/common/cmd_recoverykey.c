@@ -29,6 +29,7 @@ static int do_recoverykey(struct cmd_tbl *cmdtp, int flag, int argc, char * cons
 	else
 		log_warning("No recovery-key value is defined\n");
 
+	log_info("Recovery trigger: %s\n", (s ? "set" : "unset"));
 	return !s;
 }
 
