@@ -99,6 +99,10 @@ DECLARE_GLOBAL_DATA_PTR;
 
 struct spi_slave *slave;
 
+#if defined(CONFIG_IMX6_LDO_BYPASS)
+void imx_bypass_ldo(void);
+#endif
+
 int dram_init(void)
 {
 	/* Since imx_ddr_size does not know about interleaved multiply by 2 */
@@ -223,6 +227,8 @@ int platform_setup_pmic_voltages(void)
 	if (pmic_write_reg(DA9063_REG_VBCORE2_A, 0x64) ||
 	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
 		printf("Could not configure VBCORE2 voltage to 1V3\n");
+
+	imx_bypass_ldo();
 
 	/* 1V2 is an acceptable level up to 800 MHz */
 	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
