@@ -243,6 +243,22 @@ int get_battery_level(void)
 	return state.battery_level;
 }
 
+/*
+ * Read battery voltage.
+ * Return voltage in mV, or <0 on error.
+ */
+static int get_battery_voltage(void)
+{
+	int ret;
+	u16 val = 0;
+
+	ret = bq27_read_cmd(BQ_VOLTAGE, &val);
+	if (ret < 0)
+		return ret;
+
+	return val;
+}
+
 void set_boot_logo(void)
 {
 	switch (state.boot_state) {
@@ -270,6 +286,7 @@ int usb_charge_setup(void)
 {
 	int battery_level = get_battery_level();
 	int boot_reason = get_boot_reason();
+	int battery_voltage = get_battery_voltage();
 
 	print_boot_event();
 	state.boot_state = NORMAL_BOOT;
@@ -285,6 +302,8 @@ int usb_charge_setup(void)
 
 	if (battery_level >= 0)
 		log_info("Battery: charge level %d%%\n", battery_level);
+
+	log_info("Battery: voltage %d mV\n", battery_voltage);
 
 	switch (boot_reason) {
 	case USB_CABLE:
