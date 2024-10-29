@@ -68,7 +68,8 @@ const char *boot_state_names[] = {
 	"NORMAL_BOOT",
 	"LOW_BATTERY",
 	"NO_BATTERY",
-	"USB_CHARGE"
+	"USB_CHARGE",
+	"HOT_BATTERY"
 };
 
 static struct boot_state
@@ -89,6 +90,7 @@ static struct boot_state
 #define GAUGE_POWERUP_WAIT_INC_ms     100
 #define GAUGE_POWERUP_WAIT_ITERATIONS 20
 #define charge_state_cmd "fad.power_state=3 systemd.unit=charge.target"
+#define BATTERY_HOT_POWEROFF_DELAY_ms 3000
 
 static void print_boot_event(void)
 {
@@ -113,6 +115,11 @@ __weak void prepare_power_off(void)
 __weak bool board_support_known(void)
 {
 	return true;
+}
+
+__weak bool battery_overheat(void)
+{
+	return false;
 }
 
 void power_off(bool comparator_enable)
@@ -274,6 +281,9 @@ void set_boot_logo(void)
 	case NORMAL_BOOT:
 		env_set("bootlogo", "bootlogo.bmp.gz");
 		break;
+	case HOT_BATTERY:
+		env_set("bootlogo", "hot_battery.bmp.gz");
+		break;
 	}
 }
 
@@ -304,6 +314,11 @@ int usb_charge_setup(void)
 		log_info("Battery: charge level %d%%\n", battery_level);
 
 	log_info("Battery: voltage %d mV\n", battery_voltage);
+
+	if (battery_overheat()) {
+		state.boot_state = HOT_BATTERY;
+		return 0;
+	}
 
 	switch (boot_reason) {
 	case USB_CABLE:
@@ -397,6 +412,13 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 #endif
 		break;
 
+	case HOT_BATTERY:
+		splash_screen_prepare();
+		splash_display();
+		mdelay(BATTERY_HOT_POWEROFF_DELAY_ms);
+		power_off(true);
+		break;
+
 	default:
 		log_err("Invalid boot state\n");
 		break;
@@ -408,9 +430,10 @@ static int do_boot_state(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 U_BOOT_CMD(chargeState, 2, 0, do_boot_state,
 	   "Process charge state, might power off camera",
 	   " {state}\n"
-	   "0 - Normal state		-> boot camera into run state\n"
-	   "1 - Low battery state		-> power off camera\n"
-	   "2 - No battery			-> power off camera\n"
-	   "3 - Charge battery		-> boot camera into charge state\n"
+	   "0 - Normal state            -> boot camera into run state\n"
+	   "1 - Low battery state       -> power off camera\n"
+	   "2 - No battery              -> power off camera\n"
+	   "3 - Charge battery          -> boot camera into charge state\n"
+	   "4 - Battery overheat        -> power off after delay\n"
 	);
 

@@ -7,11 +7,20 @@ void get_pmic_regs(unsigned char *event_a, unsigned char *status_a);
 bool get_gauge_state(void);
 int get_battery_level(void);
 
+/**
+ * battery_overheat() - Temp-check function
+ * Override this weak function to add high-temp functionality.
+ *
+ * Return: true if temp too high to boot
+ */
+bool battery_overheat(void);
+
 enum BOOT_STATES {
 	NORMAL_BOOT = 0,
 	LOW_BATTERY,
 	NO_BATTERY,
 	USB_CHARGE,
+	HOT_BATTERY,
 };
 
 #define FAKE_BATTERY_LEVEL 50

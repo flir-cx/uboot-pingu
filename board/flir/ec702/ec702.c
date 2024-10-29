@@ -681,3 +681,27 @@ void kbdsecret_custom_callback(void)
 	}
 	mdelay(5000);
 }
+
+/*
+ * Override weak temperature-check function
+ */
+#define MAX_BATTERY_TEMP_C (60)
+#define KELVIN_OFFSET (2732)
+bool battery_overheat(void)
+{
+	u16 value;
+	int ret;
+	int tmp, ipart, fpart;
+
+	// read battery temp i 0.1K resolution
+	ret = bq27_read_cmd(BQ_TEMPERATURE, &value);
+	if (ret)
+		return false;
+
+	tmp = (int)value - KELVIN_OFFSET;
+	ipart = tmp / 10;
+	fpart = tmp - ipart * 10;
+	log_info("Battery: temp %d.%d C\n", ipart, fpart);
+
+	return (ipart >= MAX_BATTERY_TEMP_C);
+}
