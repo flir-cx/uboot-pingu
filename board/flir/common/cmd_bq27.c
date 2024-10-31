@@ -3,12 +3,24 @@
  * Copyright (C) 2024 FLIR Systems.
  */
 #include <command.h>
+#include <vsprintf.h>
 #include "bq27xxx.h"
+
+/* Convert deci-kelvin to C and make a print-string */
+static void dkelvin_to_celsius(int dkelvin, char *rstr)
+{
+	int tmp = dkelvin - 2732;
+	int icel = tmp / 10;
+	int dcel = tmp - icel * 10;
+
+	sprintf(rstr, "    Temp: %d.%dC\n", icel, dcel);
+}
 
 int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	int ret = 0;
 	u16 value = 0;
+	char extra_msg[128] = {0};
 
 	if (argc < 2) {
 		log_info("Too few arguments\n");
@@ -29,6 +41,11 @@ int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 		ret = bq27_read_cmd(BQ_SET_HIBERNATE, &value);
 	} else if (!strcmp(argv[1], "clr_hiber")) {
 		ret = bq27_read_cmd(BQ_CLEAR_HIBERNATE, &value);
+	} else if (!strcmp(argv[1], "temp")) {
+		ret = bq27_read_cmd(BQ_TEMPERATURE, &value);
+		if (!ret)
+			dkelvin_to_celsius(value, extra_msg);
+
 	} else if (!strcmp(argv[1], "volt")) {
 		ret = bq27_read_cmd(BQ_VOLTAGE, &value);
 	} else if (!strcmp(argv[1], "soc")) {
@@ -41,7 +58,7 @@ int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 	}
 
 	if (!ret)
-		log_info("Response: 0x%04x (%u)\n", value, value);
+		log_info("Response: 0x%04x (%u)\n%s", value, value, extra_msg);
 	else
 		log_info("Command failed\n");
 
@@ -58,6 +75,7 @@ U_BOOT_CMD(bq27, 3, 0, do_bq27,
 	   "bq27 chemid  - Control(CHEM_ID)\n"
 	   "bq27 set_hiber  - Control(SET_HIBERNATE_ID)\n"
 	   "bq27 clr_hiber  - Control(CLEAR_HIBERNATE_ID)\n"
+	   "bq27 temp    - Temperature()\n"
 	   "bq27 volt    - Voltage()\n"
 	   "bq27 soc     - StateOfCharge()\n"
 	   "bq27 dcap    - DesignCapacity()\n"

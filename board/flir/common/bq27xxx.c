@@ -179,6 +179,9 @@ int bq27_read_cmd(const enum bq27_command cmd, u16 *rval)
 		if (!ret)
 			ret = bq_read_regpair(REG_CONTROL, rval);
 		break;
+	case BQ_TEMPERATURE:
+		ret = bq_read_regpair(REG_TEMPERATURE, rval);
+		break;
 	case BQ_VOLTAGE:
 		ret = bq_read_regpair(REG_VOLTAGE, rval);
 		break;
