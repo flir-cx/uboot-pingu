@@ -691,6 +691,7 @@ bool battery_overheat(void)
 {
 	u16 value;
 	int ret;
+	struct hw_version boardinfo;
 	int tmp, ipart, fpart;
 
 	// read battery temp i 0.1K resolution
@@ -702,6 +703,15 @@ bool battery_overheat(void)
 	ipart = tmp / 10;
 	fpart = tmp - ipart * 10;
 	log_info("Battery: temp %d.%d C\n", ipart, fpart);
+
+	ret = eeprom_read_rev("main", &boardinfo);
+	if (ret)
+		return false;
+	if (boardinfo.revision < 4) {
+		log_info("Battery: Skip temp check on board rev %02d\n",
+			 boardinfo.revision);
+		return false;
+	}
 
 	return (ipart >= MAX_BATTERY_TEMP_C);
 }
