@@ -110,7 +110,7 @@ static int ec702_fpga_power(bool enable)
 
 	// Power needs some time to stabilize, or subsequent
 	// configuration will fail
-	mdelay(30);
+	mdelay(200);
 
 fpga_pwr_exit:
 	spi_release_bus(slave);
