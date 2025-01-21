@@ -129,12 +129,7 @@ int board_init(void)
 	setup_usb();
 #endif
 	init_pf1550_pmic();
-
-	battery_inserted = fuelgauge_check_battery_insertion();
 	fuelgauge_init();
-	if ((battery_inserted == BATTERY_INSERTED) && !CONFIG_FLIR_MFG)
-		power_off();
-
 	usb_charge_detect();
 	boot_state_init();
 
