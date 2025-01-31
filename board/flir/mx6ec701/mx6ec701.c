@@ -135,6 +135,8 @@ static int platform_setup_pmic_voltages(void)
 	    pmic_write_reg(DA9063_REG_VBCORE2_B, 0x64))
 		printf("Could not configure VBCORE2 voltage to 1V3\n");
 
+	imx_bypass_ldo();
+
 	/* 1V2 is an acceptable level up to 800 MHz */
 	if (pmic_write_reg(DA9063_REG_VBCORE1_A, 0x5A) ||
 	    pmic_write_reg(DA9063_REG_VBCORE1_B, 0x5A))
