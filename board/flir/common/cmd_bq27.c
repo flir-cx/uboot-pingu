@@ -16,6 +16,20 @@ static void dkelvin_to_celsius(int dkelvin, char *rstr)
 	sprintf(rstr, "    Temp: %d.%dC\n", icel, dcel);
 }
 
+/* Read out manufacturer info and format it in a string */
+static int read_maninfo(u16 *value, char *rstr)
+{
+	int ret;
+	char *data;
+
+	ret = bq27_manufacturer_info(&data);
+	if (!ret && data) {
+		sprintf(rstr, "    Manufacturer Info: '%s'\n", data);
+		*value = strlen(data);
+	}
+	return ret;
+}
+
 int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 {
 	int ret = 0;
@@ -52,6 +66,8 @@ int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 		ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &value);
 	} else if (!strcmp(argv[1], "dcap")) {
 		ret = bq27_read_cmd(BQ_DESIGN_CAPACITY, &value);
+	} else if (!strcmp(argv[1], "maninfo")) {
+		ret = read_maninfo(&value, extra_msg);
 	} else {
 		log_err("Invalid command '%s'\n", argv[1]);
 		ret = 1;
@@ -79,4 +95,5 @@ U_BOOT_CMD(bq27, 3, 0, do_bq27,
 	   "bq27 volt    - Voltage()\n"
 	   "bq27 soc     - StateOfCharge()\n"
 	   "bq27 dcap    - DesignCapacity()\n"
+	   "bq27 maninfo - Manufacturer Info, as a string"
 	);

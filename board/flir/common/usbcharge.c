@@ -217,6 +217,10 @@ int get_battery_level(void)
 	int ret;
 	u16 soc, dcap;
 	int retries = 0;
+	char *ver_str;
+
+	bq27_manufacturer_info(&ver_str);
+	log_info("Fuelgauge: Version '%s'\n", ver_str ? ver_str : "(unset)");
 
 	do {
 		ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &soc);

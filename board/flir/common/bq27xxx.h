@@ -37,5 +37,21 @@ enum bq27_command {
  */
 int bq27_read_cmd(const enum bq27_command cmd, u16 *rval);
 
+/**
+ * bq27_is_sealed - Query flash sealed status
+ * @seal_status: 1 = sealed, 0 = unsealed, undef on fail
+ *
+ * Return: 0 on success
+ */
+int bq27_is_sealed(int *seal_status);
+
+/**
+ * bq27_manufacturer_info - Read manufacturer info
+ * @maninfo: Returned data string
+ *
+ * Return: 0 on success
+ */
+int bq27_manufacturer_info(char **maninfo);
+
 #endif // _BQ27XXX_H
 

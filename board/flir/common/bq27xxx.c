@@ -5,6 +5,7 @@
 #include <log.h>
 #include <i2c.h>
 #include <dm/uclass.h>
+#include <linux/delay.h>
 #include <errno.h>
 #include "bq27xxx.h"
 
@@ -36,6 +37,13 @@
 #define BQ27542_REG_STATE_OF_CHARGE (0x2c)
 #define BQ27520_REG_DESIGN_CAPACITY (0x2e)
 #define BQ27542_REG_DESIGN_CAPACITY (0x3c)
+
+// Extended Data Commands
+#define REG_DATA_FLASH_CLASS  (0x3E)
+#define REG_DATA_FLASH_BLOCK  (0x3F)
+#define REG_BLOCK_DATA        (0x40)
+#define BLOCK_DATA_MAXLEN     (32)
+#define MAN_INFO_CLASS        (0x39)
 
 static struct udevice *dev;
 static struct {
@@ -129,6 +137,41 @@ static int bq_write_regpair(u8 reg, u16 val)
 	return ret;
 }
 
+static int bq_write_buf(u8 reg, u8 *buf, int len)
+{
+	int ret;
+
+	ret = i2c_get_chip_for_busnum(gauge.bus, gauge.chip, 1, &dev);
+	if (ret) {
+		log_err("BQ27: Battery fuelgauge not found\n");
+		return ret;
+	}
+	ret = dm_i2c_write(dev, reg, buf, len);
+	if (ret)
+		log_err("BQ27: i2c write error, returning %d\n", ret);
+
+	// Max reaction time to register writes
+	udelay(2000);
+	return ret;
+}
+
+static int bq_read_buf(u8 reg, u8 *buf, int len)
+{
+	int ret;
+
+	ret = i2c_get_chip_for_busnum(gauge.bus, gauge.chip, 1, &dev);
+	if (ret) {
+		log_err("BQ27: Battery fuelgauge not found\n");
+		return ret;
+	}
+
+	ret = dm_i2c_read(dev, reg, buf, len);
+	if (ret)
+		log_err("BQ27: i2c read error, returning %d\n", ret);
+
+	return ret;
+}
+
 int bq27_read_cmd(const enum bq27_command cmd, u16 *rval)
 {
 	int ret = 0;
@@ -201,5 +244,67 @@ int bq27_read_cmd(const enum bq27_command cmd, u16 *rval)
 		ret = -EINVAL;
 	};
 
+	return ret;
+}
+
+int bq27_is_sealed(int *seal_status)
+{
+	int ret;
+	u16 status;
+
+	if (!seal_status)
+		return -EINVAL;
+
+	ret = bq27_read_cmd(BQ_CONTROL_STATUS, &status);
+	if (!ret)
+		*seal_status = (status >> 13) & 1;
+	return ret;
+}
+
+int bq27_manufacturer_info(char **maninfo)
+{
+	int ret;
+	int sealed;
+	static u8 buf[BLOCK_DATA_MAXLEN];
+	int len;
+
+	*maninfo = NULL;
+	ret = bq27_is_sealed(&sealed);
+	if (ret)
+		return ret;
+
+	memset(buf, 0, sizeof(buf));
+	if (sealed) {
+		len = 1;
+		buf[0] = 0x01;
+		ret = bq_write_buf(REG_DATA_FLASH_BLOCK, buf, len);
+		if (ret)
+			return ret;
+
+		buf[0] = 0x00;
+		len = BLOCK_DATA_MAXLEN;
+		if (!ret)
+			ret = bq_read_buf(REG_BLOCK_DATA, buf, len);
+		if (ret)
+			return ret;
+	} else {
+		buf[0] = MAN_INFO_CLASS;
+		len = 1;
+		ret = bq_write_buf(REG_DATA_FLASH_CLASS, buf, len);
+		if (ret)
+			return ret;
+
+		buf[0] = 0x00;
+		ret = bq_write_buf(REG_DATA_FLASH_BLOCK, buf, len);
+		if (ret)
+			return ret;
+
+		len = BLOCK_DATA_MAXLEN;
+		if (!ret)
+			ret = bq_read_buf(REG_BLOCK_DATA, buf, len);
+		if (ret)
+			return ret;
+	}
+	*maninfo = (char *)buf;
 	return ret;
 }
