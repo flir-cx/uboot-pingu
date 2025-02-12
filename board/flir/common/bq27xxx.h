@@ -54,6 +54,14 @@ int bq27_unseal(void);
 int bq27_is_sealed(int *seal_status);
 
 /**
+ * bq27_init_complete - Check FW init status
+ * @ready: 1 = init complete, 0 = init not complete
+ *
+ * Return: 0 on success
+ */
+int bq27_init_complete(int *ready);
+
+/**
  * bq27_manufacturer_info - Read manufacturer info
  * @maninfo: Returned data string
  *

@@ -46,6 +46,10 @@
 #define BLOCK_DATA_MAXLEN     (32)
 #define MAN_INFO_CLASS        (0x39)
 
+// Control Status Bits
+#define BIT_SS         (13)
+#define BIT_INITCOMP   (7)
+
 static struct udevice *dev;
 static struct {
 	int type;
@@ -270,18 +274,28 @@ int bq27_unseal(void)
 	return ret;
 }
 
-int bq27_is_sealed(int *seal_status)
+static int check_control_bit(int bit, int *state)
 {
 	int ret;
 	u16 status;
 
-	if (!seal_status)
+	if (!state)
 		return -EINVAL;
 
 	ret = bq27_read_cmd(BQ_CONTROL_STATUS, &status);
 	if (!ret)
-		*seal_status = (status >> 13) & 1;
+		*state = (status >> bit) & 1;
 	return ret;
+}
+
+int bq27_is_sealed(int *seal_status)
+{
+	return check_control_bit(BIT_SS, seal_status);
+}
+
+int bq27_init_complete(int *ready)
+{
+	return check_control_bit(BIT_INITCOMP, ready);
 }
 
 int bq27_manufacturer_info(char **maninfo)

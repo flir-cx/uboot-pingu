@@ -215,27 +215,35 @@ int get_boot_reason(void)
 int get_battery_level(void)
 {
 	int ret;
+	int icomp = 0;
 	u16 soc, dcap;
 	int retries = 0;
 	char *ver_str;
 
-	bq27_manufacturer_info(&ver_str);
-	log_info("Fuelgauge: Version '%s'\n", ver_str ? ver_str : "(unset)");
-
+	// Wait for firmware to initialize
 	do {
-		ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &soc);
-		if (ret < 0)
-			return ret;
-		if (soc)
+		ret = bq27_init_complete(&icomp);
+		if (icomp)
 			break;
 		if (retries++ < GAUGE_POWERUP_WAIT_ITERATIONS)
 			mdelay(GAUGE_POWERUP_WAIT_INC_ms);
-		else
-			log_info("Fuelgauge: Battery is reeeally empty!\n");
-	} while (!soc && retries <= GAUGE_POWERUP_WAIT_ITERATIONS);
-	if (soc && retries)
-		log_info("Fuelgauge: Waited %d ms for a gauge value\n",
+	} while (!icomp && retries <= GAUGE_POWERUP_WAIT_ITERATIONS);
+	if (icomp && retries)
+		log_info("Fuelgauge: Waited %d ms for FW initialization\n",
 			 retries * GAUGE_POWERUP_WAIT_INC_ms);
+	if (!icomp)
+		log_info("Fuelgauge: FW failed to initialize\n");
+
+	// Log manufacturer info
+	bq27_manufacturer_info(&ver_str);
+	log_info("Fuelgauge: Version '%s'\n", ver_str ? ver_str : "(unset)");
+
+	// Read state-of-charge
+	ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &soc);
+	if (ret < 0)
+		return ret;
+	if (soc == 0)
+		log_info("Fuelgauge: Battery is reeeally empty!\n");
 
 	// 0-100 is expected, sanitize response
 	state.battery_level = (unsigned char)(soc & 0xff);
