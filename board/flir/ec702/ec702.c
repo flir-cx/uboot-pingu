@@ -715,3 +715,20 @@ bool battery_overheat(void)
 
 	return (ipart >= MAX_BATTERY_TEMP_C);
 }
+
+/**
+ * Override weak hook in usbcharge
+ */
+void prepare_power_off(void)
+{
+	int ret;
+	int sealed;
+
+	ret = bq27_unseal();
+	if (!ret)
+		ret = bq27_is_sealed(&sealed);
+	if (ret || sealed)
+		log_err("Fulegauge: Unsealing failed\n");
+	else
+		bq27_read_cmd(BQ_RESET, NULL);
+}
