@@ -702,6 +702,8 @@ bool battery_overheat(void)
 	tmp = (int)value - KELVIN_OFFSET;
 	ipart = tmp / 10;
 	fpart = tmp - ipart * 10;
+	if (fpart < 0)
+		fpart = -fpart;
 	log_info("Battery: temp %d.%d C\n", ipart, fpart);
 
 	ret = eeprom_read_rev("main", &boardinfo);
