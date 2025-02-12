@@ -20,6 +20,7 @@
 #define CMD_CHEM_ID        (0x0008)
 #define CMD_SET_HIBERNATE  (0x0011)
 #define CMD_CLEAR_HIBERNATE (0x0012)
+#define CMD_RESET          (0x0041)
 
 // Device-specific Control Subcommands
 #define BQ27520_CMD_DF_VERSION (0x1f)
@@ -151,7 +152,7 @@ static int bq_write_buf(u8 reg, u8 *buf, int len)
 		log_err("BQ27: i2c write error, returning %d\n", ret);
 
 	// Max reaction time to register writes
-	udelay(2000);
+	mdelay(2);
 	return ret;
 }
 
@@ -175,6 +176,7 @@ static int bq_read_buf(u8 reg, u8 *buf, int len)
 int bq27_read_cmd(const enum bq27_command cmd, u16 *rval)
 {
 	int ret = 0;
+	int tmp = 0;
 
 	if (!bq_is_initialized()) {
 		ret = bq_init();
@@ -199,13 +201,23 @@ int bq27_read_cmd(const enum bq27_command cmd, u16 *rval)
 			ret = bq_read_regpair(REG_CONTROL, rval);
 		break;
 	case BQ_DF_VERSION:
-		log_info("%s: type is 0x%04x\n", __func__, gauge.type);
 		if (gauge.type == TYPE_BQ27542)
 			ret = bq_write_regpair(REG_CONTROL, BQ27542_CMD_DF_VERSION);
 		else
 			ret = bq_write_regpair(REG_CONTROL, BQ27520_CMD_DF_VERSION);
 		if (!ret)
 			ret = bq_read_regpair(REG_CONTROL, rval);
+		break;
+	case BQ_RESET:
+		ret = bq27_is_sealed(&tmp);
+		if (tmp) {
+			log_warning("BQ27: Cannot reset sealed fuel gauge\n");
+		} else if (!ret) {
+			ret = bq_write_regpair(REG_CONTROL, CMD_RESET);
+			// Wait for FW boot, or consecutive calls will fail
+			mdelay(200);
+		}
+		log_info("BQ27: RESET %s\n", ret || tmp ? "FAILED" : "OK");
 		break;
 	case BQ_CHEM_ID:
 		ret = bq_write_regpair(REG_CONTROL, CMD_CHEM_ID);
@@ -244,6 +256,17 @@ int bq27_read_cmd(const enum bq27_command cmd, u16 *rval)
 		ret = -EINVAL;
 	};
 
+	return ret;
+}
+
+int bq27_unseal(void)
+{
+	int ret;
+	u8 buf[4] = { 0x14, 0x04, 0x72, 0x36 };
+
+	ret = bq_write_buf(0x00, &buf[0], 2);
+	if (!ret)
+		ret = bq_write_buf(0x00, &buf[2], 2);
 	return ret;
 }
 

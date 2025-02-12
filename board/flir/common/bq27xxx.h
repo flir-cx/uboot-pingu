@@ -23,7 +23,8 @@ enum bq27_command {
 	BQ_TEMPERATURE,
 	BQ_VOLTAGE,
 	BQ_STATE_OF_CHARGE,
-	BQ_DESIGN_CAPACITY
+	BQ_DESIGN_CAPACITY,
+	BQ_RESET
 };
 
 #define BQ27_DEFAULT_DESIGN_CAPACITY (1000)
@@ -36,6 +37,13 @@ enum bq27_command {
  * Return: 0 on success
  */
 int bq27_read_cmd(const enum bq27_command cmd, u16 *rval);
+
+/**
+ * bq27_unseal - Transition to unsealed state
+ *
+ * Return: 0 on success
+ */
+int bq27_unseal(void);
 
 /**
  * bq27_is_sealed - Query flash sealed status

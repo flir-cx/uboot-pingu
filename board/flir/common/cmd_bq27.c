@@ -55,6 +55,8 @@ int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 		ret = bq27_read_cmd(BQ_SET_HIBERNATE, &value);
 	} else if (!strcmp(argv[1], "clr_hiber")) {
 		ret = bq27_read_cmd(BQ_CLEAR_HIBERNATE, &value);
+	} else if (!strcmp(argv[1], "reset")) {
+		ret = bq27_read_cmd(BQ_RESET, NULL);
 	} else if (!strcmp(argv[1], "temp")) {
 		ret = bq27_read_cmd(BQ_TEMPERATURE, &value);
 		if (!ret)
@@ -66,6 +68,8 @@ int do_bq27(struct cmd_tbl *cmdtp, int flag, int argc, char * const argv[])
 		ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &value);
 	} else if (!strcmp(argv[1], "dcap")) {
 		ret = bq27_read_cmd(BQ_DESIGN_CAPACITY, &value);
+	} else if (!strcmp(argv[1], "unseal")) {
+		ret = bq27_unseal();
 	} else if (!strcmp(argv[1], "maninfo")) {
 		ret = read_maninfo(&value, extra_msg);
 	} else {
@@ -91,9 +95,11 @@ U_BOOT_CMD(bq27, 3, 0, do_bq27,
 	   "bq27 chemid  - Control(CHEM_ID)\n"
 	   "bq27 set_hiber  - Control(SET_HIBERNATE_ID)\n"
 	   "bq27 clr_hiber  - Control(CLEAR_HIBERNATE_ID)\n"
+	   "bq27 reset   - Control(RESET)\n"
 	   "bq27 temp    - Temperature()\n"
 	   "bq27 volt    - Voltage()\n"
 	   "bq27 soc     - StateOfCharge()\n"
 	   "bq27 dcap    - DesignCapacity()\n"
+	   "bq27 unseal  - Transition to unsealed mode\n"
 	   "bq27 maninfo - Manufacturer Info, as a string"
 	);
