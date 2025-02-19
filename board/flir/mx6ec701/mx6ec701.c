@@ -644,3 +644,12 @@ int board_late_init(void)
 	return 0;
 }
 
+/**
+ * Override weak hook in usbcharge
+ */
+#define MIN_SUPPLY_VOLTAGE_mV (3800)
+bool supply_voltage_present(int voltage)
+{
+	return voltage >= MIN_SUPPLY_VOLTAGE_mV;
+}
+

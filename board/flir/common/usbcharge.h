@@ -15,6 +15,18 @@ int get_battery_level(void);
  */
 bool battery_overheat(void);
 
+/**
+ * supply_voltage_present() - Detect non-battery power supply
+ * @voltage: measured voltage at the fuelgauge
+ *
+ * Override this weak function to check for external power.
+ * Compare measured voltage to a reasonable limit and indicate
+ * that some kind of supply power is present.
+ *
+ * Return: true if voltage is high enough to run
+ */
+bool supply_voltage_present(int voltage);
+
 enum BOOT_STATES {
 	NORMAL_BOOT = 0,
 	LOW_BATTERY,

@@ -122,6 +122,11 @@ __weak bool battery_overheat(void)
 	return false;
 }
 
+__weak bool supply_voltage_present(int voltage)
+{
+	return false;
+}
+
 void power_off(bool comparator_enable)
 {
 	prepare_power_off();
@@ -205,6 +210,22 @@ int get_boot_reason(void)
 }
 
 /*
+ * Read battery voltage.
+ * Return voltage in mV, or <0 on error.
+ */
+static int get_battery_voltage(void)
+{
+	int ret;
+	u16 val = 0;
+
+	ret = bq27_read_cmd(BQ_VOLTAGE, &val);
+	if (ret < 0)
+		return ret;
+
+	return val;
+}
+
+/*
  * Read fuel gauge cell and set state.battery_level
  * Return charge level, or <0 on error
  *
@@ -238,6 +259,12 @@ int get_battery_level(void)
 	bq27_manufacturer_info(&ver_str);
 	log_info("Fuelgauge: Version '%s'\n", ver_str ? ver_str : "(unset)");
 
+	if (!icomp && supply_voltage_present(get_battery_voltage())) {
+		log_info("Fuelgauge: No battery, running on external power\n");
+		state.battery_level = FAKE_BATTERY_LEVEL;
+		return state.battery_level;
+	}
+
 	// Read state-of-charge
 	ret = bq27_read_cmd(BQ_STATE_OF_CHARGE, &soc);
 	if (ret < 0)
@@ -260,22 +287,6 @@ int get_battery_level(void)
 	}
 
 	return state.battery_level;
-}
-
-/*
- * Read battery voltage.
- * Return voltage in mV, or <0 on error.
- */
-static int get_battery_voltage(void)
-{
-	int ret;
-	u16 val = 0;
-
-	ret = bq27_read_cmd(BQ_VOLTAGE, &val);
-	if (ret < 0)
-		return ret;
-
-	return val;
 }
 
 void set_boot_logo(void)

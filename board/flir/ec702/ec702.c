@@ -734,3 +734,13 @@ void prepare_power_off(void)
 	else
 		bq27_read_cmd(BQ_RESET, NULL);
 }
+
+/**
+ * Override weak hook in usbcharge
+ */
+#define MIN_SUPPLY_VOLTAGE_mV (3800)
+bool supply_voltage_present(int voltage)
+{
+	return voltage >= MIN_SUPPLY_VOLTAGE_mV;
+}
+
