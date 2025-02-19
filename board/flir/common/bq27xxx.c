@@ -298,6 +298,26 @@ int bq27_init_complete(int *ready)
 	return check_control_bit(BIT_INITCOMP, ready);
 }
 
+#define ASCII_MIN (0x20)
+#define ASCII_MAX (0x7a)
+static void sanitize_maninfo_string(u8 *buf, int len)
+{
+	u8 val;
+
+	if (buf[0] < ASCII_MIN || buf[0] > ASCII_MAX) {
+		// First char is illegal, maninfo not properly set
+		strncpy((char *)buf, "(unset)", len);
+		return;
+	}
+
+	*(buf+(--len)) = 0;
+	while (len--) {
+		val = *(buf+len);
+		if (val && (val < ASCII_MIN || val > ASCII_MAX))
+			*(buf+len) = '.';
+	}
+}
+
 int bq27_manufacturer_info(char **maninfo)
 {
 	int ret;
@@ -342,6 +362,7 @@ int bq27_manufacturer_info(char **maninfo)
 		if (ret)
 			return ret;
 	}
+	sanitize_maninfo_string(buf, sizeof(buf));
 	*maninfo = (char *)buf;
 	return ret;
 }
