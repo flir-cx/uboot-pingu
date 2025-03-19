@@ -239,10 +239,6 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 	int max_string_length;
 	int ret = 0;
 
-	//MSD_LOAD button overrides security check
-	if (flir_get_safe_boot())
-		return 0;
-
 	if (init_stdio()) {
 		printf("Stdio error, proceed without visual feedback\n");
 	} else {
@@ -250,6 +246,15 @@ static int do_kbd_secret(struct cmd_tbl *cmdtp, int flag, int argc, char * const
 
 		if (ret == 0)
 			has_console = true;
+	}
+
+	// MSD_LOAD button, or similar, overrides security check
+	if (flir_get_safe_boot()) {
+		if (has_console)
+			print_recovery_banner();
+		else
+			print_display("Recovery boot");
+		return 0;
 	}
 
 	if (has_console) {
